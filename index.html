@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>PROJECT ENTERPRISE | Mission Control & Orbital Architect</title>
@@ -12,36 +12,67 @@
             --cyan: #00e5ff;
             --amber: #ffab00;
             --green: #00e676;
+            --red: #ff5252;
             --text-main: #e2e8f0;
             --text-muted: #94a3b8;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, monospace; }
-        body { background-color: var(--bg-dark); color: var(--text-main); padding: 16px; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding: 14px; }
+
         header {
             display: flex; justify-content: space-between; align-items: center;
             background: var(--panel-bg); border: 1px solid var(--border-col);
-            padding: 14px 24px; border-radius: 8px; margin-bottom: 16px;
+            padding: 12px 20px; border-radius: 8px; margin-bottom: 12px;
         }
-        .brand h1 { font-size: 20px; letter-spacing: 2px; color: var(--cyan); }
+        .brand h1 { font-size: 19px; letter-spacing: 2px; color: var(--cyan); }
         .brand span { font-size: 12px; color: var(--text-muted); }
-        .controls { display: flex; gap: 12px; align-items: center; }
+
         .btn-load {
             background: linear-gradient(135deg, #0284c7, #00e5ff); color: #000;
-            font-weight: 700; padding: 10px 18px; border-radius: 6px; cursor: pointer; border: none;
+            font-weight: 700; font-size: 13px; padding: 9px 16px; border-radius: 6px; cursor: pointer; border: none;
         }
-        .grid-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+
+        .sim-bar {
+            display: flex; align-items: center; justify-content: space-between; gap: 16px;
+            background: var(--panel-bg); border: 1px solid var(--border-col);
+            padding: 10px 20px; border-radius: 8px; margin-bottom: 12px;
+        }
+        .sim-controls { display: flex; align-items: center; gap: 10px; }
+        .btn-sim {
+            background: #1e293b; color: #fff; border: 1px solid #334155;
+            padding: 6px 14px; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 13px;
+        }
+        .btn-sim:hover { background: #334155; }
+        .btn-sim.active { background: var(--cyan); color: #000; border-color: var(--cyan); }
+        .scrubber { flex: 1; accent-color: var(--cyan); cursor: pointer; }
+        .live-telemetry { display: flex; gap: 16px; font-size: 13px; align-items: center; }
+        .badge {
+            padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 12px;
+            background: #1e293b; border: 1px solid #334155;
+        }
+
+        .grid-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
         .card {
             background: var(--panel-bg); border: 1px solid var(--border-col);
-            border-radius: 8px; padding: 16px;
+            border-radius: 8px; padding: 14px;
         }
-        .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-col); }
+        .card h2 {
+            font-size: 13px; text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border-col);
+        }
         .card-init h2 { color: var(--cyan); }
         .card-man h2 { color: var(--amber); }
         .card-targ h2 { color: var(--green); }
-        .metric-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; border-bottom: 1px dashed #1e2636; }
+        .metric-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed #1e2636; }
         .metric-val { font-weight: 700; color: #fff; }
-        .grid-plots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: 520px; }
-        .plot-box { background: var(--panel-bg); border: 1px solid var(--border-col); border-radius: 8px; padding: 8px; }
+
+        .grid-plots { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 510px; }
+        .plot-box { background: var(--panel-bg); border: 1px solid var(--border-col); border-radius: 8px; padding: 6px; position: relative; }
+        .plot-hint {
+            position: absolute; bottom: 12px; left: 16px; z-index: 10;
+            font-size: 11px; color: var(--text-muted); background: rgba(11,14,20,0.8);
+            padding: 4px 8px; border-radius: 4px; pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -49,158 +80,369 @@
 <header>
     <div class="brand">
         <h1>PROJECT ENTERPRISE // ORBITAL ARCHITECT</h1>
-        <span>C11 Core Astrodynamics Engine &bull; Real-Time Mission Analysis UI</span>
+        <span>C11 Astrodynamics Core Engine &bull; WGS84 3D Ellipsoid &amp; Mission Control</span>
     </div>
     <div class="controls">
         <label class="btn-load">
-            Carica Telemetria JSON (mission_report.json)
+            Load Telemetry JSON (mission_report.json)
             <input type="file" id="jsonInput" accept=".json" style="display:none">
         </label>
     </div>
 </header>
 
+<div class="sim-bar">
+    <div class="sim-controls">
+        <button class="btn-sim active" id="btnPlayPause">&#9208; Pause</button>
+        <button class="btn-sim" id="btnReset">&#8634; Reset</button>
+        <select id="speedSelect" class="btn-sim">
+            <option value="1">Speed: 1x</option>
+            <option value="2" selected>Speed: 2x</option>
+            <option value="5">Speed: 5x</option>
+        </select>
+        <select id="trackModeSelect" class="btn-sim" title="Choose how many revolutions to display on Ground Track">
+            <option value="1" selected>Ground Track: 1 Orbit (Single Pass)</option>
+            <option value="2">Ground Track: 2 Orbits (Earth Rotation Shift)</option>
+        </select>
+    </div>
+    <input type="range" id="timelineSlider" class="scrubber" min="0" max="100" value="0">
+    <div class="live-telemetry">
+        <span class="badge" id="phaseBadge" style="color:var(--cyan)">PHASE 1: PARKING ORBIT</span>
+        <span>Alt: <strong id="liveAlt">---</strong> km</span>
+        <span>Lat/Lon: <strong id="liveLatLon">---</strong></span>
+        <span class="badge" id="eclipseBadge" style="color:var(--amber)">&#9728; SUNLIGHT</span>
+    </div>
+</div>
+
 <div class="grid-cards">
-    <div class="card card-init" id="cardInit">
-        <h2>1. Orbita Iniziale (Parking Orbit)</h2>
-        <div id="initMetrics">Carica <code>mission_report.json</code> o apri tramite CLion Preview...</div>
+    <div class="card card-init">
+        <h2>1. Initial Orbit (Parking Orbit)</h2>
+        <div id="initMetrics">Waiting for <code>mission_report.json</code>...</div>
     </div>
-    <div class="card card-man" id="cardMan">
-        <h2>2. Manovra Ottimale 3D (Hohmann + Plane Change)</h2>
-        <div id="manMetrics">In attesa di telemetria...</div>
+    <div class="card card-man">
+        <h2>2. Optimal 3D Maneuver (Transfer &amp; Plane Change)</h2>
+        <div id="manMetrics">Waiting for telemetry...</div>
     </div>
-    <div class="card card-targ" id="cardTarg">
-        <h2>3. Nuova Orbita Operativa (Target Orbit)</h2>
-        <div id="targMetrics">In attesa di telemetria...</div>
+    <div class="card card-targ">
+        <h2>3. Target Operational Orbit</h2>
+        <div id="targMetrics">Waiting for telemetry...</div>
     </div>
 </div>
 
 <div class="grid-plots">
-    <div class="plot-box" id="plot3D"></div>
-    <div class="plot-box" id="plotGround"></div>
+    <div class="plot-box">
+        <div id="plot3D" style="width:100%; height:100%;"></div>
+        <div class="plot-hint">&#128433; Left-Click + Drag: Rotate 3D WGS84 Earth | Scroll: Zoom | Right-Click: Pan</div>
+    </div>
+    <div class="plot-box">
+        <div id="plotGround" style="width:100%; height:100%;"></div>
+    </div>
 </div>
 
 <script>
+    let globalData = null;
+    let continent3DCoords = { x: [], y: [], z: [] };
+    let animFrames = [];
+    let currentFrame = 0;
+    let isPlaying = true;
+    let animTimer = null;
+    let animSpeed = 2;
+    let satTraceIndex3D = 5;
+
+    // WGS84 Ellipsoid Constants
+    const R_EQ  = 6378.137;
+    const FLAT  = 1.0 / 298.257223563;
+    const E2    = 2.0 * FLAT - FLAT * FLAT;
+    const R_POL = R_EQ * (1.0 - FLAT);
+
+    // Convert Geodetic (Lat, Lon in deg, Alt in km) to 3D WGS84 Cartesian (km)
+    function geodeticToWGS84(latDeg, lonDeg, altKm = 0.0) {
+        const lat = latDeg * Math.PI / 180.0;
+        const lon = lonDeg * Math.PI / 180.0;
+        const sinLat = Math.sin(lat);
+        const cosLat = Math.cos(lat);
+        const N = R_EQ / Math.sqrt(1.0 - E2 * sinLat * sinLat);
+        return {
+            x: (N + altKm) * cosLat * Math.cos(lon),
+            y: (N + altKm) * cosLat * Math.sin(lon),
+            z: (N * (1.0 - E2) + altKm) * sinLat
+        };
+    }
+
+    // Fetch World Continents GeoJSON and project onto 3D WGS84 Ellipsoid
+    async function load3DContinents() {
+        try {
+            const res = await fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson');
+            const geo = await res.json();
+            let cx = [], cy = [], cz = [];
+            geo.features.forEach(feat => {
+                const geom = feat.geometry;
+                const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+                polys.forEach(poly => {
+                    poly.forEach(ring => {
+                        ring.forEach(pt => {
+                            const v = geodeticToWGS84(pt[1], pt[0], 18.0); // +18 km offset to sit cleanly above ocean mesh
+                            cx.push(v.x); cy.push(v.y); cz.push(v.z);
+                        });
+                        cx.push(null); cy.push(null); cz.push(null);
+                    });
+                });
+            });
+            continent3DCoords = { x: cx, y: cy, z: cz };
+            if (globalData) renderDashboard(globalData);
+        } catch (e) {
+            console.warn('3D continent outlines offline fallback:', e);
+        }
+    }
+
     function renderDashboard(data) {
+        globalData = data;
         const r1 = data.initial_report;
         const m  = data.maneuver;
         const r2 = data.target_report;
         const st = data.station;
 
         document.getElementById('initMetrics').innerHTML = `
-        <div class="metric-row"><span>Quota / Inclinazione</span><span class="metric-val">${r1.alt_km} km | ${r1.inc_deg}&deg;</span></div>
-        <div class="metric-row"><span>Periodo Orbitale</span><span class="metric-val">${r1.period_min} min</span></div>
-        <div class="metric-row"><span>Luce / Ombra (24h)</span><span class="metric-val">${r1.sun_min}m / ${r1.ecl_min}m (${r1.ecl_pct}% ecl)</span></div>
-        <div class="metric-row"><span>Visibilit&agrave; (${st.name})</span><span class="metric-val">${r1.passes} passaggi (${r1.contact_min} min tot)</span></div>
-        <div class="metric-row"><span>Decadimento Drag</span><span class="metric-val" style="color:#ff5252">-${r1.decay_m_day} m/giorno</span></div>
-        <div class="metric-row"><span>Carburante Mantenimento</span><span class="metric-val" style="color:#ff5252">${r1.sk_fuel_yr} kg/anno (${r1.sk_dv_yr} m/s)</span></div>
+        <div class="metric-row"><span>Altitude / Inclination</span><span class="metric-val">${r1.alt_km} km | ${r1.inc_deg}&deg;</span></div>
+        <div class="metric-row"><span>Orbital Period</span><span class="metric-val">${r1.period_min} min</span></div>
+        <div class="metric-row"><span>Sunlight / Eclipse (24h)</span><span class="metric-val">${r1.sun_min}m / ${r1.ecl_min}m (${r1.ecl_pct}% ecl)</span></div>
+        <div class="metric-row"><span>Ground Access (${st.name})</span><span class="metric-val">${r1.passes} passes (${r1.contact_min} min tot)</span></div>
+        <div class="metric-row"><span>Atmospheric Drag Decay</span><span class="metric-val" style="color:var(--red)">-${r1.decay_m_day} m/day</span></div>
+        <div class="metric-row"><span>Station-Keeping Fuel</span><span class="metric-val" style="color:var(--red)">${r1.sk_fuel_yr} kg/yr (${r1.sk_dv_yr} m/s)</span></div>
     `;
 
         document.getElementById('manMetrics').innerHTML = `
-        <div class="metric-row"><span>Impulso 1 (Perigeo)</span><span class="metric-val">${m.dv1_ms} m/s</span></div>
-        <div class="metric-row"><span>Direzione Spinta 1 (RTN)</span><span class="metric-val">[ ${m.dir1.join(', ')} ]</span></div>
-        <div class="metric-row"><span>Impulso 2 (Apogeo 3D)</span><span class="metric-val">${m.dv2_ms} m/s</span></div>
-        <div class="metric-row"><span>Direzione Spinta 2 (RTN)</span><span class="metric-val">[ ${m.dir2.join(', ')} ]</span></div>
-        <div class="metric-row"><span>Delta-V Totale / Durata</span><span class="metric-val" style="color:var(--amber)">${m.total_dv_ms} m/s (${m.transfer_min} min)</span></div>
-        <div class="metric-row"><span>Propellente Bruciato</span><span class="metric-val" style="color:var(--amber)">${m.fuel_kg} kg (Massa fin: ${m.final_mass_kg} kg)</span></div>
+        <div class="metric-row"><span>Burn 1 (Perigee Departure)</span><span class="metric-val">${m.dv1_ms} m/s</span></div>
+        <div class="metric-row"><span>Burn 1 Direction (RTN)</span><span class="metric-val">[ ${m.dir1.join(', ')} ]</span></div>
+        <div class="metric-row"><span>Burn 2 (3D Apogee Insertion)</span><span class="metric-val">${m.dv2_ms} m/s</span></div>
+        <div class="metric-row"><span>Burn 2 Direction (RTN)</span><span class="metric-val">[ ${m.dir2.join(', ')} ]</span></div>
+        <div class="metric-row"><span>Total Delta-V / TOF</span><span class="metric-val" style="color:var(--amber)">${m.total_dv_ms} m/s (${m.transfer_min} min)</span></div>
+        <div class="metric-row"><span>Propellant Consumed</span><span class="metric-val" style="color:var(--amber)">${m.fuel_kg} kg (Final Mass: ${m.final_mass_kg} kg)</span></div>
     `;
 
         document.getElementById('targMetrics').innerHTML = `
-        <div class="metric-row"><span>Quota / Inclinazione</span><span class="metric-val">${r2.alt_km} km | ${r2.inc_deg}&deg;</span></div>
-        <div class="metric-row"><span>Periodo Orbitale</span><span class="metric-val">${r2.period_min} min</span></div>
-        <div class="metric-row"><span>Luce / Ombra (24h)</span><span class="metric-val">${r2.sun_min}m / ${r2.ecl_min}m (${r2.ecl_pct}% ecl)</span></div>
-        <div class="metric-row"><span>Visibilit&agrave; (${st.name})</span><span class="metric-val">${r2.passes} passaggi (${r2.contact_min} min tot)</span></div>
-        <div class="metric-row"><span>Decadimento Drag</span><span class="metric-val" style="color:var(--green)">-${r2.decay_m_day} m/giorno</span></div>
-        <div class="metric-row"><span>Carburante Mantenimento</span><span class="metric-val" style="color:var(--green)">${r2.sk_fuel_yr} kg/anno (${r2.sk_dv_yr} m/s)</span></div>
+        <div class="metric-row"><span>Altitude / Inclination</span><span class="metric-val">${r2.alt_km} km | ${r2.inc_deg}&deg;</span></div>
+        <div class="metric-row"><span>Orbital Period</span><span class="metric-val">${r2.period_min} min</span></div>
+        <div class="metric-row"><span>Sunlight / Eclipse (24h)</span><span class="metric-val">${r2.sun_min}m / ${r2.ecl_min}m (${r2.ecl_pct}% ecl)</span></div>
+        <div class="metric-row"><span>Ground Access (${st.name})</span><span class="metric-val">${r2.passes} passes (${r2.contact_min} min tot)</span></div>
+        <div class="metric-row"><span>Atmospheric Drag Decay</span><span class="metric-val" style="color:var(--green)">-${r2.decay_m_day} m/day</span></div>
+        <div class="metric-row"><span>Station-Keeping Fuel</span><span class="metric-val" style="color:var(--green)">${r2.sk_fuel_yr} kg/yr (${r2.sk_dv_yr} m/s)</span></div>
     `;
 
-        const R = 6378.137;
+        // Filter 1 or 2 revolutions depending on user selector
+        const trackMode = parseInt(document.getElementById('trackModeSelect').value, 10);
+        const initSlice = trackMode === 1 ? data.traj_initial.slice(0, Math.ceil(data.traj_initial.length / 2)) : data.traj_initial;
+        const targSlice = trackMode === 1 ? data.traj_target.slice(0, Math.ceil(data.traj_target.length / 2)) : data.traj_target;
+
+        // Build unified animation timeline
+        animFrames = [];
+        initSlice.forEach(p => animFrames.push({...p, phase: 'PHASE 1: PARKING ORBIT', color: '#00e5ff'}));
+        data.traj_transfer.forEach(p => animFrames.push({...p, phase: 'PHASE 2: TRANSFER MANEUVER', color: '#ffab00'}));
+        targSlice.forEach(p => animFrames.push({...p, phase: 'PHASE 3: TARGET ORBIT', color: '#00e676'}));
+
+        const slider = document.getElementById('timelineSlider');
+        slider.max = animFrames.length - 1;
+        currentFrame = 0;
+
+        // 1. Build Exact 3D WGS84 Oblate Ellipsoid Surface
         let sx = [], sy = [], sz = [];
-        for (let i = 0; i <= 30; i++) {
-            let lat = (i / 30) * Math.PI - Math.PI / 2;
+        for (let i = 0; i <= 36; i++) {
+            let latDeg = (i / 36) * 180.0 - 90.0;
             let rowX = [], rowY = [], rowZ = [];
-            for (let j = 0; j <= 30; j++) {
-                let lon = (j / 30) * 2 * Math.PI;
-                rowX.push(R * Math.cos(lat) * Math.cos(lon));
-                rowY.push(R * Math.cos(lat) * Math.sin(lon));
-                rowZ.push(R * Math.sin(lat));
+            for (let j = 0; j <= 36; j++) {
+                let lonDeg = (j / 36) * 360.0 - 180.0;
+                let pt = geodeticToWGS84(latDeg, lonDeg, 0.0);
+                rowX.push(pt.x); rowY.push(pt.y); rowZ.push(pt.z);
             }
             sx.push(rowX); sy.push(rowY); sz.push(rowZ);
         }
 
-        const earthSurface = {
+        const earthEllipsoid = {
             type: 'surface', x: sx, y: sy, z: sz,
-            colorscale: [[0, '#0f2547'], [1, '#1d4ed8']], showscale: false, opacity: 0.85, name: 'Terra WGS84'
+            colorscale: [[0, '#071c38'], [0.5, '#0c3666'], [1, '#154c8a']],
+            showscale: false, opacity: 0.94, hoverinfo: 'skip', name: 'WGS84 Ellipsoid'
+        };
+
+        // 3D Continents & Coastlines drawn directly onto the WGS84 Ellipsoid
+        const traceContinents3D = {
+            type: 'scatter3d', mode: 'lines', name: 'Continents (WGS84)',
+            x: continent3DCoords.x, y: continent3DCoords.y, z: continent3DCoords.z,
+            line: { color: '#4ade80', width: 2.2 }, hoverinfo: 'skip'
+        };
+
+        // 3D Ground Station Marker on the Ellipsoid
+        const st3D = geodeticToWGS84(st.lat, st.lon, 25.0);
+        const traceStation3D = {
+            type: 'scatter3d', mode: 'markers+text', name: st.name,
+            x: [st3D.x], y: [st3D.y], z: [st3D.z],
+            text: [st.name], textposition: 'top right',
+            textfont: { color: '#ff5252', size: 10 },
+            marker: { size: 5, color: '#ff1744', symbol: 'diamond' }
         };
 
         const traceInit3D = {
-            type: 'scatter3d', mode: 'lines', name: '1. Orbita Iniziale (400 km)',
-            x: data.traj_initial.map(p => p.x), y: data.traj_initial.map(p => p.y), z: data.traj_initial.map(p => p.z),
-            line: { color: '#00e5ff', width: 4 }
+            type: 'scatter3d', mode: 'lines', name: '1. Initial Orbit (400 km)',
+            x: initSlice.map(p => p.x), y: initSlice.map(p => p.y), z: initSlice.map(p => p.z),
+            line: { color: '#00e5ff', width: 4.5 }
         };
 
         const traceTrans3D = {
-            type: 'scatter3d', mode: 'lines', name: '2. Manovra Trasferimento',
+            type: 'scatter3d', mode: 'lines', name: '2. Transfer Trajectory',
             x: data.traj_transfer.map(p => p.x), y: data.traj_transfer.map(p => p.y), z: data.traj_transfer.map(p => p.z),
             line: { color: '#ffab00', width: 6, dash: 'dash' }
         };
 
         const traceTarg3D = {
-            type: 'scatter3d', mode: 'lines', name: '3. Orbita Target (650 km)',
-            x: data.traj_target.map(p => p.x), y: data.traj_target.map(p => p.y), z: data.traj_target.map(p => p.z),
-            line: { color: '#00e676', width: 4 }
+            type: 'scatter3d', mode: 'lines', name: '3. Target Orbit (650 km)',
+            x: targSlice.map(p => p.x), y: targSlice.map(p => p.y), z: targSlice.map(p => p.z),
+            line: { color: '#00e676', width: 4.5 }
         };
 
-        Plotly.newPlot('plot3D', [earthSurface, traceInit3D, traceTrans3D, traceTarg3D], {
-            title: { text: 'Vista Spaziale 3D Inerziale (ECI)', font: { color: '#e2e8f0', size: 15 } },
-            paper_bgcolor: '#131822', plot_bgcolor: '#131822',
-            margin: { l: 0, r: 0, b: 0, t: 40 },
-            scene: {
-                xaxis: { title: 'X [km]', color: '#94a3b8', gridcolor: '#263044' },
-                yaxis: { title: 'Y [km]', color: '#94a3b8', gridcolor: '#263044' },
-                zaxis: { title: 'Z [km]', color: '#94a3b8', gridcolor: '#263044' },
-                aspectmode: 'data'
-            },
-            legend: { font: { color: '#e2e8f0' }, bgcolor: 'rgba(19,24,34,0.7)' }
-        });
+        const p0 = animFrames[0];
+        const traceSat3D = {
+            type: 'scatter3d', mode: 'markers+text', name: 'Spacecraft (Live)',
+            x: [p0.x], y: [p0.y], z: [p0.z],
+            text: ['SAT'], textposition: 'top center',
+            textfont: { color: '#ffffff', size: 11 },
+            marker: { size: 8, color: '#ffffff', line: { color: '#ff1744', width: 3 }, symbol: 'circle' }
+        };
 
+        const traces3D = [earthEllipsoid, traceContinents3D, traceStation3D, traceInit3D, traceTrans3D, traceTarg3D, traceSat3D];
+        satTraceIndex3D = traces3D.length - 1;
+
+        Plotly.newPlot('plot3D', traces3D, {
+            title: { text: `3D WGS84 Ellipsoid (${R_EQ.toFixed(1)} x ${R_POL.toFixed(1)} km) & Orbits`, font: { color: '#e2e8f0', size: 13.5 } },
+            paper_bgcolor: '#131822', plot_bgcolor: '#131822',
+            margin: { l: 0, r: 0, b: 0, t: 36 },
+            uirevision: 'keep_camera_state',
+            scene: {
+                uirevision: 'keep_camera_state',
+                dragmode: 'orbit',
+                xaxis: { title: 'X [km]', color: '#94a3b8', gridcolor: '#263044', zerolinecolor: '#334155' },
+                yaxis: { title: 'Y [km]', color: '#94a3b8', gridcolor: '#263044', zerolinecolor: '#334155' },
+                zaxis: { title: 'Z [km]', color: '#94a3b8', gridcolor: '#263044', zerolinecolor: '#334155' },
+                aspectmode: 'data',
+                camera: { eye: { x: 1.5, y: 1.3, z: 1.0 } }
+            },
+            legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(19,24,34,0.75)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // 2. Build Colored 2D World Map & Ground Track
         const traceInitGeo = {
-            type: 'scattergeo', mode: 'markers', name: 'Track Iniziale (400 km)',
-            lat: data.traj_initial.map(p => p.lat), lon: data.traj_initial.map(p => p.lon),
+            type: 'scattergeo', mode: 'markers', name: 'Initial Orbit Track',
+            lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon),
             marker: { size: 4, color: '#00e5ff' }
         };
+        const traceTransGeo = {
+            type: 'scattergeo', mode: 'markers', name: 'Transfer Track',
+            lat: data.traj_transfer.map(p => p.lat), lon: data.traj_transfer.map(p => p.lon),
+            marker: { size: 4, color: '#ffab00' }
+        };
         const traceTargGeo = {
-            type: 'scattergeo', mode: 'markers', name: 'Track Target (650 km)',
-            lat: data.traj_target.map(p => p.lat), lon: data.traj_target.map(p => p.lon),
+            type: 'scattergeo', mode: 'markers', name: 'Target Orbit Track',
+            lat: targSlice.map(p => p.lat), lon: targSlice.map(p => p.lon),
             marker: { size: 4, color: '#00e676' }
         };
         const traceStation = {
             type: 'scattergeo', mode: 'markers+text', name: st.name,
             lat: [st.lat], lon: [st.lon], text: [st.name], textposition: 'top right',
-            marker: { size: 11, color: '#ff1744', symbol: 'triangle-up' },
-            textfont: { color: '#ffffff', size: 12 }
+            marker: { size: 11, color: '#ff1744', symbol: 'triangle-up', line: { color: '#fff', width: 1 } },
+            textfont: { color: '#ffffff', size: 11 }
+        };
+        const traceSatGeo = {
+            type: 'scattergeo', mode: 'markers+text', name: 'Spacecraft (Live)',
+            lat: [p0.lat], lon: [p0.lon], text: ['SAT'], textposition: 'bottom right',
+            textfont: { color: '#ffffff', size: 11 },
+            marker: { size: 11, color: '#ffffff', line: { color: '#ff1744', width: 3 } }
         };
 
-        Plotly.newPlot('plotGround', [traceInitGeo, traceTargGeo, traceStation], {
-            title: { text: 'Ground Track & Stazione di Terra (WGS84)', font: { color: '#e2e8f0', size: 15 } },
+        Plotly.newPlot('plotGround', [traceInitGeo, traceTransGeo, traceTargGeo, traceStation, traceSatGeo], {
+            title: { text: '2D Ground Track & Ground Station Coverage (WGS84)', font: { color: '#e2e8f0', size: 13.5 } },
             paper_bgcolor: '#131822',
-            margin: { l: 10, r: 10, b: 10, t: 40 },
+            margin: { l: 8, r: 8, b: 8, t: 36 },
+            uirevision: 'keep_map_state',
             geo: {
+                bgcolor: '#131822',
                 projection: { type: 'natural earth' },
-                showland: true, landcolor: '#1e293b',
-                showocean: true, oceancolor: '#0b0e14',
-                showcountries: true, countrycolor: '#334155',
-                showcoastlines: true, coastlinecolor: '#475569',
-                lataxis: { showgrid: true, gridcolor: '#1e293b' },
-                lonaxis: { showgrid: true, gridcolor: '#1e293b' }
+                showland: true, landcolor: '#2e6b3e',
+                showocean: true, oceancolor: '#0a2e5c',
+                showlakes: true, lakecolor: '#0a2e5c',
+                showrivers: true, rivercolor: '#0a2e5c',
+                showcountries: true, countrycolor: '#64748b',
+                showcoastlines: true, coastlinecolor: '#94a3b8',
+                lataxis: { showgrid: true, gridcolor: 'rgba(255,255,255,0.12)' },
+                lonaxis: { showgrid: true, gridcolor: 'rgba(255,255,255,0.12)' }
             },
-            legend: { font: { color: '#e2e8f0' }, bgcolor: 'rgba(19,24,34,0.7)' }
-        });
+            legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(19,24,34,0.75)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        startAnimationLoop();
     }
+
+    function updateSatellitePosition(frameIdx) {
+        if (!animFrames.length) return;
+        const pt = animFrames[frameIdx];
+
+        Plotly.restyle('plot3D', { x: [[pt.x]], y: [[pt.y]], z: [[pt.z]] }, [satTraceIndex3D]);
+        Plotly.restyle('plotGround', { lat: [[pt.lat]], lon: [[pt.lon]] }, [4]);
+
+        document.getElementById('timelineSlider').value = frameIdx;
+        document.getElementById('liveAlt').textContent = pt.alt.toFixed(1);
+        document.getElementById('liveLatLon').textContent = `${pt.lat.toFixed(1)}°, ${pt.lon.toFixed(1)}°`;
+
+        const phaseBadge = document.getElementById('phaseBadge');
+        phaseBadge.textContent = pt.phase;
+        phaseBadge.style.color = pt.color;
+
+        const eclBadge = document.getElementById('eclipseBadge');
+        if (pt.ecl === 1) {
+            eclBadge.innerHTML = '&#9790; IN ECLIPSE (UMBRA)';
+            eclBadge.style.color = '#94a3b8';
+        } else {
+            eclBadge.innerHTML = '&#9728; SUNLIGHT';
+            eclBadge.style.color = '#ffab00';
+        }
+    }
+
+    function startAnimationLoop() {
+        if (animTimer) clearInterval(animTimer);
+        animTimer = setInterval(() => {
+            if (!isPlaying || !animFrames.length) return;
+            currentFrame = (currentFrame + animSpeed) % animFrames.length;
+            updateSatellitePosition(currentFrame);
+        }, 60);
+    }
+
+    document.getElementById('btnPlayPause').addEventListener('click', function() {
+        isPlaying = !isPlaying;
+        this.innerHTML = isPlaying ? '&#9208; Pause' : '&#9654; Play';
+        this.classList.toggle('active', isPlaying);
+    });
+
+    document.getElementById('btnReset').addEventListener('click', function() {
+        currentFrame = 0;
+        updateSatellitePosition(0);
+    });
+
+    document.getElementById('speedSelect').addEventListener('change', function() {
+        animSpeed = parseInt(this.value, 10);
+    });
+
+    document.getElementById('trackModeSelect').addEventListener('change', function() {
+        if (globalData) renderDashboard(globalData);
+    });
+
+    document.getElementById('timelineSlider').addEventListener('input', function() {
+        currentFrame = parseInt(this.value, 10);
+        updateSatellitePosition(currentFrame);
+    });
+
+    // Load 3D Continent Vectors and Mission JSON
+    load3DContinents();
 
     fetch('mission_report.json')
         .then(r => r.json())
         .then(data => renderDashboard(data))
-        .catch(() => console.log('Usa il pulsante in alto a destra per selezionare mission_report.json'));
+        .catch(() => console.log('Use the top-right button to load mission_report.json'));
 
     document.getElementById('jsonInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
