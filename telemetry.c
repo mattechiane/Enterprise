@@ -1,14 +1,13 @@
 #include "telemetry.h"
 #include "astrodynamics.h"
+#include "propagator.h"
 #include <math.h>
 
 Vector3D eci_to_ecef(Vector3D pos_eci, double epoch, double gmst0) {
-    // Angolo di rotazione terrestre (Greenwich Mean Sidereal Time) all'epoca attuale
     double theta_gmst = gmst0 + (EARTH_OMEGA * epoch);
     double cos_t = cos(theta_gmst);
     double sin_t = sin(theta_gmst);
 
-    // Rotazione attorno all'asse Z di +theta_gmst
     Vector3D pos_ecef = {
         ( cos_t * pos_eci.x) + (sin_t * pos_eci.y),
         (-sin_t * pos_eci.x) + (cos_t * pos_eci.y),
@@ -23,12 +22,10 @@ GeodeticCoord ecef_to_geodetic(Vector3D pos_ecef) {
     double y = pos_ecef.y;
     double z = pos_ecef.z;
 
-    // 1. Longitudine esatta (-PI a +PI)
     geo.longitude = atan2(y, x);
 
-    // 2. Metodo iterativo di Bowring/Heiskanen per Latitudine e Quota su Ellissoide WGS84
     double p = sqrt((x * x) + (y * y));
-    double e2 = 2.0 * EARTH_FLATTENING - (EARTH_FLATTENING * EARTH_FLATTENING); // Quadrato prima eccentricità terrestre
+    double e2 = 2.0 * EARTH_FLATTENING - (EARTH_FLATTENING * EARTH_FLATTENING);
 
     double lat = atan2(z, p * (1.0 - e2));
     double N = EARTH_RADIUS;
@@ -72,7 +69,92 @@ void telemetry_write_step(FILE *fp, CartesianState state, KeplerianElements kep,
 }
 
 void telemetry_close(FILE *fp) {
-    if (fp != NULL) {
-        fclose(fp);
+    if (fp != NULL) fclose(fp);
+}
+
+static void write_trajectory_json_array(FILE *fp, KeplerianElements kep, double duration_sec, int num_steps, const SpacecraftConfig *sc) {
+    CartesianState s = keplerian_to_cartesian(kep, EARTH_MU, 500.0, 0.0);
+    ForceModelConfig forces = {.enable_j2 = true, .enable_drag = true, .sun_dir = {1.0, 0.0, 0.0}};
+    SpacecraftConfig sc_pass = *sc;
+    sc_pass.thruster.is_active = false;
+
+    double dt = duration_sec / (double)num_steps;
+    fprintf(fp, "[\n");
+    for (int i = 0; i <= num_steps; i++) {
+        Vector3D ecef = eci_to_ecef(s.position, s.epoch, 0.0);
+        GeodeticCoord geo = ecef_to_geodetic(ecef);
+        SpaceEnvironment env = evaluate_environment(s.position, forces.sun_dir);
+
+        fprintf(fp, "    {\"t\":%.1f,\"x\":%.3f,\"y\":%.3f,\"z\":%.3f,\"lat\":%.3f,\"lon\":%.3f,\"alt\":%.2f,\"ecl\":%d}%s\n",
+                s.epoch, s.position.x, s.position.y, s.position.z,
+                geo.latitude * RAD2DEG, geo.longitude * RAD2DEG, geo.altitude,
+                env.in_eclipse ? 1 : 0, (i < num_steps) ? "," : "");
+        s = propagate_step_rk4(s, dt, &sc_pass, &forces);
     }
+    fprintf(fp, "  ]");
+}
+
+bool export_web_mission_json(const char *filename,
+                             OrbitReport rep_init,
+                             OptimalTransferPlan plan,
+                             OrbitReport rep_target,
+                             const GroundStation *station,
+                             const SpacecraftConfig *sc) {
+    FILE *fp = fopen(filename, "w");
+    if (fp == NULL) return false;
+
+    fprintf(fp, "{\n");
+    fprintf(fp, "  \"station\": {\"name\":\"%s\", \"lat\":%.4f, \"lon\":%.4f, \"min_el\":%.1f},\n",
+            station->name, station->coord.latitude * RAD2DEG, station->coord.longitude * RAD2DEG, station->min_elevation * RAD2DEG);
+
+    fprintf(fp, "  \"initial_report\": {\n");
+    fprintf(fp, "    \"alt_km\": %.2f, \"inc_deg\": %.2f, \"ecc\": %.4f, \"period_min\": %.2f,\n",
+            rep_init.initial_kep.a - EARTH_RADIUS, rep_init.initial_kep.i * RAD2DEG, rep_init.initial_kep.e, rep_init.period_min);
+    fprintf(fp, "    \"sun_min\": %.1f, \"ecl_min\": %.1f, \"ecl_pct\": %.1f,\n",
+            rep_init.sunlight_time_min, rep_init.eclipse_time_min, rep_init.eclipse_percentage);
+    fprintf(fp, "    \"passes\": %d, \"contact_min\": %.1f, \"max_el\": %.1f,\n",
+            rep_init.ground_passes_24h, rep_init.total_contact_min, rep_init.max_elevation_deg);
+    fprintf(fp, "    \"decay_m_day\": %.2f, \"sk_dv_yr\": %.2f, \"sk_fuel_yr\": %.3f\n  },\n",
+            rep_init.sma_decay_m_per_day, rep_init.station_keeping_dv_year, rep_init.station_keeping_fuel_yr);
+
+    fprintf(fp, "  \"maneuver\": {\n");
+    fprintf(fp, "    \"dv1_ms\": %.2f, \"dir1\": [%.3f, %.3f, %.3f],\n",
+            plan.dv1_mag * 1000.0, plan.burn1_dir_rtn.x, plan.burn1_dir_rtn.y, plan.burn1_dir_rtn.z);
+    fprintf(fp, "    \"dv2_ms\": %.2f, \"dir2\": [%.3f, %.3f, %.3f],\n",
+            plan.dv2_mag * 1000.0, plan.burn2_dir_rtn.x, plan.burn2_dir_rtn.y, plan.burn2_dir_rtn.z);
+    fprintf(fp, "    \"total_dv_ms\": %.2f, \"transfer_min\": %.2f, \"fuel_kg\": %.2f, \"final_mass_kg\": %.2f\n  },\n",
+            plan.total_dv * 1000.0, plan.transfer_time_sec / 60.0, plan.propellant_used, plan.final_mass);
+
+    fprintf(fp, "  \"target_report\": {\n");
+    fprintf(fp, "    \"alt_km\": %.2f, \"inc_deg\": %.2f, \"ecc\": %.4f, \"period_min\": %.2f,\n",
+            rep_target.initial_kep.a - EARTH_RADIUS, rep_target.initial_kep.i * RAD2DEG, rep_target.initial_kep.e, rep_target.period_min);
+    fprintf(fp, "    \"sun_min\": %.1f, \"ecl_min\": %.1f, \"ecl_pct\": %.1f,\n",
+            rep_target.sunlight_time_min, rep_target.eclipse_time_min, rep_target.eclipse_percentage);
+    fprintf(fp, "    \"passes\": %d, \"contact_min\": %.1f, \"max_el\": %.1f,\n",
+            rep_target.ground_passes_24h, rep_target.total_contact_min, rep_target.max_elevation_deg);
+    fprintf(fp, "    \"decay_m_day\": %.2f, \"sk_dv_yr\": %.2f, \"sk_fuel_yr\": %.3f\n  },\n",
+            rep_target.sma_decay_m_per_day, rep_target.station_keeping_dv_year, rep_target.station_keeping_fuel_yr);
+
+    fprintf(fp, "  \"traj_initial\": ");
+    write_trajectory_json_array(fp, rep_init.initial_kep, rep_init.period_min * 60.0 * 2.0, 240, sc);
+    fprintf(fp, ",\n");
+
+    double r1 = rep_init.initial_kep.a;
+    double r2 = rep_target.initial_kep.a;
+    KeplerianElements kep_trans = rep_init.initial_kep;
+    kep_trans.a = 0.5 * (r1 + r2);
+    kep_trans.e = fabs(r2 - r1) / (r1 + r2);
+    kep_trans.theta = 0.0;
+    fprintf(fp, "  \"traj_transfer\": ");
+    write_trajectory_json_array(fp, kep_trans, plan.transfer_time_sec, 100, sc);
+    fprintf(fp, ",\n");
+
+    KeplerianElements kep_targ_start = rep_target.initial_kep;
+    kep_targ_start.theta = PI;
+    fprintf(fp, "  \"traj_target\": ");
+    write_trajectory_json_array(fp, kep_targ_start, rep_target.period_min * 60.0 * 2.0, 240, sc);
+    fprintf(fp, "\n}\n");
+
+    fclose(fp);
+    return true;
 }
