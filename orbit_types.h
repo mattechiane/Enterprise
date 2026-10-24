@@ -51,9 +51,9 @@ typedef struct {
 // 4. STAZIONI DI TERRA E ANALISI DI MISSIONE
 // ==========================================
 typedef struct {
-    char name[64];        // Nome della stazione (es. "Milano-Bovisa" o "Fucino")
+    char name[64];        // Nome della stazione
     GeodeticCoord coord;  // Posizione geografica della stazione
-    double min_elevation; // Elevazione minima sopra l'orizzonte per il contatto (radianti)
+    double min_elevation; // Elevazione minima sopra l'orizzonte (radianti)
 } GroundStation;
 
 typedef struct {
@@ -69,6 +69,33 @@ typedef struct {
     double total_dv;      // Delta-V totale della manovra (km/s)
     double transfer_time; // Tempo di volo sull'ellisse di trasferimento (secondi)
 } HohmannTransfer;
+
+// Piano completo per passare da Orbita 1 a Orbita 2 (Quota + Inclinazione)
+typedef struct {
+    double dv1_mag;           // Modulo Impulso 1 al perigeo (km/s)
+    Vector3D burn1_dir_rtn;   // Direzione Impulso 1 nel frame satellite RTN (Radiale, Tangenziale, Normale)
+    double dv2_mag;           // Modulo Impulso 2 combinato all'apogeo (km/s)
+    Vector3D burn2_dir_rtn;   // Direzione Impulso 2 nel frame satellite RTN
+    double total_dv;          // Delta-V totale ottimale (km/s)
+    double transfer_time_sec; // Durata del trasferimento (secondi)
+    double propellant_used;   // Carburante totale bruciato per il trasferimento (kg)
+    double final_mass;        // Massa residua del satellite all'arrivo (kg)
+} OptimalTransferPlan;
+
+// Report completo generato per qualsiasi orbita (Iniziale o Target)
+typedef struct {
+    KeplerianElements initial_kep;
+    double period_min;              // Periodo orbitale (minuti)
+    double sunlight_time_min;       // Minuti di luce solare su 24h
+    double eclipse_time_min;        // Minuti di ombra (eclissi) su 24h
+    double eclipse_percentage;      // Percentuale di tempo in ombra (%)
+    int    ground_passes_24h;       // Numero di passaggi sopra la stazione in 24h
+    double total_contact_min;       // Minuti totali di comunicazione radio su 24h
+    double max_elevation_deg;       // Massima elevazione raggiunta nei passaggi (gradi)
+    double sma_decay_m_per_day;     // Perdita di quota giornaliera per attrito atmosferico (metri/giorno)
+    double station_keeping_dv_year; // Delta-V annuo per mantenere l'orbita contro il drag (m/s/anno)
+    double station_keeping_fuel_yr; // Carburante annuo per rimanere in orbita (kg/anno)
+} OrbitReport;
 
 // ==========================================
 // 5. SOTTOSISTEMI, PROPRIETA' FISICHE E AMBIENTE
