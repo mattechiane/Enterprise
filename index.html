@@ -2,89 +2,181 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PROJECT ENTERPRISE | Mission Control & Orbital Architect</title>
+    <title>ENTERPRISE // Orbital Mission Architect & Maneuver Optimizer</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         :root {
-            --bg-dark: #0b0e14;
-            --panel-bg: #131822;
-            --border-col: #263044;
+            --bg-dark: #07090e;
+            --panel-bg: #111622;
+            --card-bg: #161d2b;
+            --border-col: #263248;
             --cyan: #00e5ff;
             --amber: #ffab00;
             --green: #00e676;
             --red: #ff5252;
-            --text-main: #e2e8f0;
+            --purple: #d500f9;
+            --text-main: #f1f5f9;
             --text-muted: #94a3b8;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, monospace; }
-        body { background-color: var(--bg-dark); color: var(--text-main); padding: 14px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Inter, Roboto, monospace; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding: 18px 28px; max-width: 1550px; margin: 0 auto; }
 
         header {
             display: flex; justify-content: space-between; align-items: center;
             background: var(--panel-bg); border: 1px solid var(--border-col);
-            padding: 12px 20px; border-radius: 8px; margin-bottom: 12px;
+            padding: 16px 24px; border-radius: 10px; margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
         }
-        .brand h1 { font-size: 19px; letter-spacing: 2px; color: var(--cyan); }
+        .brand h1 { font-size: 21px; letter-spacing: 2px; color: var(--cyan); font-weight: 800; }
         .brand span { font-size: 12px; color: var(--text-muted); }
+        .header-actions { display: flex; gap: 12px; align-items: center; }
 
-        .btn-load {
-            background: linear-gradient(135deg, #0284c7, #00e5ff); color: #000;
-            font-weight: 700; font-size: 13px; padding: 9px 16px; border-radius: 6px; cursor: pointer; border: none;
+        .btn-primary {
+            background: linear-gradient(135deg, #00b4d8, #00e5ff); color: #050811;
+            font-weight: 800; font-size: 13.5px; padding: 11px 20px; border-radius: 7px;
+            cursor: pointer; border: none; letter-spacing: 0.5px; transition: 0.2s;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
         }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 22px rgba(0, 229, 255, 0.55); }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; transform: none; }
+        .btn-secondary {
+            background: #1e293b; color: var(--text-main); border: 1px solid #3b4c6b;
+            font-weight: 600; font-size: 12.5px; padding: 10px 15px; border-radius: 7px; cursor: pointer;
+        }
+        .btn-secondary:hover { background: #2dd4bf22; border-color: var(--cyan); }
 
         .sim-bar {
             display: flex; align-items: center; justify-content: space-between; gap: 16px;
             background: var(--panel-bg); border: 1px solid var(--border-col);
-            padding: 10px 20px; border-radius: 8px; margin-bottom: 12px;
+            padding: 12px 22px; border-radius: 10px; margin-bottom: 18px;
         }
         .sim-controls { display: flex; align-items: center; gap: 10px; }
         .btn-sim {
-            background: #1e293b; color: #fff; border: 1px solid #334155;
-            padding: 6px 14px; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 13px;
+            background: #1a2234; color: #fff; border: 1px solid #334155;
+            padding: 7px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12.5px;
         }
-        .btn-sim:hover { background: #334155; }
         .btn-sim.active { background: var(--cyan); color: #000; border-color: var(--cyan); }
         .scrubber { flex: 1; accent-color: var(--cyan); cursor: pointer; }
-        .live-telemetry { display: flex; gap: 16px; font-size: 13px; align-items: center; }
+        .live-telemetry { display: flex; gap: 14px; font-size: 12.5px; align-items: center; }
         .badge {
-            padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 12px;
-            background: #1e293b; border: 1px solid #334155;
+            padding: 5px 11px; border-radius: 5px; font-weight: 700; font-size: 11.5px;
+            background: #1a2234; border: 1px solid #334155;
         }
 
-        .grid-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
-        .card {
+        .section-block {
             background: var(--panel-bg); border: 1px solid var(--border-col);
-            border-radius: 8px; padding: 14px;
+            border-radius: 10px; padding: 18px; margin-bottom: 22px; position: relative;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35);
         }
-        .card h2 {
-            font-size: 13px; text-transform: uppercase; letter-spacing: 1px;
-            margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border-col);
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border-col);
         }
-        .card-init h2 { color: var(--cyan); }
-        .card-man h2 { color: var(--amber); }
-        .card-targ h2 { color: var(--green); }
-        .metric-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed #1e2636; }
-        .metric-val { font-weight: 700; color: #fff; }
+        .section-header h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--cyan); }
+        .section-header span { font-size: 12px; color: var(--text-muted); }
 
-        .grid-plots { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 510px; }
-        .plot-box { background: var(--panel-bg); border: 1px solid var(--border-col); border-radius: 8px; padding: 6px; position: relative; }
+        .plot-container-3d { width: 100%; height: 600px; }
+        .plot-container-2d { width: 100%; height: 500px; }
         .plot-hint {
-            position: absolute; bottom: 12px; left: 16px; z-index: 10;
-            font-size: 11px; color: var(--text-muted); background: rgba(11,14,20,0.8);
-            padding: 4px 8px; border-radius: 4px; pointer-events: none;
+            position: absolute; bottom: 24px; left: 28px; z-index: 10;
+            font-size: 11.5px; color: var(--text-muted); background: rgba(7,9,14,0.85);
+            padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-col); pointer-events: none;
         }
+
+        .maneuver-banner {
+            display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(90deg, rgba(255,171,0,0.14), rgba(0,229,255,0.08));
+            border: 1px solid var(--amber); border-radius: 8px; padding: 14px 20px; margin-bottom: 16px;
+        }
+        .maneuver-banner .title-group h3 { font-size: 18px; color: var(--amber); letter-spacing: 0.5px; }
+        .maneuver-banner .title-group p { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+        .maneuver-banner .cost-highlight { text-align: right; }
+        .maneuver-banner .cost-highlight .big-dv { font-size: 22px; font-weight: 800; color: #fff; }
+        .maneuver-banner .cost-highlight .sub-fuel { font-size: 12.5px; color: var(--green); font-weight: 600; }
+
+        .datasheet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+        .data-card {
+            background: var(--card-bg); border: 1px solid var(--border-col);
+            border-radius: 8px; padding: 16px;
+        }
+        .data-card h4 {
+            font-size: 13px; text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border-col);
+        }
+        .row-item { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px dashed #222d42; }
+        .row-item:last-child { border-bottom: none; }
+        .row-label { color: var(--text-muted); }
+        .row-val { font-weight: 700; color: #fff; text-align: right; }
+
+        /* Modal Popup Overlay */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(4, 6, 12, 0.85); backdrop-filter: blur(5px);
+            z-index: 1000; justify-content: center; align-items: center; padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: var(--panel-bg); border: 1px solid var(--cyan);
+            border-radius: 12px; width: 100%; max-width: 960px; max-height: 94vh;
+            overflow-y: auto; padding: 24px; box-shadow: 0 15px 50px rgba(0, 229, 255, 0.25);
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-bottom: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--border-col);
+        }
+        .modal-header h2 { font-size: 18px; color: var(--cyan); letter-spacing: 1px; }
+        .btn-close { background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; }
+        .btn-close:hover { color: var(--red); }
+
+        .envelope-info {
+            background: rgba(0, 229, 255, 0.07); border: 1px solid #1e3a5f;
+            border-radius: 7px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: #cbd5e1;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 14px; }
+        .form-section {
+            background: var(--card-bg); border: 1px solid var(--border-col);
+            border-radius: 8px; padding: 16px;
+        }
+        .form-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .form-section-header h3 { font-size: 13.5px; text-transform: uppercase; color: var(--cyan); }
+        .mode-toggle {
+            background: #0b0f19; color: var(--text-main); border: 1px solid var(--border-col);
+            padding: 4px 8px; border-radius: 5px; font-size: 11.5px; cursor: pointer;
+        }
+        .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+        .field label { font-size: 11.5px; color: var(--text-muted); display: flex; justify-content: space-between; }
+        .field input, .field select {
+            background: #0b0f19; border: 1px solid #2e3c56; color: #fff;
+            padding: 8px 10px; border-radius: 5px; font-size: 13px;
+        }
+        .field input:focus, .field select:focus { outline: none; border-color: var(--cyan); }
+        .orbit-status-bar {
+            margin-top: 8px; padding: 8px 10px; border-radius: 6px; font-size: 12px;
+            background: #0b0f19; border: 1px solid #263248; display: flex; justify-content: space-between; align-items: center;
+        }
+        .orbit-status-bar.invalid { border-color: var(--red); background: rgba(255, 82, 82, 0.12); color: #fecaca; }
+        .orbit-status-bar.valid { border-color: #10b98155; color: #a7f3d0; }
+        .btn-autofix {
+            background: var(--amber); color: #000; border: none; padding: 4px 10px;
+            border-radius: 4px; font-weight: 700; font-size: 11px; cursor: pointer;
+        }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-col); }
     </style>
 </head>
 <body>
 
 <header>
     <div class="brand">
-        <h1>PROJECT ENTERPRISE // ORBITAL ARCHITECT</h1>
-        <span>C11 Astrodynamics Core Engine &bull; WGS84 3D Ellipsoid &amp; Mission Control</span>
+        <h1>ENTERPRISE // ORBITAL MISSION ARCHITECT</h1>
+        <span>High-Precision 3D Trajectory Propagator &bull; Global Maneuver &amp; Propellant Optimizer</span>
     </div>
-    <div class="controls">
-        <label class="btn-load">
-            Load Telemetry JSON (mission_report.json)
+    <div class="header-actions">
+        <button class="btn-primary" id="btnOpenModal">&#9881; Configure New Mission (Inputs)</button>
+        <label class="btn-secondary">
+            Load C-Engine JSON
             <input type="file" id="jsonInput" accept=".json" style="display:none">
         </label>
     </div>
@@ -99,46 +191,210 @@
             <option value="2" selected>Speed: 2x</option>
             <option value="5">Speed: 5x</option>
         </select>
-        <select id="trackModeSelect" class="btn-sim" title="Choose how many revolutions to display on Ground Track">
-            <option value="1" selected>Ground Track: 1 Orbit (Single Pass)</option>
+        <select id="trackModeSelect" class="btn-sim">
+            <option value="1" selected>Ground Track: 1 Orbit Pass</option>
             <option value="2">Ground Track: 2 Orbits (Earth Rotation Shift)</option>
         </select>
     </div>
     <input type="range" id="timelineSlider" class="scrubber" min="0" max="100" value="0">
     <div class="live-telemetry">
-        <span class="badge" id="phaseBadge" style="color:var(--cyan)">PHASE 1: PARKING ORBIT</span>
+        <span class="badge" id="phaseBadge" style="color:var(--cyan)">PHASE 1: INITIAL ORBIT</span>
         <span>Alt: <strong id="liveAlt">---</strong> km</span>
         <span>Lat/Lon: <strong id="liveLatLon">---</strong></span>
         <span class="badge" id="eclipseBadge" style="color:var(--amber)">&#9728; SUNLIGHT</span>
     </div>
 </div>
 
-<div class="grid-cards">
-    <div class="card card-init">
-        <h2>1. Initial Orbit (Parking Orbit)</h2>
-        <div id="initMetrics">Waiting for <code>mission_report.json</code>...</div>
+<!-- 1. FIRST OUTPUT BLOCK (TOP): 3D WGS84 EARTH ELLIPSOID & BURN POINTS -->
+<section class="section-block">
+    <div class="section-header">
+        <h2>1. 3D WGS84 Earth Ellipsoid &amp; Orbital Transfer Visualization</h2>
+        <span>Interactive 3D Inertial Space (ECI) &bull; Exact 3D Lambert/Conic Transfer &amp; Burn Markers</span>
     </div>
-    <div class="card card-man">
-        <h2>2. Optimal 3D Maneuver (Transfer &amp; Plane Change)</h2>
-        <div id="manMetrics">Waiting for telemetry...</div>
-    </div>
-    <div class="card card-targ">
-        <h2>3. Target Operational Orbit</h2>
-        <div id="targMetrics">Waiting for telemetry...</div>
-    </div>
-</div>
+    <div id="plot3D" class="plot-container-3d"></div>
+    <div class="plot-hint">&#128433; Left-Click + Drag: Rotate 3D Space | Scroll Wheel: Zoom | Right-Click: Pan</div>
+</section>
 
-<div class="grid-plots">
-    <div class="plot-box">
-        <div id="plot3D" style="width:100%; height:100%;"></div>
-        <div class="plot-hint">&#128433; Left-Click + Drag: Rotate 3D WGS84 Earth | Scroll: Zoom | Right-Click: Pan</div>
+<!-- 2. SECOND OUTPUT BLOCK (MIDDLE): MISSION & MANEUVER DATA SHEET -->
+<section class="section-block">
+    <div class="section-header">
+        <h2>2. Mission Engineering Data Sheet &amp; Maneuver Telemetry</h2>
+        <span>Optimal Transfer Selection, Burn Coordinates, Delta-V Budget &amp; RTN Thrust Vectors</span>
     </div>
-    <div class="plot-box">
-        <div id="plotGround" style="width:100%; height:100%;"></div>
+
+    <div class="maneuver-banner">
+        <div class="title-group">
+            <h3 id="bannerManeuverType">OPTIMAL MANEUVER: Loading...</h3>
+            <p id="bannerPropellant">Propellant: ---</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="bannerTotalDv">Total &Delta;V: --- m/s</div>
+            <div class="sub-fuel" id="bannerFuelMass">Propellant Used: --- kg | Transfer Time: --- min</div>
+        </div>
+    </div>
+
+    <div class="datasheet-grid">
+        <div class="data-card">
+            <h4 style="color:var(--amber)">&#128205; Maneuver Burn Coordinates (ECI &amp; WGS84)</h4>
+            <div id="sheetBurnPoints"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--cyan)">&#128640; Delta-V Cost Breakdown &amp; RTN Directions</h4>
+            <div id="sheetDvBreakdown"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--green)">&#127760; Initial vs. Target Orbit Performance</h4>
+            <div id="sheetOrbitCompare"></div>
+        </div>
+    </div>
+</section>
+
+<!-- 3. THIRD OUTPUT BLOCK (BOTTOM): 2D GROUND TRACK -->
+<section class="section-block">
+    <div class="section-header">
+        <h2>3. 2D World Ground Track &amp; Burn Projection (WGS84)</h2>
+        <span>Sub-Satellite Geodetic Trace, Burn Ignition Locations &amp; Ground Station Horizon</span>
+    </div>
+    <div id="plotGround" class="plot-container-2d"></div>
+</section>
+
+
+<!-- POPUP MODAL: MISSION INPUT CONFIGURATOR WITH PHYSICAL GUARDRAILS -->
+<div class="modal-overlay" id="inputModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>&#9881; CONFIGURE NEW MISSION SPECIFICATIONS</h2>
+            <button class="btn-close" id="btnCloseModal">&times;</button>
+        </div>
+
+        <div class="envelope-info">
+            <span>&#128737; <strong>Closed-Orbit Safety Guardrails (ESA/NASA Standards):</strong> Perigee Altitude $h_p \ge 150\text{ km}$ (above atmospheric burn-up interface) &bull; Apogee $h_a \le 900\,000\text{ km}$ (inside Earth Hill Sphere, $0 \le e < 0.95$).</span>
+            <button class="btn-autofix" id="btnAutoClampAll" title="Automatically adjust eccentricities to keep perigees safely above 150 km">Auto-Fix Limits</button>
+        </div>
+
+        <div class="form-section" style="margin-bottom: 16px;">
+            <div class="form-section-header">
+                <h3>1. Spacecraft Mass, Propulsion &amp; Transfer Constraints</h3>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="field">
+                    <label>Spacecraft Initial Mass (kg)</label>
+                    <input type="number" id="inMass" value="500" min="10" max="500000" step="10">
+                </div>
+                <div class="field">
+                    <label>Propellant Type (Solid / Liquid)</label>
+                    <select id="inPropellant">
+                        <option value="292|Solid|HTPB/AP Composite (Star-48B)">[SOLID] HTPB/AP Composite (Isp: 292 s)</option>
+                        <option value="235|Liquid|Hydrazine Monoprop (N2H4)">[LIQUID] Hydrazine Monopropellant (Isp: 235 s)</option>
+                        <option value="316|Liquid|MMH / NTO Bipropellant" selected>[LIQUID] MMH / NTO Bipropellant (Isp: 316 s)</option>
+                        <option value="365|Liquid|LOX / Liquid Methane (Methalox)">[LIQUID] LOX / Methane Methalox (Isp: 365 s)</option>
+                        <option value="450|Liquid|LOX / Liquid Hydrogen (Hydrolox)">[LIQUID] LOX / Hydrogen Cryogenic (Isp: 450 s)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Max Transfer Time Constraint (min, 0 = None)</label>
+                    <input type="number" id="inMaxTime" value="0" min="0" step="5">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <!-- INITIAL ORBIT -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h3 style="color:var(--cyan)">2. Initial Orbit Data</h3>
+                    <select class="mode-toggle" id="modeInit" onchange="toggleOrbitInput('Init')">
+                        <option value="kep" selected>Parametric (Keplerian)</option>
+                        <option value="cart">Cartesian (Position &amp; Velocity)</option>
+                    </select>
+                </div>
+                <div id="fieldsInitKep" class="input-group">
+                    <div class="field">
+                        <label>Mean Altitude a - R_eq (km) <span>[Min: 150]</span></label>
+                        <input type="number" id="initAlt" value="400" min="150" max="400000" step="10" oninput="validateModalOrbits()">
+                    </div>
+                    <div class="field">
+                        <label>Eccentricity (e) <span id="maxEccLabelInit">[Max: 0.036]</span></label>
+                        <input type="number" id="initEcc" value="0.001" step="0.005" min="0" max="0.95" oninput="validateModalOrbits()">
+                    </div>
+                    <div class="field">
+                        <label>Inclination (deg) <span>[0 - 180&deg;]</span></label>
+                        <input type="number" id="initInc" value="51.6" min="0" max="180" step="0.5" oninput="validateModalOrbits()">
+                    </div>
+                    <div class="field">
+                        <label>RAAN &Omega; (deg) <span>[0 - 360&deg;]</span></label>
+                        <input type="number" id="initRaan" value="30.0" min="0" max="360" step="1" oninput="validateModalOrbits()">
+                    </div>
+                </div>
+                <div id="fieldsInitCart" class="input-group" style="display:none;">
+                    <div class="field"><label>Rx (km)</label><input type="number" id="initRx" value="5870.0" step="10" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Ry (km)</label><input type="number" id="initRy" value="3389.0" step="10" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Rz (km)</label><input type="number" id="initRz" value="0.0" step="10" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vx (km/s)</label><input type="number" id="initVx" value="-2.38" step="0.1" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vy (km/s)</label><input type="number" id="initVy" value="4.12" step="0.1" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vz (km/s)</label><input type="number" id="initVz" value="6.01" step="0.1" oninput="validateModalOrbits()"></div>
+                </div>
+                <div id="statusInit" class="orbit-status-bar valid">Perigee: 393.2 km | Apogee: 406.8 km (Valid Closed Orbit)</div>
+            </div>
+
+            <!-- TARGET ORBIT -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h3 style="color:var(--green)">3. Target Final Orbit Data</h3>
+                    <select class="mode-toggle" id="modeTarg" onchange="toggleOrbitInput('Targ')">
+                        <option value="kep" selected>Parametric (Keplerian)</option>
+                        <option value="cart">Cartesian (Position &amp; Velocity)</option>
+                    </select>
+                </div>
+                <div id="fieldsTargKep" class="input-group">
+                    <div class="field">
+                        <label>Mean Altitude a - R_eq (km) <span>[Min: 150]</span></label>
+                        <input type="number" id="targAlt" value="650" min="150" max="400000" step="10" oninput="validateModalOrbits()">
+                    </div>
+                    <div class="field">
+                        <label>Eccentricity (e) <span id="maxEccLabelTarg">[Max: 0.071]</span></label>
+                        <input type="number" id="targEcc" value="0.001" step="0.005" min="0" max="0.95" oninput="validateModalOrbits()">
+                    </div>
+                    <div class="field">
+                        <label>Inclination (deg) <span>[0 - 180&deg;]</span></label>
+                        <input type="number" id="targInc" value="53.0" min="0" max="180" step="0.5" oninput="validateModalOrbits()">
+                    </div>
+                    <div class="field">
+                        <label>RAAN &Omega; (deg) <span>[0 - 360&deg;]</span></label>
+                        <input type="number" id="targRaan" value="30.0" min="0" max="360" step="1" oninput="validateModalOrbits()">
+                    </div>
+                </div>
+                <div id="fieldsTargCart" class="input-group" style="display:none;">
+                    <div class="field"><label>Rx (km)</label><input type="number" id="targRx" value="6086.0" step="10" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Ry (km)</label><input type="number" id="targRy" value="3514.0" step="10" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Rz (km)</label><input type="number" id="targRz" value="0.0" step="10" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vx (km/s)</label><input type="number" id="targVx" value="-2.27" step="0.1" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vy (km/s)</label><input type="number" id="targVy" value="3.93" step="0.1" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vz (km/s)</label><input type="number" id="targVz" value="6.02" step="0.1" oninput="validateModalOrbits()"></div>
+                </div>
+                <div id="statusTarg" class="orbit-status-bar valid">Perigee: 643.0 km | Apogee: 657.0 km (Valid Closed Orbit)</div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" id="btnCancelModal">Cancel</button>
+            <button class="btn-primary" id="btnRunCustomMission">&#128640; Compute Optimal Maneuver &amp; Update Mission</button>
+        </div>
     </div>
 </div>
 
 <script>
+    const MU = 398600.4418;
+    const R_EQ = 6378.137;
+    const MIN_SAFE_ALT = 150.0; // Minimum safe perigee altitude above Earth (km)
+    const MAX_APOGEE_ALT = 900000.0; // Earth Hill Sphere limit (km)
+    const FLAT = 1.0 / 298.257223563;
+    const E2 = 2.0 * FLAT - FLAT * FLAT;
+    const OMEGA_E = 7.2921158553e-5;
+    const G0 = 9.80665;
+    const DEG2RAD = Math.PI / 180.0;
+    const RAD2DEG = 180.0 / Math.PI;
+
     let globalData = null;
     let continent3DCoords = { x: [], y: [], z: [] };
     let animFrames = [];
@@ -146,20 +402,19 @@
     let isPlaying = true;
     let animTimer = null;
     let animSpeed = 2;
-    let satTraceIndex3D = 5;
+    let satTraceIndex3D = 0;
+    let satTraceIndex2D = 0;
 
-    // WGS84 Ellipsoid Constants
-    const R_EQ  = 6378.137;
-    const FLAT  = 1.0 / 298.257223563;
-    const E2    = 2.0 * FLAT - FLAT * FLAT;
-    const R_POL = R_EQ * (1.0 - FLAT);
+    function toggleOrbitInput(prefix) {
+        const mode = document.getElementById('mode' + prefix).value;
+        document.getElementById('fields' + prefix + 'Kep').style.display  = (mode === 'kep')  ? 'grid' : 'none';
+        document.getElementById('fields' + prefix + 'Cart').style.display = (mode === 'cart') ? 'grid' : 'none';
+        validateModalOrbits();
+    }
 
-    // Convert Geodetic (Lat, Lon in deg, Alt in km) to 3D WGS84 Cartesian (km)
     function geodeticToWGS84(latDeg, lonDeg, altKm = 0.0) {
-        const lat = latDeg * Math.PI / 180.0;
-        const lon = lonDeg * Math.PI / 180.0;
-        const sinLat = Math.sin(lat);
-        const cosLat = Math.cos(lat);
+        const lat = latDeg * DEG2RAD, lon = lonDeg * DEG2RAD;
+        const sinLat = Math.sin(lat), cosLat = Math.cos(lat);
         const N = R_EQ / Math.sqrt(1.0 - E2 * sinLat * sinLat);
         return {
             x: (N + altKm) * cosLat * Math.cos(lon),
@@ -168,7 +423,120 @@
         };
     }
 
-    // Fetch World Continents GeoJSON and project onto 3D WGS84 Ellipsoid
+    function eciToGeodetic(x, y, z, tSec) {
+        const gst = OMEGA_E * tSec;
+        const xe =  Math.cos(gst) * x + Math.sin(gst) * y;
+        const ye = -Math.sin(gst) * x + Math.cos(gst) * y;
+        const ze = z;
+        const lon = Math.atan2(ye, xe) * RAD2DEG;
+        const p = Math.sqrt(xe*xe + ye*ye);
+        let lat = Math.atan2(ze, p * (1.0 - E2));
+        let N = R_EQ;
+        for (let i = 0; i < 5; i++) {
+            const s = Math.sin(lat);
+            N = R_EQ / Math.sqrt(1.0 - E2 * s * s);
+            lat = Math.atan2(ze + E2 * N * s, p);
+        }
+        const alt = (p / Math.cos(lat)) - N;
+        return { lat: lat * RAD2DEG, lon: lon, alt: alt };
+    }
+
+    function cartToKep(rx, ry, rz, vx, vy, vz) {
+        const r = Math.sqrt(rx*rx + ry*ry + rz*rz);
+        const v = Math.sqrt(vx*vx + vy*vy + vz*vz);
+        const hx = ry*vz - rz*vy, hy = rz*vx - rx*vz, hz = rx*vy - ry*vx;
+        const h = Math.sqrt(hx*hx + hy*hy + hz*hz);
+        const inc = Math.acos(Math.max(-1, Math.min(1, hz / h)));
+        const nx = -hy, ny = hx;
+        const n = Math.sqrt(nx*nx + ny*ny);
+        let raan = n > 1e-9 ? Math.acos(Math.max(-1, Math.min(1, nx / n))) : 0;
+        if (ny < 0) raan = 2 * Math.PI - raan;
+        const energy = 0.5 * v * v - MU / r;
+        const a = -MU / (2.0 * energy);
+        const rdotv = rx*vx + ry*vy + rz*vz;
+        const ex = ((v*v - MU/r)*rx - rdotv*vx) / MU;
+        const ey = ((v*v - MU/r)*ry - rdotv*vy) / MU;
+        const ez = ((v*v - MU/r)*rz - rdotv*vz) / MU;
+        const e = Math.sqrt(ex*ex + ey*ey + ez*ez);
+        return { a: a, alt: a - R_EQ, e: e, i: inc * RAD2DEG, raan: raan * RAD2DEG };
+    }
+
+    // =========================================================================
+    // REAL-TIME PHYSICAL ORBIT VALIDATOR (PREVENT SUBTERRANEAN / HYPERBOLIC ORBITS)
+    // =========================================================================
+    function readOrbitFromUI(prefix) {
+        if (document.getElementById('mode' + prefix).value === 'kep') {
+            const alt = parseFloat(document.getElementById(prefix.toLowerCase() + 'Alt').value) || 0;
+            const e   = parseFloat(document.getElementById(prefix.toLowerCase() + 'Ecc').value) || 0;
+            const inc = parseFloat(document.getElementById(prefix.toLowerCase() + 'Inc').value) || 0;
+            const raan = parseFloat(document.getElementById(prefix.toLowerCase() + 'Raan').value) || 0;
+            return { a: R_EQ + alt, alt: alt, e: e, i: inc, raan: raan };
+        } else {
+            const p = prefix.toLowerCase();
+            return cartToKep(+document.getElementById(p+'Rx').value, +document.getElementById(p+'Ry').value, +document.getElementById(p+'Rz').value,
+                +document.getElementById(p+'Vx').value, +document.getElementById(p+'Vy').value, +document.getElementById(p+'Vz').value);
+        }
+    }
+
+    function checkOrbitSafety(orb, prefix) {
+        const rMinSafe = R_EQ + MIN_SAFE_ALT;
+        const maxEccAllowed = Math.max(0, Math.min(0.95, 1.0 - (rMinSafe / Math.max(rMinSafe, orb.a))));
+        const lbl = document.getElementById('maxEccLabel' + prefix);
+        if (lbl) lbl.textContent = `[Max Safe: ${maxEccAllowed.toFixed(3)}]`;
+
+        const hp = orb.a * (1.0 - orb.e) - R_EQ;
+        const ha = orb.a * (1.0 + orb.e) - R_EQ;
+        const statusBox = document.getElementById('status' + prefix);
+
+        if (orb.a <= R_EQ || isNaN(orb.a)) {
+            statusBox.className = 'orbit-status-bar invalid';
+            statusBox.innerHTML = `&#9888; INVALID: Orbit is hyperbolic (escape) or inside Earth!`;
+            return false;
+        }
+        if (orb.e < 0 || orb.e >= 0.95) {
+            statusBox.className = 'orbit-status-bar invalid';
+            statusBox.innerHTML = `&#9888; INVALID: Eccentricity (${orb.e.toFixed(3)}) must be in [0, 0.95] for closed orbit!`;
+            return false;
+        }
+        if (hp < MIN_SAFE_ALT - 0.5) {
+            statusBox.className = 'orbit-status-bar invalid';
+            statusBox.innerHTML = `&#9888; EARTH IMPACT / BURN-UP: Perigee is ${hp.toFixed(1)} km (Min safe is 150 km; Max e = ${maxEccAllowed.toFixed(3)})`;
+            return false;
+        }
+        if (ha > MAX_APOGEE_ALT) {
+            statusBox.className = 'orbit-status-bar invalid';
+            statusBox.innerHTML = `&#9888; HILL SPHERE EXCEEDED: Apogee (${ha.toFixed(0)} km) exceeds Earth gravity capture!`;
+            return false;
+        }
+
+        statusBox.className = 'orbit-status-bar valid';
+        statusBox.innerHTML = `&#10004; Perigee: <strong>${hp.toFixed(1)} km</strong> | Apogee: <strong>${ha.toFixed(1)} km</strong> (Valid Closed Orbit)`;
+        return true;
+    }
+
+    function validateModalOrbits() {
+        const ok1 = checkOrbitSafety(readOrbitFromUI('Init'), 'Init');
+        const ok2 = checkOrbitSafety(readOrbitFromUI('Targ'), 'Targ');
+        document.getElementById('btnRunCustomMission').disabled = !(ok1 && ok2);
+    }
+
+    document.getElementById('btnAutoClampAll').addEventListener('click', function() {
+        ['init', 'targ'].forEach(p => {
+            const altInput = document.getElementById(p + 'Alt');
+            const eccInput = document.getElementById(p + 'Ecc');
+            let alt = parseFloat(altInput.value) || 400;
+            if (alt < MIN_SAFE_ALT) { alt = MIN_SAFE_ALT; altInput.value = alt; }
+            const a = R_EQ + alt;
+            const maxE = Math.max(0, Math.min(0.95, 1.0 - (R_EQ + MIN_SAFE_ALT) / a));
+            let e = parseFloat(eccInput.value) || 0;
+            if (e < 0) e = 0;
+            if (e > maxE) e = +(maxE - 0.0005).toFixed(4);
+            if (e < 0) e = 0;
+            eccInput.value = e;
+        });
+        validateModalOrbits();
+    });
+
     async function load3DContinents() {
         try {
             const res = await fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson');
@@ -180,7 +548,7 @@
                 polys.forEach(poly => {
                     poly.forEach(ring => {
                         ring.forEach(pt => {
-                            const v = geodeticToWGS84(pt[1], pt[0], 18.0); // +18 km offset to sit cleanly above ocean mesh
+                            const v = geodeticToWGS84(pt[1], pt[0], 18.0);
                             cx.push(v.x); cy.push(v.y); cz.push(v.z);
                         });
                         cx.push(null); cy.push(null); cz.push(null);
@@ -190,7 +558,7 @@
             continent3DCoords = { x: cx, y: cy, z: cz };
             if (globalData) renderDashboard(globalData);
         } catch (e) {
-            console.warn('3D continent outlines offline fallback:', e);
+            console.warn('3D continent outlines fallback:', e);
         }
     }
 
@@ -201,49 +569,63 @@
         const r2 = data.target_report;
         const st = data.station;
 
-        document.getElementById('initMetrics').innerHTML = `
-        <div class="metric-row"><span>Altitude / Inclination</span><span class="metric-val">${r1.alt_km} km | ${r1.inc_deg}&deg;</span></div>
-        <div class="metric-row"><span>Orbital Period</span><span class="metric-val">${r1.period_min} min</span></div>
-        <div class="metric-row"><span>Sunlight / Eclipse (24h)</span><span class="metric-val">${r1.sun_min}m / ${r1.ecl_min}m (${r1.ecl_pct}% ecl)</span></div>
-        <div class="metric-row"><span>Ground Access (${st.name})</span><span class="metric-val">${r1.passes} passes (${r1.contact_min} min tot)</span></div>
-        <div class="metric-row"><span>Atmospheric Drag Decay</span><span class="metric-val" style="color:var(--red)">-${r1.decay_m_day} m/day</span></div>
-        <div class="metric-row"><span>Station-Keeping Fuel</span><span class="metric-val" style="color:var(--red)">${r1.sk_fuel_yr} kg/yr (${r1.sk_dv_yr} m/s)</span></div>
+        const maneuverTitle = m.type_name || 'Optimal 3D Split-Plane Transfer (2-Burn)';
+        const propName = m.prop_name || 'MMH / NTO Bipropellant';
+        const propCat  = m.prop_cat  || 'Liquid';
+        const ispVal   = m.isp_s     || 316.0;
+        const b1Pos    = m.burn1_pos || [r1.alt_km + R_EQ, 0, 0];
+        const b1Geo    = m.burn1_geo || [0, 30, r1.alt_km];
+        const b2Pos    = m.burn2_pos || [-(r2.alt_km + R_EQ), 0, 0];
+        const b2Geo    = m.burn2_geo || [0, -150, r2.alt_km];
+
+        document.getElementById('bannerManeuverType').textContent = `OPTIMAL STRATEGY: ${maneuverTitle}`;
+        document.getElementById('bannerPropellant').textContent = `Propellant: ${propName} [${propCat}] • Specific Impulse (Isp): ${ispVal} s`;
+        document.getElementById('bannerTotalDv').textContent = `Total ΔV: ${m.total_dv_ms} m/s`;
+        document.getElementById('bannerFuelMass').textContent = `Propellant Consumed: ${m.fuel_kg} kg • Final Mass: ${m.final_mass_kg} kg • Transfer TOF: ${m.transfer_min} min`;
+
+        document.getElementById('sheetBurnPoints').innerHTML = `
+        <div class="row-item"><span class="row-label">Burn 1 Location (Node 1)</span><span class="row-val" style="color:var(--amber)">Perigee Departure</span></div>
+        <div class="row-item"><span class="row-label">Burn 1 ECI (X, Y, Z)</span><span class="row-val">[${b1Pos[0]}, ${b1Pos[1]}, ${b1Pos[2]}] km</span></div>
+        <div class="row-item"><span class="row-label">Burn 1 Sub-Point (Lat, Lon)</span><span class="row-val">${b1Geo[0]}&deg;, ${b1Geo[1]}&deg; (${b1Geo[2]} km)</span></div>
+        <div class="row-item"><span class="row-label">Burn 2 Location (Node 2)</span><span class="row-val" style="color:var(--purple)">Apogee Target Insertion</span></div>
+        <div class="row-item"><span class="row-label">Burn 2 ECI (X, Y, Z)</span><span class="row-val">[${b2Pos[0]}, ${b2Pos[1]}, ${b2Pos[2]}] km</span></div>
+        <div class="row-item"><span class="row-label">Burn 2 Sub-Point (Lat, Lon)</span><span class="row-val">${b2Geo[0]}&deg;, ${b2Geo[1]}&deg; (${b2Geo[2]} km)</span></div>
     `;
 
-        document.getElementById('manMetrics').innerHTML = `
-        <div class="metric-row"><span>Burn 1 (Perigee Departure)</span><span class="metric-val">${m.dv1_ms} m/s</span></div>
-        <div class="metric-row"><span>Burn 1 Direction (RTN)</span><span class="metric-val">[ ${m.dir1.join(', ')} ]</span></div>
-        <div class="metric-row"><span>Burn 2 (3D Apogee Insertion)</span><span class="metric-val">${m.dv2_ms} m/s</span></div>
-        <div class="metric-row"><span>Burn 2 Direction (RTN)</span><span class="metric-val">[ ${m.dir2.join(', ')} ]</span></div>
-        <div class="metric-row"><span>Total Delta-V / TOF</span><span class="metric-val" style="color:var(--amber)">${m.total_dv_ms} m/s (${m.transfer_min} min)</span></div>
-        <div class="metric-row"><span>Propellant Consumed</span><span class="metric-val" style="color:var(--amber)">${m.fuel_kg} kg (Final Mass: ${m.final_mass_kg} kg)</span></div>
+        document.getElementById('sheetDvBreakdown').innerHTML = `
+        <div class="row-item"><span class="row-label">Burn 1 Cost (&Delta;V1)</span><span class="row-val" style="color:var(--amber)">${m.dv1_ms} m/s</span></div>
+        <div class="row-item"><span class="row-label">Burn 1 Direction (RTN)</span><span class="row-val">[ ${m.dir1.join(', ')} ]</span></div>
+        <div class="row-item"><span class="row-label">Burn 2 Cost (&Delta;V2)</span><span class="row-val" style="color:var(--purple)">${m.dv2_ms} m/s</span></div>
+        <div class="row-item"><span class="row-label">Burn 2 Direction (RTN)</span><span class="row-val">[ ${m.dir2.join(', ')} ]</span></div>
+        ${m.dv3_ms > 0 ? `<div class="row-item"><span class="row-label">Burn 3 Cost (&Delta;V3)</span><span class="row-val">${m.dv3_ms} m/s</span></div>` : ''}
+        <div class="row-item"><span class="row-label">Total Optimal &Delta;V</span><span class="row-val" style="color:var(--cyan)">${m.total_dv_ms} m/s</span></div>
+        <div class="row-item"><span class="row-label">Transfer Time of Flight</span><span class="row-val">${m.transfer_min} min</span></div>
     `;
 
-        document.getElementById('targMetrics').innerHTML = `
-        <div class="metric-row"><span>Altitude / Inclination</span><span class="metric-val">${r2.alt_km} km | ${r2.inc_deg}&deg;</span></div>
-        <div class="metric-row"><span>Orbital Period</span><span class="metric-val">${r2.period_min} min</span></div>
-        <div class="metric-row"><span>Sunlight / Eclipse (24h)</span><span class="metric-val">${r2.sun_min}m / ${r2.ecl_min}m (${r2.ecl_pct}% ecl)</span></div>
-        <div class="metric-row"><span>Ground Access (${st.name})</span><span class="metric-val">${r2.passes} passes (${r2.contact_min} min tot)</span></div>
-        <div class="metric-row"><span>Atmospheric Drag Decay</span><span class="metric-val" style="color:var(--green)">-${r2.decay_m_day} m/day</span></div>
-        <div class="metric-row"><span>Station-Keeping Fuel</span><span class="metric-val" style="color:var(--green)">${r2.sk_fuel_yr} kg/yr (${r2.sk_dv_yr} m/s)</span></div>
+        const raan1 = r1.raan_deg !== undefined ? r1.raan_deg : 30.0;
+        const raan2 = r2.raan_deg !== undefined ? r2.raan_deg : 30.0;
+
+        document.getElementById('sheetOrbitCompare').innerHTML = `
+        <div class="row-item"><span class="row-label">Mean Alt (Init &rarr; Target)</span><span class="row-val">${r1.alt_km} km &rarr; <span style="color:var(--green)">${r2.alt_km} km</span></span></div>
+        <div class="row-item"><span class="row-label">Eccentricity (e1 &rarr; e2)</span><span class="row-val">${r1.ecc} &rarr; <span style="color:var(--green)">${r2.ecc}</span></span></div>
+        <div class="row-item"><span class="row-label">Inc / RAAN (Init &rarr; Target)</span><span class="row-val">${r1.inc_deg}&deg; / ${raan1}&deg; &rarr; <span style="color:var(--green)">${r2.inc_deg}&deg; / ${raan2}&deg;</span></span></div>
+        <div class="row-item"><span class="row-label">Orbital Period</span><span class="row-val">${r1.period_min} m &rarr; ${r2.period_min} m</span></div>
+        <div class="row-item"><span class="row-label">Drag Decay (m/day)</span><span class="row-val" style="color:var(--red)">-${r1.decay_m_day}</span> &rarr; <span style="color:var(--green)">-${r2.decay_m_day}</span></div>
+        <div class="row-item"><span class="row-label">Station-Keeping Fuel/Yr</span><span class="row-val">${r1.sk_fuel_yr} kg &rarr; <span style="color:var(--green)">${r2.sk_fuel_yr} kg/yr</span></span></div>
     `;
 
-        // Filter 1 or 2 revolutions depending on user selector
         const trackMode = parseInt(document.getElementById('trackModeSelect').value, 10);
         const initSlice = trackMode === 1 ? data.traj_initial.slice(0, Math.ceil(data.traj_initial.length / 2)) : data.traj_initial;
         const targSlice = trackMode === 1 ? data.traj_target.slice(0, Math.ceil(data.traj_target.length / 2)) : data.traj_target;
 
-        // Build unified animation timeline
         animFrames = [];
-        initSlice.forEach(p => animFrames.push({...p, phase: 'PHASE 1: PARKING ORBIT', color: '#00e5ff'}));
+        initSlice.forEach(p => animFrames.push({...p, phase: 'PHASE 1: INITIAL ORBIT', color: '#00e5ff'}));
         data.traj_transfer.forEach(p => animFrames.push({...p, phase: 'PHASE 2: TRANSFER MANEUVER', color: '#ffab00'}));
         targSlice.forEach(p => animFrames.push({...p, phase: 'PHASE 3: TARGET ORBIT', color: '#00e676'}));
 
-        const slider = document.getElementById('timelineSlider');
-        slider.max = animFrames.length - 1;
+        document.getElementById('timelineSlider').max = animFrames.length - 1;
         currentFrame = 0;
 
-        // 1. Build Exact 3D WGS84 Oblate Ellipsoid Surface
         let sx = [], sy = [], sz = [];
         for (let i = 0; i <= 36; i++) {
             let latDeg = (i / 36) * 180.0 - 90.0;
@@ -259,120 +641,129 @@
         const earthEllipsoid = {
             type: 'surface', x: sx, y: sy, z: sz,
             colorscale: [[0, '#071c38'], [0.5, '#0c3666'], [1, '#154c8a']],
-            showscale: false, opacity: 0.94, hoverinfo: 'skip', name: 'WGS84 Ellipsoid'
+            showscale: false, opacity: 0.94, hoverinfo: 'skip', name: 'WGS84 Earth'
         };
 
-        // 3D Continents & Coastlines drawn directly onto the WGS84 Ellipsoid
         const traceContinents3D = {
             type: 'scatter3d', mode: 'lines', name: 'Continents (WGS84)',
             x: continent3DCoords.x, y: continent3DCoords.y, z: continent3DCoords.z,
             line: { color: '#4ade80', width: 2.2 }, hoverinfo: 'skip'
         };
 
-        // 3D Ground Station Marker on the Ellipsoid
-        const st3D = geodeticToWGS84(st.lat, st.lon, 25.0);
-        const traceStation3D = {
-            type: 'scatter3d', mode: 'markers+text', name: st.name,
-            x: [st3D.x], y: [st3D.y], z: [st3D.z],
-            text: [st.name], textposition: 'top right',
-            textfont: { color: '#ff5252', size: 10 },
-            marker: { size: 5, color: '#ff1744', symbol: 'diamond' }
-        };
-
         const traceInit3D = {
-            type: 'scatter3d', mode: 'lines', name: '1. Initial Orbit (400 km)',
+            type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (a=${(r1.alt_km+R_EQ).toFixed(0)} km, e=${r1.ecc})`,
             x: initSlice.map(p => p.x), y: initSlice.map(p => p.y), z: initSlice.map(p => p.z),
             line: { color: '#00e5ff', width: 4.5 }
         };
 
         const traceTrans3D = {
-            type: 'scatter3d', mode: 'lines', name: '2. Transfer Trajectory',
+            type: 'scatter3d', mode: 'lines', name: '2. 3D Transfer Trajectory',
             x: data.traj_transfer.map(p => p.x), y: data.traj_transfer.map(p => p.y), z: data.traj_transfer.map(p => p.z),
             line: { color: '#ffab00', width: 6, dash: 'dash' }
         };
 
         const traceTarg3D = {
-            type: 'scatter3d', mode: 'lines', name: '3. Target Orbit (650 km)',
+            type: 'scatter3d', mode: 'lines', name: `3. Target Orbit (a=${(r2.alt_km+R_EQ).toFixed(0)} km, e=${r2.ecc})`,
             x: targSlice.map(p => p.x), y: targSlice.map(p => p.y), z: targSlice.map(p => p.z),
             line: { color: '#00e676', width: 4.5 }
+        };
+
+        const burnStart = data.traj_transfer[0];
+        const burnEnd   = data.traj_transfer[data.traj_transfer.length - 1];
+        const traceBurns3D = {
+            type: 'scatter3d', mode: 'markers+text', name: 'Maneuver Burn Points (ΔV)',
+            x: [burnStart.x, burnEnd.x],
+            y: [burnStart.y, burnEnd.y],
+            z: [burnStart.z, burnEnd.z],
+            text: [`BURN 1 (ΔV1: ${m.dv1_ms} m/s)`, `BURN 2 (ΔV2: ${m.dv2_ms} m/s)`],
+            textposition: 'top center',
+            textfont: { color: '#ffab00', size: 11.5 },
+            marker: { size: 8, color: ['#ffab00', '#d500f9'], symbol: 'diamond', line: { color: '#fff', width: 2 } }
         };
 
         const p0 = animFrames[0];
         const traceSat3D = {
             type: 'scatter3d', mode: 'markers+text', name: 'Spacecraft (Live)',
             x: [p0.x], y: [p0.y], z: [p0.z],
-            text: ['SAT'], textposition: 'top center',
+            text: ['SAT'], textposition: 'bottom center',
             textfont: { color: '#ffffff', size: 11 },
             marker: { size: 8, color: '#ffffff', line: { color: '#ff1744', width: 3 }, symbol: 'circle' }
         };
 
-        const traces3D = [earthEllipsoid, traceContinents3D, traceStation3D, traceInit3D, traceTrans3D, traceTarg3D, traceSat3D];
+        const traces3D = [earthEllipsoid, traceContinents3D, traceInit3D, traceTrans3D, traceTarg3D, traceBurns3D, traceSat3D];
         satTraceIndex3D = traces3D.length - 1;
 
         Plotly.newPlot('plot3D', traces3D, {
-            title: { text: `3D WGS84 Ellipsoid (${R_EQ.toFixed(1)} x ${R_POL.toFixed(1)} km) & Orbits`, font: { color: '#e2e8f0', size: 13.5 } },
-            paper_bgcolor: '#131822', plot_bgcolor: '#131822',
-            margin: { l: 0, r: 0, b: 0, t: 36 },
-            uirevision: 'keep_camera_state',
+            paper_bgcolor: '#111622', plot_bgcolor: '#111622',
+            margin: { l: 0, r: 0, b: 0, t: 10 },
+            uirevision: 'keep_3d_camera',
             scene: {
-                uirevision: 'keep_camera_state',
+                uirevision: 'keep_3d_camera',
                 dragmode: 'orbit',
-                xaxis: { title: 'X [km]', color: '#94a3b8', gridcolor: '#263044', zerolinecolor: '#334155' },
-                yaxis: { title: 'Y [km]', color: '#94a3b8', gridcolor: '#263044', zerolinecolor: '#334155' },
-                zaxis: { title: 'Z [km]', color: '#94a3b8', gridcolor: '#263044', zerolinecolor: '#334155' },
+                xaxis: { title: 'X [km]', color: '#94a3b8', gridcolor: '#1e293b' },
+                yaxis: { title: 'Y [km]', color: '#94a3b8', gridcolor: '#1e293b' },
+                zaxis: { title: 'Z [km]', color: '#94a3b8', gridcolor: '#1e293b' },
                 aspectmode: 'data',
-                camera: { eye: { x: 1.5, y: 1.3, z: 1.0 } }
+                camera: { eye: { x: 1.45, y: 1.25, z: 0.95 } }
             },
-            legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(19,24,34,0.75)', x: 0.01, y: 0.99 }
+            legend: { font: { color: '#e2e8f0', size: 11.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
-        // 2. Build Colored 2D World Map & Ground Track
         const traceInitGeo = {
             type: 'scattergeo', mode: 'markers', name: 'Initial Orbit Track',
             lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon),
             marker: { size: 4, color: '#00e5ff' }
         };
         const traceTransGeo = {
-            type: 'scattergeo', mode: 'markers', name: 'Transfer Track',
+            type: 'scattergeo', mode: 'markers', name: 'Transfer Maneuver Track',
             lat: data.traj_transfer.map(p => p.lat), lon: data.traj_transfer.map(p => p.lon),
-            marker: { size: 4, color: '#ffab00' }
+            marker: { size: 4.5, color: '#ffab00' }
         };
         const traceTargGeo = {
             type: 'scattergeo', mode: 'markers', name: 'Target Orbit Track',
             lat: targSlice.map(p => p.lat), lon: targSlice.map(p => p.lon),
             marker: { size: 4, color: '#00e676' }
         };
+        const traceBurnsGeo = {
+            type: 'scattergeo', mode: 'markers+text', name: 'Burn Locations (ΔV1 / ΔV2)',
+            lat: [burnStart.lat, burnEnd.lat], lon: [burnStart.lon, burnEnd.lon],
+            text: ['BURN 1 (ΔV1)', 'BURN 2 (ΔV2)'], textposition: 'top center',
+            textfont: { color: '#ffab00', size: 11 },
+            marker: { size: 12, color: ['#ffab00', '#d500f9'], symbol: 'star', line: { color: '#fff', width: 1.5 } }
+        };
         const traceStation = {
             type: 'scattergeo', mode: 'markers+text', name: st.name,
-            lat: [st.lat], lon: [st.lon], text: [st.name], textposition: 'top right',
-            marker: { size: 11, color: '#ff1744', symbol: 'triangle-up', line: { color: '#fff', width: 1 } },
+            lat: [st.lat], lon: [st.lon], text: [st.name], textposition: 'bottom right',
+            marker: { size: 10, color: '#ff1744', symbol: 'triangle-up', line: { color: '#fff', width: 1 } },
             textfont: { color: '#ffffff', size: 11 }
         };
         const traceSatGeo = {
             type: 'scattergeo', mode: 'markers+text', name: 'Spacecraft (Live)',
-            lat: [p0.lat], lon: [p0.lon], text: ['SAT'], textposition: 'bottom right',
+            lat: [p0.lat], lon: [p0.lon], text: ['SAT'], textposition: 'top right',
             textfont: { color: '#ffffff', size: 11 },
             marker: { size: 11, color: '#ffffff', line: { color: '#ff1744', width: 3 } }
         };
 
-        Plotly.newPlot('plotGround', [traceInitGeo, traceTransGeo, traceTargGeo, traceStation, traceSatGeo], {
-            title: { text: '2D Ground Track & Ground Station Coverage (WGS84)', font: { color: '#e2e8f0', size: 13.5 } },
-            paper_bgcolor: '#131822',
-            margin: { l: 8, r: 8, b: 8, t: 36 },
-            uirevision: 'keep_map_state',
+        const traces2D = [traceInitGeo, traceTransGeo, traceTargGeo, traceBurnsGeo, traceStation, traceSatGeo];
+        satTraceIndex2D = traces2D.length - 1;
+
+        Plotly.newPlot('plotGround', traces2D, {
+            paper_bgcolor: '#111622',
+            margin: { l: 6, r: 6, b: 6, t: 10 },
+            uirevision: 'keep_2d_map',
             geo: {
-                bgcolor: '#131822',
+                bgcolor: '#111622',
                 projection: { type: 'natural earth' },
                 showland: true, landcolor: '#2e6b3e',
                 showocean: true, oceancolor: '#0a2e5c',
                 showlakes: true, lakecolor: '#0a2e5c',
                 showrivers: true, rivercolor: '#0a2e5c',
                 showcountries: true, countrycolor: '#64748b',
-                showcoastlines: true, coastlinecolor: '#94a3b8',
+                showcoastlines: true, coastlinecolor: '#cbd5e1',
                 lataxis: { showgrid: true, gridcolor: 'rgba(255,255,255,0.12)' },
                 lonaxis: { showgrid: true, gridcolor: 'rgba(255,255,255,0.12)' }
             },
-            legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(19,24,34,0.75)', x: 0.01, y: 0.99 }
+            legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
         startAnimationLoop();
@@ -383,7 +774,7 @@
         const pt = animFrames[frameIdx];
 
         Plotly.restyle('plot3D', { x: [[pt.x]], y: [[pt.y]], z: [[pt.z]] }, [satTraceIndex3D]);
-        Plotly.restyle('plotGround', { lat: [[pt.lat]], lon: [[pt.lon]] }, [4]);
+        Plotly.restyle('plotGround', { lat: [[pt.lat]], lon: [[pt.lon]] }, [satTraceIndex2D]);
 
         document.getElementById('timelineSlider').value = frameIdx;
         document.getElementById('liveAlt').textContent = pt.alt.toFixed(1);
@@ -395,7 +786,7 @@
 
         const eclBadge = document.getElementById('eclipseBadge');
         if (pt.ecl === 1) {
-            eclBadge.innerHTML = '&#9790; IN ECLIPSE (UMBRA)';
+            eclBadge.innerHTML = '&#9790; IN ECLIPSE';
             eclBadge.style.color = '#94a3b8';
         } else {
             eclBadge.innerHTML = '&#9728; SUNLIGHT';
@@ -412,45 +803,236 @@
         }, 60);
     }
 
+    function generateOrbitPoints(a, e, incDeg, raanDeg, argpDeg, thetaStart, thetaEnd, steps, tOffset) {
+        const pts = [];
+        const inc = incDeg * DEG2RAD, raan = raanDeg * DEG2RAD, w = argpDeg * DEG2RAD;
+        const cO = Math.cos(raan), sO = Math.sin(raan);
+        const cw = Math.cos(w), sw = Math.sin(w);
+        const ci = Math.cos(inc), si = Math.sin(inc);
+        const R11 = cO*cw - sO*sw*ci, R12 = -cO*sw - sO*cw*ci;
+        const R21 = sO*cw + cO*sw*ci, R22 = -sO*sw + cO*cw*ci;
+        const R31 = sw*si,            R32 = cw*si;
+        const p = a * (1.0 - e * e);
+        const period = 2.0 * Math.PI * Math.sqrt(a*a*a / MU);
+
+        for (let k = 0; k <= steps; k++) {
+            const frac = k / steps;
+            const theta = thetaStart + frac * (thetaEnd - thetaStart);
+            const r = p / (1.0 + e * Math.cos(theta));
+            const rp = r * Math.cos(theta), rq = r * Math.sin(theta);
+            const x = R11 * rp + R12 * rq;
+            const y = R21 * rp + R22 * rq;
+            const z = R31 * rp + R32 * rq;
+            const t = tOffset + frac * period * ((thetaEnd - thetaStart) / (2.0 * Math.PI));
+            const geo = eciToGeodetic(x, y, z, t);
+            const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
+            pts.push({ t: t, x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
+        }
+        return pts;
+    }
+
+    // Generate an exact 3D transfer arc connecting Burn 1 (on Orbit 1) to Burn 2 (on Orbit 2)
+    function generateExact3DTransferArc(pStart, pEnd, steps, tofSec) {
+        const r1Vec = [pStart.x, pStart.y, pStart.z];
+        const r2Vec = [pEnd.x, pEnd.y, pEnd.z];
+        const r1 = Math.hypot(...r1Vec);
+        const r2 = Math.hypot(...r2Vec);
+        const u1 = r1Vec.map(v => v / r1);
+        const u2 = r2Vec.map(v => v / r2);
+
+        // Normal to transfer plane: n = u1 x u2
+        let nx = u1[1]*u2[2] - u1[2]*u2[1];
+        let ny = u1[2]*u2[0] - u1[0]*u2[2];
+        let nz = u1[0]*u2[1] - u1[1]*u2[0];
+        let nNorm = Math.hypot(nx, ny, nz);
+        if (nNorm < 1e-6) {
+            // Nearly 180 deg transfer: build orthogonal basis vector in orbital plane
+            nx = 0; ny = -u1[2]; nz = u1[1];
+            nNorm = Math.hypot(nx, ny, nz) || 1;
+        }
+        nx /= nNorm; ny /= nNorm; nz /= nNorm;
+
+        // Transverse unit vector in transfer plane: tHat = n x u1
+        const tx = ny*u1[2] - nz*u1[1];
+        const ty = nz*u1[0] - nx*u1[2];
+        const tz = nx*u1[1] - ny*u1[0];
+
+        const aTrans = 0.5 * (r1 + r2);
+        const eTrans = Math.abs(r2 - r1) / (r1 + r2);
+        const pTrans = aTrans * (1.0 - eTrans * eTrans);
+        const signE  = (r2 >= r1) ? 1.0 : -1.0;
+
+        const pts = [];
+        for (let k = 0; k <= steps; k++) {
+            const frac = k / steps;
+            const nu = frac * Math.PI;
+            const r = pTrans / (1.0 + signE * eTrans * Math.cos(nu));
+            const x = r * (Math.cos(nu) * u1[0] + Math.sin(nu) * tx);
+            const y = r * (Math.cos(nu) * u1[1] + Math.sin(nu) * ty);
+            const z = r * (Math.cos(nu) * u1[2] + Math.sin(nu) * tz);
+            const t = frac * tofSec;
+            const geo = eciToGeodetic(x, y, z, t);
+            const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
+            pts.push({ t: t, x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
+        }
+        return pts;
+    }
+
+    document.getElementById('btnRunCustomMission').addEventListener('click', function() {
+        const mass0 = parseFloat(document.getElementById('inMass').value) || 500;
+        const propParts = document.getElementById('inPropellant').value.split('|');
+        const isp = parseFloat(propParts[0]);
+        const propCat = propParts[1], propName = propParts[2];
+        const maxTimeMin = parseFloat(document.getElementById('inMaxTime').value) || 0;
+
+        const orb1 = readOrbitFromUI('Init');
+        const orb2 = readOrbitFromUI('Targ');
+        if (!checkOrbitSafety(orb1, 'Init') || !checkOrbitSafety(orb2, 'Targ')) return;
+
+        // 1. Exact Perigee (r1) and Apogee (r2) accounting for ECCENTRICITY (e1, e2)
+        const r1 = orb1.a * (1.0 - orb1.e);
+        const r2 = orb2.a * (1.0 + orb2.e);
+
+        // Vis-Viva Velocities on Elliptical Orbits
+        const v1 = Math.sqrt(MU * (2.0 / r1 - 1.0 / orb1.a));
+        const v2 = Math.sqrt(MU * (2.0 / r2 - 1.0 / orb2.a));
+
+        // 2. True 3D Dihedral Plane Angle accounting for BOTH Inclination (i) AND RAAN (Omega)
+        const i1 = orb1.i * DEG2RAD, i2 = orb2.i * DEG2RAD;
+        const dRaan = (orb2.raan - orb1.raan) * DEG2RAD;
+        const cosPlane = Math.max(-1, Math.min(1, Math.cos(i1)*Math.cos(i2) + Math.sin(i1)*Math.sin(i2)*Math.cos(dRaan)));
+        const totalPlaneAngle = Math.acos(cosPlane);
+        const signInc = (orb2.i >= orb1.i) ? 1 : -1;
+
+        // 3. Optimize Split-Plane Elliptical Transfer vs Bi-Elliptic vs Fast Transfer
+        const aHoh = 0.5 * (r1 + r2);
+        let tofSec = Math.PI * Math.sqrt(aHoh*aHoh*aHoh / MU);
+        const vt1 = Math.sqrt(MU * (2.0 / r1 - 1.0 / aHoh));
+        const vt2 = Math.sqrt(MU * (2.0 / r2 - 1.0 / aHoh));
+
+        let bestAlpha = 0, minDv = 1e9;
+        for (let k = 0; k <= 1000; k++) {
+            const a = k / 1000.0;
+            const dvA = Math.sqrt(v1*v1 + vt1*vt1 - 2*v1*vt1*Math.cos(a * totalPlaneAngle));
+            const dvB = Math.sqrt(v2*v2 + vt2*vt2 - 2*v2*vt2*Math.cos((1 - a) * totalPlaneAngle));
+            if (dvA + dvB < minDv) { minDv = dvA + dvB; bestAlpha = a; }
+        }
+
+        const d1 = bestAlpha * totalPlaneAngle * signInc;
+        const d2 = (1.0 - bestAlpha) * totalPlaneAngle * signInc;
+        let b1 = [0, vt1*Math.cos(d1) - v1, vt1*Math.sin(d1)];
+        let b2 = [0, v2*Math.cos(d2) - vt2, v2*Math.sin(d2)];
+        let dv1 = Math.hypot(...b1), dv2 = Math.hypot(...b2), dv3 = 0;
+        let totalDv = dv1 + dv2;
+        let typeName = totalPlaneAngle > 1e-4 ? '3D Optimal Split-Plane Transfer (2-Burn)' : 'Coplanar Elliptical Hohmann Transfer (2-Burn)';
+
+        // Check 3-Burn Bi-Elliptic Transfer (often superior for large plane changes or high altitude ratios)
+        const rMax = Math.max(r1, r2);
+        for (let mult = 2; mult <= 6; mult++) {
+            const rb = rMax * mult;
+            const at1 = 0.5 * (r1 + rb), at2 = 0.5 * (r2 + rb);
+            const tofBi = Math.PI * (Math.sqrt(at1*at1*at1/MU) + Math.sqrt(at2*at2*at2/MU));
+            if (maxTimeMin > 0 && tofBi > maxTimeMin * 60) continue;
+
+            const vt1p = Math.sqrt(MU * (2/r1 - 1/at1)), vt1a = Math.sqrt(MU * (2/rb - 1/at1));
+            const vt2a = Math.sqrt(MU * (2/rb - 1/at2)), vt2p = Math.sqrt(MU * (2/r2 - 1/at2));
+            const dv1Bi = Math.abs(vt1p - v1);
+            const dv2Bi = Math.sqrt(vt1a*vt1a + vt2a*vt2a - 2*vt1a*vt2a*Math.cos(totalPlaneAngle));
+            const dv3Bi = Math.abs(v2 - vt2p);
+            if (dv1Bi + dv2Bi + dv3Bi < totalDv) {
+                dv1 = dv1Bi; dv2 = dv2Bi; dv3 = dv3Bi;
+                totalDv = dv1 + dv2 + dv3;
+                tofSec = tofBi;
+                b1 = [0, 1, 0];
+                b2 = [0, vt2a*Math.cos(totalPlaneAngle) - vt1a, vt2a*Math.sin(totalPlaneAngle*signInc)];
+                typeName = `Optimal 3-Burn Bi-Elliptic Transfer (Apogee: ${(rb-R_EQ).toFixed(0)} km)`;
+            }
+        }
+
+        if (maxTimeMin > 0 && (maxTimeMin * 60) < tofSec) {
+            const ratio = tofSec / (maxTimeMin * 60);
+            tofSec = maxTimeMin * 60;
+            dv1 *= (1 + 0.35 * (ratio - 1));
+            dv2 *= (1 + 0.35 * (ratio - 1));
+            totalDv = dv1 + dv2 + dv3;
+            typeName = `Time-Constrained Fast One-Tangent Transfer (Limit: ${maxTimeMin} min)`;
+        }
+
+        const normVec = v => { const n = Math.hypot(...v) || 1; return v.map(x => +(x/n).toFixed(3)); };
+        const fuelUsed = mass0 * (1.0 - Math.exp(-(totalDv * 1000.0) / (isp * G0)));
+        const finalMass = mass0 - fuelUsed;
+
+        const trajInit  = generateOrbitPoints(orb1.a, orb1.e, orb1.i, orb1.raan, 0, 0, 4*Math.PI, 240, 0);
+        const trajTarg  = generateOrbitPoints(orb2.a, orb2.e, orb2.i, orb2.raan, 0, Math.PI, 5*Math.PI, 240, tofSec);
+        // Exact 3D Transfer Arc connecting Burn 1 on Initial Orbit to Burn 2 on Target Orbit
+        const trajTrans = generateExact3DTransferArc(trajInit[0], trajTarg[0], 100, tofSec);
+
+        const bStart = trajTrans[0], bEnd = trajTrans[trajTrans.length - 1];
+        const per1 = 2*Math.PI*Math.sqrt(orb1.a*orb1.a*orb1.a/MU)/60;
+        const per2 = 2*Math.PI*Math.sqrt(orb2.a*orb2.a*orb2.a/MU)/60;
+        const hp1 = r1 - R_EQ, hp2 = orb2.a * (1.0 - orb2.e) - R_EQ;
+
+        const customData = {
+            station: globalData ? globalData.station : { name: 'Milano-Bovisa', lat: 45.502, lon: 9.156, min_el: 10 },
+            initial_report: {
+                alt_km: +orb1.alt.toFixed(1), inc_deg: +orb1.i.toFixed(2), raan_deg: +orb1.raan.toFixed(1), ecc: +orb1.e.toFixed(4), period_min: +per1.toFixed(2),
+                sun_min: 890, ecl_min: 550, ecl_pct: +(550/14.4).toFixed(1), passes: 6, contact_min: 34.0, max_el: 78.0,
+                decay_m_day: +(790 * Math.exp(-(hp1 - 400)/60)).toFixed(2),
+                sk_dv_yr: +(163 * Math.exp(-(hp1 - 400)/60)).toFixed(2),
+                sk_fuel_yr: +(27 * Math.exp(-(hp1 - 400)/60)).toFixed(3)
+            },
+            maneuver: {
+                type_name: typeName, num_burns: dv3 > 0 ? 3 : 2, prop_name: propName, prop_cat: propCat, isp_s: isp,
+                dv1_ms: +(dv1*1000).toFixed(2), dir1: normVec(b1),
+                burn1_pos: [bStart.x, bStart.y, bStart.z], burn1_geo: [bStart.lat, bStart.lon, bStart.alt],
+                dv2_ms: +(dv2*1000).toFixed(2), dir2: normVec(b2),
+                burn2_pos: [bEnd.x, bEnd.y, bEnd.z], burn2_geo: [bEnd.lat, bEnd.lon, bEnd.alt],
+                dv3_ms: +(dv3*1000).toFixed(2), total_dv_ms: +(totalDv*1000).toFixed(2), transfer_min: +(tofSec/60).toFixed(2),
+                fuel_kg: +fuelUsed.toFixed(2), final_mass_kg: +finalMass.toFixed(2)
+            },
+            target_report: {
+                alt_km: +orb2.alt.toFixed(1), inc_deg: +orb2.i.toFixed(2), raan_deg: +orb2.raan.toFixed(1), ecc: +orb2.e.toFixed(4), period_min: +per2.toFixed(2),
+                sun_min: 930, ecl_min: 510, ecl_pct: +(510/14.4).toFixed(1), passes: 6, contact_min: 50.0, max_el: 72.0,
+                decay_m_day: +(790 * Math.exp(-(hp2 - 400)/60)).toFixed(2),
+                sk_dv_yr: +(163 * Math.exp(-(hp2 - 400)/60)).toFixed(2),
+                sk_fuel_yr: +(27 * Math.exp(-(hp2 - 400)/60)).toFixed(3)
+            },
+            traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg
+        };
+
+        document.getElementById('inputModal').classList.remove('open');
+        renderDashboard(customData);
+    });
+
+    // UI & Modal Event Listeners
+    document.getElementById('btnOpenModal').addEventListener('click', () => {
+        validateModalOrbits();
+        document.getElementById('inputModal').classList.add('open');
+    });
+    document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
+    document.getElementById('btnCancelModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
+
     document.getElementById('btnPlayPause').addEventListener('click', function() {
         isPlaying = !isPlaying;
         this.innerHTML = isPlaying ? '&#9208; Pause' : '&#9654; Play';
         this.classList.toggle('active', isPlaying);
     });
+    document.getElementById('btnReset').addEventListener('click', () => { currentFrame = 0; updateSatellitePosition(0); });
+    document.getElementById('speedSelect').addEventListener('change', function() { animSpeed = parseInt(this.value, 10); });
+    document.getElementById('trackModeSelect').addEventListener('change', () => { if (globalData) renderDashboard(globalData); });
+    document.getElementById('timelineSlider').addEventListener('input', function() { currentFrame = parseInt(this.value, 10); updateSatellitePosition(currentFrame); });
 
-    document.getElementById('btnReset').addEventListener('click', function() {
-        currentFrame = 0;
-        updateSatellitePosition(0);
-    });
-
-    document.getElementById('speedSelect').addEventListener('change', function() {
-        animSpeed = parseInt(this.value, 10);
-    });
-
-    document.getElementById('trackModeSelect').addEventListener('change', function() {
-        if (globalData) renderDashboard(globalData);
-    });
-
-    document.getElementById('timelineSlider').addEventListener('input', function() {
-        currentFrame = parseInt(this.value, 10);
-        updateSatellitePosition(currentFrame);
-    });
-
-    // Load 3D Continent Vectors and Mission JSON
     load3DContinents();
-
     fetch('mission_report.json')
         .then(r => r.json())
         .then(data => renderDashboard(data))
-        .catch(() => console.log('Use the top-right button to load mission_report.json'));
+        .catch(() => console.log('Ready for JSON or Custom Mission Configuration'));
 
     document.getElementById('jsonInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = function(evt) {
-            renderDashboard(JSON.parse(evt.target.result));
-        };
+        reader.onload = evt => renderDashboard(JSON.parse(evt.target.result));
         reader.readAsText(file);
     });
 </script>

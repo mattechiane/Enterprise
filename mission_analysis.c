@@ -40,11 +40,45 @@ PropellantSpec get_propellant_specs(PropellantType type) {
     return p;
 }
 
-KeplerianElements resolve_user_orbit_input(OrbitInputSpec input, double mu) {
-    if (input.mode == INPUT_CARTESIAN) {
-        return cartesian_to_keplerian(input.cart, mu);
+bool validate_and_clamp_closed_orbit(KeplerianElements *kep, char *warning_msg) {
+    bool valid = true;
+    if (warning_msg) warning_msg[0] = '\0';
+
+    double r_min_safe = EARTH_RADIUS + MIN_SAFE_PERIGEE_ALT_KM;
+
+    // 1. Controllo Semiasse Maggiore minimo
+    if (kep->a < r_min_safe) {
+        kep->a = r_min_safe;
+        valid = false;
+        if (warning_msg) strcpy(warning_msg, "Semi-major axis raised to minimum safe LEO altitude (150 km).");
     }
-    return input.kep;
+
+    // 2. Controllo Orbita Chiusa (0 <= e < 0.95)
+    if (kep->e < 0.0) kep->e = 0.0;
+    if (kep->e > 0.95) {
+        kep->e = 0.95;
+        valid = false;
+    }
+
+    // 3. Controllo Anti-Impatto Terrestre: r_perigee = a * (1 - e) >= R_earth + 150 km
+    double e_max_perigee = 1.0 - (r_min_safe / kep->a);
+    if (e_max_perigee < 0.0) e_max_perigee = 0.0;
+
+    if (kep->e > e_max_perigee) {
+        kep->e = e_max_perigee;
+        valid = false;
+        if (warning_msg) {
+            snprintf(warning_msg, 128, "Eccentricity clamped to %.4f to prevent Earth impact (Perigee >= 150 km).", e_max_perigee);
+        }
+    }
+
+    return valid;
+}
+
+KeplerianElements resolve_user_orbit_input(OrbitInputSpec input, double mu) {
+    KeplerianElements kep = (input.mode == INPUT_CARTESIAN) ? cartesian_to_keplerian(input.cart, mu) : input.kep;
+    validate_and_clamp_closed_orbit(&kep, NULL);
+    return kep;
 }
 
 Vector3D geodetic_to_ecef(GeodeticCoord geo) {
@@ -134,18 +168,29 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
     best.time_constrained = (max_transfer_time_sec > 0.0);
     best.max_time_limit_s = max_transfer_time_sec;
 
-    double r1 = orb_init.a;
-    double r2 = orb_target.a;
-    double delta_inc = fabs(orb_target.i - orb_init.i);
-    double sign_inc  = (orb_target.i >= orb_init.i) ? 1.0 : -1.0;
+    // 1. Validazione fisica anti-impatto terrestre
+    validate_and_clamp_closed_orbit(&orb_init, NULL);
+    validate_and_clamp_closed_orbit(&orb_target, NULL);
 
-    double v1 = sqrt(mu / r1);
-    double v2 = sqrt(mu / r2);
+    // 2. Calcolo raggi e velocità reali tenendo conto dell'ECCENTRICITA' (e1, e2)
+    // Partenza dal perigeo dell'orbita 1 (r1_p) e arrivo all'apogeo dell'orbita 2 (r2_a)
+    double r1 = orb_init.a * (1.0 - orb_init.e);
+    double r2 = orb_target.a * (1.0 + orb_target.e);
+
+    // Velocità vis-viva esatte su orbite ellittiche
+    double v1 = sqrt(mu * ((2.0 / r1) - (1.0 / orb_init.a)));
+    double v2 = sqrt(mu * ((2.0 / r2) - (1.0 / orb_target.a)));
+
+    // 3. Angolo diedro 3D reale tra i piani orbitali (include sia Inclinazione sia RAAN!)
+    double cos_theta = cos(orb_init.i) * cos(orb_target.i) +
+                       sin(orb_init.i) * sin(orb_target.i) * cos(orb_target.RAAN - orb_init.RAAN);
+    if (cos_theta >  1.0) cos_theta =  1.0;
+    if (cos_theta < -1.0) cos_theta = -1.0;
+    double total_plane_angle = acos(cos_theta);
+    double sign_inc = (orb_target.i >= orb_init.i) ? 1.0 : -1.0;
 
     // ------------------------------------------------------------------
-    // CANDIDATO 1 & 2: HOHMANN CON RIPARTIZIONE OTTIMALE DEL CAMBIO PIANO
-    // Cerchiamo la frazione alpha in [0, 1] di cambio piano sul Burn 1
-    // e (1 - alpha) sul Burn 2 che minimizza il Delta-V totale.
+    // CANDIDATO 1 & 2: ELLIPTICAL SPLIT-PLANE HOHMANN (Perigeo -> Apogeo)
     // ------------------------------------------------------------------
     double a_hoh = 0.5 * (r1 + r2);
     double tof_hoh = PI * sqrt((a_hoh * a_hoh * a_hoh) / mu);
@@ -157,24 +202,24 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
 
     for (int k = 0; k <= 1000; k++) {
         double alpha = (double)k / 1000.0;
-        double di1 = alpha * delta_inc;
-        double di2 = (1.0 - alpha) * delta_inc;
+        double d1 = alpha * total_plane_angle;
+        double d2 = (1.0 - alpha) * total_plane_angle;
 
-        double dv1 = sqrt(v1*v1 + vt1_hoh*vt1_hoh - 2.0*v1*vt1_hoh*cos(di1));
-        double dv2 = sqrt(v2*v2 + vt2_hoh*vt2_hoh - 2.0*v2*vt2_hoh*cos(di2));
+        double dv1 = sqrt(v1*v1 + vt1_hoh*vt1_hoh - 2.0*v1*vt1_hoh*cos(d1));
+        double dv2 = sqrt(v2*v2 + vt2_hoh*vt2_hoh - 2.0*v2*vt2_hoh*cos(d2));
         if ((dv1 + dv2) < min_hoh_dv) {
             min_hoh_dv = dv1 + dv2;
             best_alpha = alpha;
         }
     }
 
-    double di1_opt = best_alpha * delta_inc * sign_inc;
-    double di2_opt = (1.0 - best_alpha) * delta_inc * sign_inc;
+    double d1_opt = best_alpha * total_plane_angle * sign_inc;
+    double d2_opt = (1.0 - best_alpha) * total_plane_angle * sign_inc;
 
-    Vector3D b1_hoh = {0.0, vt1_hoh * cos(di1_opt) - v1, vt1_hoh * sin(di1_opt)};
-    Vector3D b2_hoh = {0.0, v2 * cos(di2_opt) - vt2_hoh, v2 * sin(di2_opt)};
+    Vector3D b1_hoh = {0.0, vt1_hoh * cos(d1_opt) - v1, vt1_hoh * sin(d1_opt)};
+    Vector3D b2_hoh = {0.0, v2 * cos(d2_opt) - vt2_hoh, v2 * sin(d2_opt)};
 
-    strcpy(best.maneuver_name, (delta_inc > 1e-4) ? "Optimal Split-Plane Hohmann (2-Burn)" : "Coplanar Hohmann Transfer (2-Burn)");
+    strcpy(best.maneuver_name, (total_plane_angle > 1e-4) ? "3D Optimal Split-Plane Transfer (2-Burn)" : "Coplanar Elliptical Hohmann Transfer (2-Burn)");
     best.num_burns = 2;
     best.dv1_mag = vec_norm(b1_hoh);
     best.dv2_mag = vec_norm(b2_hoh);
@@ -186,17 +231,15 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
     best.transfer_time_sec = tof_hoh;
 
     // ------------------------------------------------------------------
-    // CANDIDATO 3: TRASFERIMENTO BI-ELLITTICO (3 Impulsi)
-    // Vantaggioso quando r2/r1 > 11.94 oppure per forti cambi di piano!
+    // CANDIDATO 3: TRASFERIMENTO BI-ELLITTICO 3D (3 Impulsi)
     // ------------------------------------------------------------------
     double r_max = (r2 > r1) ? r2 : r1;
     for (int mult = 2; mult <= 6; mult++) {
-        double rb = r_max * (double)mult; // Raggio di apogeo intermedio
+        double rb = r_max * (double)mult;
         double a_t1 = 0.5 * (r1 + rb);
         double a_t2 = 0.5 * (r2 + rb);
         double tof_bi = PI * (sqrt(a_t1*a_t1*a_t1 / mu) + sqrt(a_t2*a_t2*a_t2 / mu));
 
-        // Se c'è un vincolo di tempo e la Bi-Ellittica lo sfora, la scartiamo
         if (best.time_constrained && tof_bi > max_transfer_time_sec) continue;
 
         double vt1_p = sqrt(mu * ((2.0 / r1) - (1.0 / a_t1)));
@@ -205,8 +248,7 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
         double vt2_p = sqrt(mu * ((2.0 / r2) - (1.0 / a_t2)));
 
         double dv1_bi = fabs(vt1_p - v1);
-        // Cambio di piano eseguito interamente all'apogeo lontano rb dove la velocità è minima!
-        double dv2_bi = sqrt(vt1_a*vt1_a + vt2_a*vt2_a - 2.0*vt1_a*vt2_a*cos(delta_inc));
+        double dv2_bi = sqrt(vt1_a*vt1_a + vt2_a*vt2_a - 2.0*vt1_a*vt2_a*cos(total_plane_angle));
         double dv3_bi = fabs(v2 - vt2_p);
         double tot_bi = dv1_bi + dv2_bi + dv3_bi;
 
@@ -218,7 +260,7 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
             best.dv3_mag = dv3_bi;
             best.total_dv = tot_bi;
             best.burn1_dir_rtn = (Vector3D){0.0, 1.0, 0.0};
-            Vector3D b2_vec = {0.0, vt2_a * cos(delta_inc) - vt1_a, vt2_a * sin(delta_inc * sign_inc)};
+            Vector3D b2_vec = {0.0, vt2_a * cos(total_plane_angle) - vt1_a, vt2_a * sin(total_plane_angle * sign_inc)};
             best.burn2_dir_rtn = vec_normalize(b2_vec);
             best.burn3_dir_rtn = (Vector3D){0.0, -1.0, 0.0};
             best.transfer_apogee_km = rb;
@@ -227,13 +269,12 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
     }
 
     // ------------------------------------------------------------------
-    // CANDIDATO 4: FAST ONE-TANGENT TRANSFER (Se l'utente impone un tempo < Hohmann)
+    // CANDIDATO 4: FAST ONE-TANGENT TRANSFER (Con vincolo di tempo)
     // ------------------------------------------------------------------
     if (best.time_constrained && max_transfer_time_sec < tof_hoh) {
-        // Aumentiamo l'eccentricità dell'ellisse di trasferimento per arrivare a r2 prima dell'apogeo
         double e_min = fabs(r2 - r1) / (r1 + r2);
         for (int step = 1; step <= 800; step++) {
-            double e_fast = e_min + (0.85 - e_min) * ((double)step / 800.0);
+            double e_fast = e_min + (0.88 - e_min) * ((double)step / 800.0);
             double a_fast = (r2 >= r1) ? (r1 / (1.0 - e_fast)) : (r1 / (1.0 + e_fast));
             double p_fast = a_fast * (1.0 - e_fast * e_fast);
 
@@ -241,7 +282,6 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
             if (cos_nu2 < -1.0 || cos_nu2 > 1.0) continue;
             double nu2 = acos(cos_nu2);
 
-            // Anomalia eccentrica E e tempo di volo tramite Equazione di Keplero
             double tan_E2 = sqrt((1.0 - e_fast) / (1.0 + e_fast)) * tan(0.5 * nu2);
             double E2 = 2.0 * atan(tan_E2);
             double M2 = E2 - e_fast * sin(E2);
@@ -250,13 +290,12 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
             if (tof_fast <= max_transfer_time_sec) {
                 double vt1_f = sqrt(mu * ((2.0 / r1) - (1.0 / a_fast)));
                 double vt2_f = sqrt(mu * ((2.0 / r2) - (1.0 / a_fast)));
-                // Angolo di traiettoria (flight path angle) all'intersezione r2
                 double h_fast = sqrt(mu * p_fast);
                 double vt2_transverse = h_fast / r2;
                 double vt2_radial = sqrt(fmax(0.0, vt2_f*vt2_f - vt2_transverse*vt2_transverse));
 
                 Vector3D b1_f = {0.0, vt1_f - v1, 0.0};
-                Vector3D b2_f = {-vt2_radial, v2 * cos(delta_inc) - vt2_transverse, v2 * sin(delta_inc * sign_inc)};
+                Vector3D b2_f = {-vt2_radial, v2 * cos(total_plane_angle) - vt2_transverse, v2 * sin(total_plane_angle * sign_inc)};
 
                 strcpy(best.maneuver_name, "Time-Constrained Fast One-Tangent Transfer");
                 best.num_burns = 2;
@@ -273,35 +312,20 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
         }
     }
 
-    // ------------------------------------------------------------------
-    // CALCOLO COORDINATE SPAZIALI ECI & GEODETICHE DEI PUNTI DI MANOVRA
-    // ------------------------------------------------------------------
-    // Punto di Manovra 1 (Partenza sull'Orbita Iniziale a theta = 0)
+    // Coordinate spaziali ECI e Geodetiche dei Burn Points
     KeplerianElements k_b1 = orb_init;
     k_b1.theta = 0.0;
     CartesianState s_b1 = keplerian_to_cartesian(k_b1, mu, init_mass, 0.0);
     best.burn1_pos_eci = s_b1.position;
     best.burn1_geo     = ecef_to_geodetic(eci_to_ecef(s_b1.position, 0.0, 0.0));
 
-    // Punto di Manovra 2 (Arrivo sull'Orbita Target o Apogeo Intermedio a theta = PI)
     KeplerianElements k_b2 = orb_target;
-    if (best.num_burns == 3) {
-        k_b2.a = best.transfer_apogee_km;
-    }
+    if (best.num_burns == 3) k_b2.a = best.transfer_apogee_km;
     k_b2.theta = PI;
     CartesianState s_b2 = keplerian_to_cartesian(k_b2, mu, init_mass, best.transfer_time_sec);
     best.burn2_pos_eci = s_b2.position;
     best.burn2_geo     = ecef_to_geodetic(eci_to_ecef(s_b2.position, best.transfer_time_sec, 0.0));
 
-    if (best.num_burns == 3) {
-        KeplerianElements k_b3 = orb_target;
-        k_b3.theta = 0.0;
-        CartesianState s_b3 = keplerian_to_cartesian(k_b3, mu, init_mass, best.transfer_time_sec);
-        best.burn3_pos_eci = s_b3.position;
-        best.burn3_geo     = ecef_to_geodetic(eci_to_ecef(s_b3.position, best.transfer_time_sec, 0.0));
-    }
-
-    // Consumo propellente (Equazione di Tsiolkovsky con l'Isp del propellente scelto)
     double total_dv_ms = best.total_dv * 1000.0;
     best.final_mass = init_mass * exp(-total_dv_ms / (best.prop_info.isp * G0));
     best.propellant_used = init_mass - best.final_mass;
@@ -311,19 +335,22 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
 
 OrbitReport evaluate_orbit_regime(KeplerianElements kep, double mass, const SpacecraftConfig *sc, const GroundStation *station) {
     OrbitReport rep = {0};
+    validate_and_clamp_closed_orbit(&kep, NULL);
     rep.initial_kep = kep;
     rep.period_min  = orbital_period(kep.a, EARTH_MU) / 60.0;
 
-    Vector3D r_dummy = {kep.a, 0.0, 0.0};
+    // Valutiamo il drag alla quota del perigeo (dove l'attrito atmosferico è massimo)
+    double r_perigee = kep.a * (1.0 - kep.e);
+    Vector3D r_dummy = {r_perigee, 0.0, 0.0};
     Vector3D sun_dir = {1.0, 0.0, 0.0};
     SpaceEnvironment env_mean = evaluate_environment(r_dummy, sun_dir);
 
-    double v_circ_ms = sqrt(EARTH_MU / kep.a) * 1000.0;
-    double a_drag_ms2 = 0.5 * env_mean.air_density * (v_circ_ms * v_circ_ms) * (sc->drag_coeff * sc->drag_area / mass);
+    double v_p_ms = sqrt(EARTH_MU * ((2.0 / r_perigee) - (1.0 / kep.a))) * 1000.0;
+    double a_drag_ms2 = 0.5 * env_mean.air_density * (v_p_ms * v_p_ms) * (sc->drag_coeff * sc->drag_area / mass);
 
     double dv_day_ms = a_drag_ms2 * 86400.0;
     rep.station_keeping_dv_year = dv_day_ms * 365.25;
-    rep.sma_decay_m_per_day = (2.0 * (kep.a * 1000.0) * a_drag_ms2 / v_circ_ms) * 86400.0;
+    rep.sma_decay_m_per_day = (2.0 * (kep.a * 1000.0) * a_drag_ms2 / v_p_ms) * 86400.0;
 
     if (sc->thruster.isp > 0.0) {
         rep.station_keeping_fuel_yr = mass * (1.0 - exp(-rep.station_keeping_dv_year / (sc->thruster.isp * G0)));
