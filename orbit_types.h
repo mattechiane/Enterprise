@@ -41,15 +41,37 @@ typedef struct {
     double theta;   // Anomalia vera (radianti)
 } KeplerianElements;
 
-// Coordinate terrestri per Ground Track e stazioni di terra
 typedef struct {
-    double latitude;  // Latitudine geodetica WGS84 (radianti, -PI/2 a +PI/2)
-    double longitude; // Longitudine terrestre (radianti, -PI a +PI)
+    double latitude;  // Latitudine geodetica WGS84 (radianti)
+    double longitude; // Longitudine terrestre (radianti)
     double altitude;  // Quota reale sopra l'ellissoide WGS84 (km)
 } GeodeticCoord;
 
 // ==========================================
-// 4. SOTTOSISTEMI, PROPRIETA' FISICHE E AMBIENTE
+// 4. STAZIONI DI TERRA E ANALISI DI MISSIONE
+// ==========================================
+typedef struct {
+    char name[64];        // Nome della stazione (es. "Milano-Bovisa" o "Fucino")
+    GeodeticCoord coord;  // Posizione geografica della stazione
+    double min_elevation; // Elevazione minima sopra l'orizzonte per il contatto (radianti)
+} GroundStation;
+
+typedef struct {
+    bool is_visible;      // true se Elevation >= min_elevation
+    double azimuth;       // Angolo bussola: 0=Nord, PI/2=Est (radianti)
+    double elevation;     // Angolo sopra l'orizzonte locale (radianti)
+    double range;         // Distanza diretta antenna-satellite (km)
+} AccessMetrics;
+
+typedef struct {
+    double dv1;           // Primo impulso Delta-V (km/s)
+    double dv2;           // Secondo impulso Delta-V (km/s)
+    double total_dv;      // Delta-V totale della manovra (km/s)
+    double transfer_time; // Tempo di volo sull'ellisse di trasferimento (secondi)
+} HohmannTransfer;
+
+// ==========================================
+// 5. SOTTOSISTEMI, PROPRIETA' FISICHE E AMBIENTE
 // ==========================================
 typedef struct {
     bool is_active;      // true se il motore è acceso

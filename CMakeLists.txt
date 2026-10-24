@@ -13,4 +13,6 @@ add_executable(Enterprise
         propagator.c
         telemetry.h
         telemetry.c
+        mission_analysis.h
+        mission_analysis.c
 )
