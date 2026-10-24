@@ -8,13 +8,22 @@ AccessMetrics compute_ground_access(Vector3D sat_ecef, const GroundStation *stat
 HohmannTransfer compute_hohmann_transfer(double r1, double r2, double mu);
 CartesianState apply_impulsive_maneuver(CartesianState state, Vector3D delta_v_eci, double isp);
 
-// Calcola la manovra ottimale 3D (cambio quota + cambio inclinazione combinato) e direzione di spinta
-OptimalTransferPlan plan_optimal_transfer(KeplerianElements orb_init, KeplerianElements orb_target, double init_mass, double isp, double mu);
+// Restituisce i dati fisici (Isp, categoria, nome) del propellente scelto dall'utente
+PropellantSpec get_propellant_specs(PropellantType type);
 
-// Analizza un'orbita per 24 ore calcolando Luce/Ombra, Visibilità Stazione e Carburante di Mantenimento (Station-Keeping)
+// Converte l'input utente (Cartesiano o Kepleriano) in elementi kepleriani standardizzati
+KeplerianElements resolve_user_orbit_input(OrbitInputSpec input, double mu);
+
+// Ottimizzatore Globale di Manovra: valuta Hohmann, Optimal Plane-Split, Bi-Ellittica e Fast Transfer
+// rispettando eventuali limiti sul tempo massimo (max_transfer_time_sec <= 0 significa nessun limite)
+OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
+                                              KeplerianElements orb_target,
+                                              double init_mass,
+                                              PropellantType prop_type,
+                                              double max_transfer_time_sec,
+                                              double mu);
+
 OrbitReport evaluate_orbit_regime(KeplerianElements kep, double mass, const SpacecraftConfig *sc, const GroundStation *station);
-
-// Stampa a schermo la scheda tecnica completa di un'orbita
 void print_orbit_report(const char *title, OrbitReport rep, const char *station_name);
 
 #endif // MISSION_ANALYSIS_H

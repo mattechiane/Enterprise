@@ -1,21 +1,26 @@
 {
   "station": {"name":"Milano-Bovisa", "lat":45.5020, "lon":9.1560, "min_el":10.0},
   "initial_report": {
-    "alt_km": 400.00, "inc_deg": 51.60, "ecc": 0.0010, "period_min": 92.56,
+    "sma_km": 6778.14, "alt_km": 400.00, "inc_deg": 51.60, "raan_deg": 30.00, "ecc": 0.0010, "period_min": 92.56,
     "sun_min": 879.2, "ecl_min": 560.8, "ecl_pct": 38.9,
     "passes": 6, "contact_min": 31.5, "max_el": 85.7,
-    "decay_m_day": 790.41, "sk_dv_yr": 163.31, "sk_fuel_yr": 26.999
+    "decay_m_day": 790.41, "sk_dv_yr": 163.31, "sk_fuel_yr": 25.667
   },
   "maneuver": {
-    "dv1_ms": 69.12, "dir1": [0.000, 1.000, 0.000],
-    "dv2_ms": 195.56, "dir2": [0.000, 0.339, 0.941],
-    "total_dv_ms": 264.68, "transfer_min": 47.57, "fuel_kg": 43.02, "final_mass_kg": 456.98
+    "type_name": "Optimal Split-Plane Hohmann (2-Burn)",
+    "num_burns": 2,
+    "prop_name": "MMH / NTO Bipropellant", "prop_cat": "Liquid", "isp_s": 316.0,
+    "dv1_ms": 113.16, "dir1": [0.000, 0.606, 0.795],
+    "burn1_pos": [5864.17, 3385.68, 0.00], "burn1_geo": [0.00, 30.00, 393.22],
+    "dv2_ms": 117.92, "dir2": [0.000, 0.576, 0.818],
+    "burn2_pos": [-6092.63, -3517.58, 0.00], "burn2_geo": [0.00, -161.92, 657.03],
+    "dv3_ms": 0.00, "total_dv_ms": 231.07, "transfer_min": 47.57, "fuel_kg": 35.93, "final_mass_kg": 464.07
   },
   "target_report": {
-    "alt_km": 650.00, "inc_deg": 53.00, "ecc": 0.0010, "period_min": 97.73,
+    "sma_km": 7028.14, "alt_km": 650.00, "inc_deg": 53.00, "raan_deg": 30.00, "ecc": 0.0010, "period_min": 97.73,
     "sun_min": 926.0, "ecl_min": 514.0, "ecl_pct": 35.7,
     "passes": 6, "contact_min": 49.5, "max_el": 67.8,
-    "decay_m_day": 13.65, "sk_dv_yr": 2.67, "sk_fuel_yr": 0.415
+    "decay_m_day": 13.44, "sk_dv_yr": 2.63, "sk_fuel_yr": 0.394
   },
   "traj_initial": [
     {"t":0.0,"x":5864.169,"y":3385.679,"z":0.000,"lat":0.000,"lon":30.000,"alt":393.22,"ecl":0},
