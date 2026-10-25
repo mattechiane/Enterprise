@@ -178,6 +178,7 @@
     </div>
     <div class="header-actions">
         <button class="btn-primary" id="btnOpenModal">&#9881; Configure New Mission (Inputs)</button>
+        <button class="btn-secondary" id="btnRestoreDefault" title="Restore the default preset mission">Reset to Default Mission</button>
         <label class="btn-secondary">
             Load C-Engine JSON
             <input type="file" id="jsonInput" accept=".json" style="display:none">
@@ -205,6 +206,7 @@
         <span>Alt: <strong id="liveAlt">---</strong> km</span>
         <span>Vel: <strong id="liveVel">---</strong> km/s</span>
         <span>Batt: <strong id="liveSoc" style="color:var(--green)">---</strong>%</span>
+        <span>Lat/Lon: <strong id="liveLatLon">---</strong></span>
         <span class="badge" id="eclipseBadge" style="color:var(--amber)">&#9728; SUNLIGHT</span>
     </div>
 </div>
@@ -426,6 +428,7 @@
     const RAD2DEG = 180.0 / Math.PI;
 
     let globalData = null;
+    let defaultJsonBackup = null;
     let continent3DCoords = { x: [], y: [], z: [] };
     let animFrames = [];
     let currentFrame = 0;
@@ -499,7 +502,6 @@
         return { lat: lat * RAD2DEG, lon: lon, alt: alt, xe: xe, ye: ye, ze: ze };
     }
 
-    // Compute Radar Elevation & Range from Ground Station
     function computeGroundRadarJS(xe, ye, ze, stLatDeg, stLonDeg) {
         const stEcef = geodeticToWGS84(stLatDeg, stLonDeg, 0.14);
         const dx = xe - stEcef.x, dy = ye - stEcef.y, dz = ze - stEcef.z;
@@ -512,7 +514,6 @@
         return { el: +elDeg.toFixed(2), rng: +range.toFixed(1) };
     }
 
-    // Enrich trajectory frames with velocity, radar access, solar power, and battery SoC
     function enrichTelemetrySeries(frames, st, isLowThrust) {
         let soc = 98.0;
         let tRunning = 0.0;
@@ -522,7 +523,7 @@
 
         for (let i = 0; i < frames.length; i++) {
             const p = frames[i];
-            const dt = (i > 0) ? 25.0 : 0.0; // Normalized step for smooth time-history
+            const dt = (i > 0) ? 25.0 : 0.0;
             tRunning += dt;
             p.t_mission_min = +(tRunning / 60.0).toFixed(2);
 
@@ -531,7 +532,8 @@
                 p.v = +(Math.sqrt(MU / rMag)).toFixed(3);
             }
             if (p.el === undefined || p.rng === undefined) {
-                const gst = OMEGA_E * tRunning;
+                const tRef = (p.t !== undefined) ? p.t : tRunning;
+                const gst = OMEGA_E * tRef;
                 const xe =  Math.cos(gst) * p.x + Math.sin(gst) * p.y;
                 const ye = -Math.sin(gst) * p.x + Math.cos(gst) * p.y;
                 const rad = computeGroundRadarJS(xe, ye, p.z, st.lat, st.lon);
@@ -842,7 +844,7 @@
         };
 
         const traceInit3D = {
-            type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (${r1.alt_km} km)`,
+            type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (${r1.alt_km} km, i=${r1.inc_deg}°)`,
             x: initSlice.map(p => p.x), y: initSlice.map(p => p.y), z: initSlice.map(p => p.z),
             line: { color: '#00e5ff', width: 4.5 }
         };
@@ -855,7 +857,7 @@
         };
 
         const traceTarg3D = {
-            type: 'scatter3d', mode: 'lines', name: `3. Target Orbit (${r2.alt_km} km)`,
+            type: 'scatter3d', mode: 'lines', name: `3. Target Orbit (${r2.alt_km} km, i=${r2.inc_deg}°)`,
             x: targSlice.map(p => p.x), y: targSlice.map(p => p.y), z: targSlice.map(p => p.z),
             line: { color: '#00e676', width: 4.5 }
         };
@@ -900,12 +902,12 @@
         }, { responsive: true, displaylogo: false });
 
         // ---------------------------------------------------------------------
-        // PLOT 4: 2D WORLD GROUND TRACK
+        // PLOT 4: 2D WORLD GROUND TRACK (SYNCHRONIZED WITH CONTINUOUS EARTH ROTATION)
         // ---------------------------------------------------------------------
         const traces2D = [
-            { type: 'scattergeo', mode: 'markers', name: 'Initial Orbit Track', lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon), marker: { size: 4, color: '#00e5ff' } },
-            { type: 'scattergeo', mode: 'markers', name: isLowThrust ? 'Low-Thrust Spiral Track' : 'Transfer Maneuver Track', lat: data.traj_transfer.map(p => p.lat), lon: data.traj_transfer.map(p => p.lon), marker: { size: 3.5, color: isLowThrust ? '#e040fb' : '#ffab00' } },
-            { type: 'scattergeo', mode: 'markers', name: 'Target Orbit Track', lat: targSlice.map(p => p.lat), lon: targSlice.map(p => p.lon), marker: { size: 4, color: '#00e676' } },
+            { type: 'scattergeo', mode: 'markers', name: `1. Initial Track (${r1.alt_km} km, ${r1.inc_deg}°)`, lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon), marker: { size: 4, color: '#00e5ff' } },
+            { type: 'scattergeo', mode: 'markers', name: isLowThrust ? '2. Low-Thrust Spiral Track' : '2. Transfer Maneuver Track', lat: data.traj_transfer.map(p => p.lat), lon: data.traj_transfer.map(p => p.lon), marker: { size: 4.5, color: isLowThrust ? '#e040fb' : '#ffab00' } },
+            { type: 'scattergeo', mode: 'markers', name: `3. Target Track (${r2.alt_km} km, ${r2.inc_deg}°)`, lat: targSlice.map(p => p.lat), lon: targSlice.map(p => p.lon), marker: { size: 4, color: '#00e676' } },
             { type: 'scattergeo', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Burn Locations (ΔV1 / ΔV2)', lat: [burnStart.lat, burnEnd.lat], lon: [burnStart.lon, burnEnd.lon], text: isLowThrust ? ['SPIRAL ON', 'MECO'] : ['BURN 1 (ΔV1)', 'BURN 2 (ΔV2)'], textposition: 'top center', textfont: { color: '#ffab00', size: 11 }, marker: { size: 12, color: ['#ffab00', '#d500f9'], symbol: 'star', line: { color: '#fff', width: 1.5 } } },
             { type: 'scattergeo', mode: 'markers+text', name: st.name, lat: [st.lat], lon: [st.lon], text: [st.name], textposition: 'bottom right', marker: { size: 10, color: '#ff1744', symbol: 'triangle-up', line: { color: '#fff', width: 1 } }, textfont: { color: '#ffffff', size: 11 } },
             { type: 'scattergeo', mode: 'markers+text', name: 'Spacecraft (Live)', lat: [p0.lat], lon: [p0.lon], text: ['SAT'], textposition: 'top right', textfont: { color: '#ffffff', size: 11 }, marker: { size: 11, color: '#ffffff', line: { color: '#ff1744', width: 3 } } }
@@ -930,7 +932,6 @@
         // ---------------------------------------------------------------------
         const tAxis = animFrames.map(p => p.t_mission_min);
 
-        // 5A: Geodetic Altitude & Orbital Velocity vs Time
         Plotly.newPlot('plotKinematics', [
             {
                 type: 'scatter', mode: 'lines', name: 'WGS84 Geodetic Altitude [km]',
@@ -952,7 +953,6 @@
             legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(17,22,34,0.8)', x: 0.01, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
-        // 5B: Ground Station Radar Tracking (Elevation & Slant Range)
         Plotly.newPlot('plotRadar', [
             {
                 type: 'scatter', mode: 'lines', name: `Radar Elevation above ${st.name} [deg]`,
@@ -979,7 +979,6 @@
             legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(17,22,34,0.8)', x: 0.01, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
-        // 5C: EPS Electrical Power Subsystem (Solar Array Generation & Li-Ion Battery SoC)
         Plotly.newPlot('plotPower', [
             {
                 type: 'scatter', mode: 'lines', name: 'Solar Array Generation [W]',
@@ -1040,44 +1039,107 @@
         }, 60);
     }
 
-    function generateOrbitPoints(a, e, incDeg, raanDeg, argpDeg, thetaStart, thetaEnd, steps, tOffset) {
+    // Generate Orbit Points with J2 Nodal Precession & Exact Continuous Earth GMST Clock
+    function generateOrbitPoints(a, e, incDeg, raanDeg, argpDeg, thetaStart, thetaEnd, steps, tStartSec) {
         const pts = [];
-        const inc = incDeg * DEG2RAD, raan = raanDeg * DEG2RAD, w = argpDeg * DEG2RAD;
-        const cO = Math.cos(raan), sO = Math.sin(raan);
-        const cw = Math.cos(w), sw = Math.sin(w);
-        const ci = Math.cos(inc), si = Math.sin(inc);
-        const R11 = cO*cw - sO*sw*ci, R12 = -cO*sw - sO*cw*ci;
-        const R21 = sO*cw + cO*sw*ci, R22 = -sO*sw + cO*cw*ci;
-        const R31 = sw*si,            R32 = cw*si;
+        const inc = incDeg * DEG2RAD;
         const p = a * (1.0 - e * e);
         const period = 2.0 * Math.PI * Math.sqrt(a*a*a / MU);
+        const totalDuration = period * ((thetaEnd - thetaStart) / (2.0 * Math.PI));
+
+        // Secular J2 rate to match the RK4 C-Engine Ground Track
+        const nMean = 2.0 * Math.PI / period;
+        const j2Factor = -1.5 * nMean * 0.00108262668 * Math.pow(R_EQ / p, 2);
+        const raanDot = j2Factor * Math.cos(inc);
+        const argpDot = -0.5 * j2Factor * (5.0 * Math.pow(Math.sin(inc), 2) - 4.0);
 
         for (let k = 0; k <= steps; k++) {
             const frac = k / steps;
+            const dt = frac * totalDuration;
+            const tGlobal = tStartSec + dt;
             const theta = thetaStart + frac * (thetaEnd - thetaStart);
+
+            const raan = (raanDeg * DEG2RAD) + raanDot * dt;
+            const w    = (argpDeg * DEG2RAD) + argpDot * dt;
+
+            const cO = Math.cos(raan), sO = Math.sin(raan);
+            const cw = Math.cos(w),    sw = Math.sin(w);
+            const ci = Math.cos(inc),  si = Math.sin(inc);
+
+            const R11 = cO*cw - sO*sw*ci, R12 = -cO*sw - sO*cw*ci;
+            const R21 = sO*cw + cO*sw*ci, R22 = -sO*sw + cO*cw*ci;
+            const R31 = sw*si,            R32 = cw*si;
+
             const r = p / (1.0 + e * Math.cos(theta));
             const rp = r * Math.cos(theta), rq = r * Math.sin(theta);
             const x = R11 * rp + R12 * rq;
             const y = R21 * rp + R22 * rq;
             const z = R31 * rp + R32 * rq;
             const vMag = Math.sqrt(MU * (2.0 / r - 1.0 / a));
-            const t = tOffset + frac * period * ((thetaEnd - thetaStart) / (2.0 * Math.PI));
-            const geo = eciToGeodetic(x, y, z, t);
+
+            const geo = eciToGeodetic(x, y, z, tGlobal);
             const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
-            pts.push({ t: t, x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), v: +vMag.toFixed(3), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
+            pts.push({ t: +tGlobal.toFixed(1), x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), v: +vMag.toFixed(3), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
         }
         return pts;
     }
 
-    function generate3DSpiralTrajectory(orb1, orb2, visualRevs, steps, totalTofSec) {
+    // Fixed 3D Transfer Arc: Interpolates Orbital Plane (Inclination & RAAN) cleanly from Orbit 1 to Orbit 2
+    // Never degenerates onto the Equator!
+    function generateExact3DTransferArc(orb1, orb2, steps, tofSec, tStartSec) {
+        const r1 = orb1.a * (1.0 - orb1.e);
+        const r2 = orb2.a * (1.0 + orb2.e);
+        const aTrans = 0.5 * (r1 + r2);
+        const eTrans = Math.abs(r2 - r1) / (r1 + r2);
+        const pTrans = aTrans * (1.0 - eTrans * eTrans);
+        const signE  = (r2 >= r1) ? 1.0 : -1.0;
+
+        let dRaan = orb2.raan - orb1.raan;
+        if (dRaan >  180) dRaan -= 360;
+        if (dRaan < -180) dRaan += 360;
+
+        const pts = [];
+        for (let k = 0; k <= steps; k++) {
+            const frac = k / steps;
+            const theta = frac * Math.PI; // From Perigee (0) to Apogee (PI)
+            const dt = frac * tofSec;
+            const tGlobal = tStartSec + dt;
+
+            // Smoothly transition orbital plane from (i1, raan1) at Burn 1 to (i2, raan2) at Burn 2
+            const inc  = (orb1.i + frac * (orb2.i - orb1.i)) * DEG2RAD;
+            const raan = (orb1.raan + frac * dRaan) * DEG2RAD;
+
+            const cO = Math.cos(raan), sO = Math.sin(raan);
+            const ci = Math.cos(inc),  si = Math.sin(inc);
+
+            const r = pTrans / (1.0 + signE * eTrans * Math.cos(theta));
+            const rp = r * Math.cos(theta), rq = r * Math.sin(theta);
+
+            const x = cO * rp - sO * ci * rq;
+            const y = sO * rp + cO * ci * rq;
+            const z = si * rq;
+            const vMag = Math.sqrt(MU * (2.0 / r - 1.0 / aTrans));
+
+            const geo = eciToGeodetic(x, y, z, tGlobal);
+            const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
+            pts.push({ t: +tGlobal.toFixed(1), x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), v: +vMag.toFixed(3), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
+        }
+        return pts;
+    }
+
+    function generate3DSpiralTrajectory(orb1, orb2, visualRevs, steps, totalTofSec, tStartSec) {
         const pts = [];
         const visualDurationSec = visualRevs * 5600.0;
+        let dRaan = orb2.raan - orb1.raan;
+        if (dRaan >  180) dRaan -= 360;
+        if (dRaan < -180) dRaan += 360;
+
         for (let k = 0; k <= steps; k++) {
             const frac = k / steps;
             const a    = orb1.a + frac * (orb2.a - orb1.a);
             const e    = orb1.e + frac * (orb2.e - orb1.e);
             const inc  = (orb1.i + frac * (orb2.i - orb1.i)) * DEG2RAD;
-            const raan = (orb1.raan + frac * (orb2.raan - orb1.raan)) * DEG2RAD;
+            const raan = (orb1.raan + frac * dRaan) * DEG2RAD;
             const theta = frac * (visualRevs * 2.0 * Math.PI + Math.PI);
 
             const cO = Math.cos(raan), sO = Math.sin(raan);
@@ -1091,56 +1153,14 @@
             const z = si * rq;
             const vMag = Math.sqrt(MU * (2.0 / r - 1.0 / a));
 
-            const tVis = frac * visualDurationSec;
-            const geo = eciToGeodetic(x, y, z, tVis);
+            const tGlobal = tStartSec + frac * visualDurationSec;
+            const geo = eciToGeodetic(x, y, z, tGlobal);
             const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
             pts.push({
-                t: +(frac * totalTofSec).toFixed(1),
+                t: +tGlobal.toFixed(1),
                 x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), v: +vMag.toFixed(3),
                 lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl
             });
-        }
-        return pts;
-    }
-
-    function generateExact3DTransferArc(pStart, pEnd, steps, tofSec) {
-        const r1Vec = [pStart.x, pStart.y, pStart.z];
-        const r2Vec = [pEnd.x, pEnd.y, pEnd.z];
-        const r1 = Math.hypot(...r1Vec), r2 = Math.hypot(...r2Vec);
-        const u1 = r1Vec.map(v => v / r1), u2 = r2Vec.map(v => v / r2);
-
-        let nx = u1[1]*u2[2] - u1[2]*u2[1];
-        let ny = u1[2]*u2[0] - u1[0]*u2[2];
-        let nz = u1[0]*u2[1] - u1[1]*u2[0];
-        let nNorm = Math.hypot(nx, ny, nz);
-        if (nNorm < 1e-6) {
-            nx = 0; ny = -u1[2]; nz = u1[1];
-            nNorm = Math.hypot(nx, ny, nz) || 1;
-        }
-        nx /= nNorm; ny /= nNorm; nz /= nNorm;
-
-        const tx = ny*u1[2] - nz*u1[1];
-        const ty = nz*u1[0] - nx*u1[2];
-        const tz = nx*u1[1] - ny*u1[0];
-
-        const aTrans = 0.5 * (r1 + r2);
-        const eTrans = Math.abs(r2 - r1) / (r1 + r2);
-        const pTrans = aTrans * (1.0 - eTrans * eTrans);
-        const signE  = (r2 >= r1) ? 1.0 : -1.0;
-
-        const pts = [];
-        for (let k = 0; k <= steps; k++) {
-            const frac = k / steps;
-            const nu = frac * Math.PI;
-            const r = pTrans / (1.0 + signE * eTrans * Math.cos(nu));
-            const x = r * (Math.cos(nu) * u1[0] + Math.sin(nu) * tx);
-            const y = r * (Math.cos(nu) * u1[1] + Math.sin(nu) * ty);
-            const z = r * (Math.cos(nu) * u1[2] + Math.sin(nu) * tz);
-            const vMag = Math.sqrt(MU * (2.0 / r - 1.0 / aTrans));
-            const t = frac * tofSec;
-            const geo = eciToGeodetic(x, y, z, t);
-            const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
-            pts.push({ t: t, x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), v: +vMag.toFixed(3), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
         }
         return pts;
     }
@@ -1228,15 +1248,23 @@
         const fuelUsed = mass0 * (1.0 - Math.exp(-(totalDv * 1000.0) / (isp * G0)));
         const finalMass = mass0 - fuelUsed;
 
-        const trajInit  = generateOrbitPoints(orb1.a, orb1.e, orb1.i, orb1.raan, 0, 0, 4*Math.PI, 240, 0);
-        const trajTarg  = generateOrbitPoints(orb2.a, orb2.e, orb2.i, orb2.raan, 0, Math.PI, 5*Math.PI, 240, tofSec);
-        const trajTrans = isLowThrust
-            ? generate3DSpiralTrajectory(orb1, orb2, 6, 360, tofSec)
-            : generateExact3DTransferArc(trajInit[0], trajTarg[0], 100, tofSec);
+        const per1Sec = 2 * Math.PI * Math.sqrt(orb1.a*orb1.a*orb1.a / MU);
+        const per2Sec = 2 * Math.PI * Math.sqrt(orb2.a*orb2.a*orb2.a / MU);
+
+        // Continuous Earth Rotation Clock across Phase 1 -> Phase 2 -> Phase 3 (Matches C Engine!)
+        const tStartInit  = 0.0;
+        const trajInit    = generateOrbitPoints(orb1.a, orb1.e, orb1.i, orb1.raan, 0, 0, 4*Math.PI, 240, tStartInit);
+
+        const tStartTrans = 0.0; // Burn 1 occurs at the ascending node pass (t = 0 reference)
+        const trajTrans   = isLowThrust
+            ? generate3DSpiralTrajectory(orb1, orb2, 6, 360, tofSec, tStartTrans)
+            : generateExact3DTransferArc(orb1, orb2, 100, tofSec, tStartTrans);
+
+        const tStartTarg  = isLowThrust ? (6 * 5600.0) : tofSec; // Burn 2 arrival epoch
+        const trajTarg    = generateOrbitPoints(orb2.a, orb2.e, orb2.i, orb2.raan, 0, Math.PI, 5*Math.PI, 240, tStartTarg);
 
         const bStart = trajTrans[0], bEnd = trajTrans[trajTrans.length - 1];
-        const per1 = 2*Math.PI*Math.sqrt(orb1.a*orb1.a*orb1.a/MU)/60;
-        const per2 = 2*Math.PI*Math.sqrt(orb2.a*orb2.a*orb2.a/MU)/60;
+        const per1 = per1Sec / 60.0, per2 = per2Sec / 60.0;
         const hp1 = r1 - R_EQ, hp2 = orb2.a * (1.0 - orb2.e) - R_EQ;
 
         const customData = {
@@ -1274,6 +1302,12 @@
         renderDashboard(customData);
     });
 
+    document.getElementById('btnRestoreDefault').addEventListener('click', function() {
+        if (defaultJsonBackup) {
+            renderDashboard(JSON.parse(JSON.stringify(defaultJsonBackup)));
+        }
+    });
+
     document.getElementById('btnOpenModal').addEventListener('click', () => {
         validateModalOrbits();
         document.getElementById('inputModal').classList.add('open');
@@ -1294,14 +1328,21 @@
     load3DContinents();
     fetch('mission_report.json')
         .then(r => r.json())
-        .then(data => renderDashboard(data))
+        .then(data => {
+            defaultJsonBackup = JSON.parse(JSON.stringify(data));
+            renderDashboard(data);
+        })
         .catch(() => console.log('Ready for JSON or Custom Mission Configuration'));
 
     document.getElementById('jsonInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = evt => renderDashboard(JSON.parse(evt.target.result));
+        reader.onload = evt => {
+            const parsed = JSON.parse(evt.target.result);
+            defaultJsonBackup = JSON.parse(JSON.stringify(parsed));
+            renderDashboard(parsed);
+        };
         reader.readAsText(file);
     });
 </script>
