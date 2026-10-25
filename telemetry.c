@@ -73,31 +73,61 @@ void telemetry_close(FILE *fp) {
     if (fp != NULL) fclose(fp);
 }
 
-static void write_trajectory_json_array(FILE *fp, KeplerianElements kep, double duration_sec, int num_steps, const SpacecraftConfig *sc) {
+// Propaga un segmento di missione ed esporta Posizione, Velocità, Tracking Radar e Bilancio Energetico (EPS)
+static void write_trajectory_json_array(FILE *fp, KeplerianElements kep, double duration_sec, int num_steps,
+                                        const SpacecraftConfig *sc, const GroundStation *station,
+                                        double *t_cum, double *soc_pct) {
     CartesianState s = keplerian_to_cartesian(kep, EARTH_MU, 500.0, 0.0);
     ForceModelConfig forces = {.enable_j2 = true, .enable_drag = true, .sun_dir = {1.0, 0.0, 0.0}};
     SpacecraftConfig sc_pass = *sc;
     sc_pass.thruster.is_active = false;
 
     double dt = duration_sec / (double)num_steps;
+    const double P_SOLAR_MAX_W = 850.0; // Pannelli solari GaAs (W)
+    const double P_LOAD_NOM_W  = 320.0; // Consumo nominale avionica + ADCS + payload (W)
+    const double BATT_CAP_WH   = 1200.0;// Capacità batteria Li-Ion di bordo (Wh)
+
     fprintf(fp, "[\n");
     for (int i = 0; i <= num_steps; i++) {
-        Vector3D ecef = eci_to_ecef(s.position, s.epoch, 0.0);
+        double t_global = *t_cum + s.epoch;
+        Vector3D ecef = eci_to_ecef(s.position, t_global, 0.0);
         GeodeticCoord geo = ecef_to_geodetic(ecef);
         SpaceEnvironment env = evaluate_environment(s.position, forces.sun_dir);
+        AccessMetrics acc = compute_ground_access(ecef, station);
 
-        fprintf(fp, "    {\"t\":%.1f,\"x\":%.3f,\"y\":%.3f,\"z\":%.3f,\"lat\":%.3f,\"lon\":%.3f,\"alt\":%.2f,\"ecl\":%d}%s\n",
-                s.epoch, s.position.x, s.position.y, s.position.z,
+        double v_mag = vec_norm(s.velocity);
+        double p_gen = env.in_eclipse ? 0.0 : P_SOLAR_MAX_W;
+
+        if (i > 0) {
+            double net_p = (p_gen >= P_LOAD_NOM_W) ? (p_gen - P_LOAD_NOM_W) * 0.90 : (p_gen - P_LOAD_NOM_W);
+            double d_wh = net_p * (dt / 3600.0);
+            *soc_pct += (d_wh / BATT_CAP_WH) * 100.0;
+            if (*soc_pct > 100.0) *soc_pct = 100.0;
+            if (*soc_pct < 15.0)  *soc_pct = 15.0;
+        }
+
+        fprintf(fp, "    {\"t\":%.1f,\"x\":%.2f,\"y\":%.2f,\"z\":%.2f,\"v\":%.3f,\"lat\":%.2f,\"lon\":%.2f,\"alt\":%.2f,\"ecl\":%d,\"el\":%.2f,\"rng\":%.1f,\"pwr\":%.0f,\"soc\":%.1f}%s\n",
+                t_global, s.position.x, s.position.y, s.position.z, v_mag,
                 geo.latitude * RAD2DEG, geo.longitude * RAD2DEG, geo.altitude,
-                env.in_eclipse ? 1 : 0, (i < num_steps) ? "," : "");
+                env.in_eclipse ? 1 : 0,
+                acc.elevation * RAD2DEG, acc.range, p_gen, *soc_pct,
+                (i < num_steps) ? "," : "");
         s = propagate_step_rk4(s, dt, &sc_pass, &forces);
     }
     fprintf(fp, "  ]");
+    *t_cum += duration_sec;
 }
 
-// Genera una traiettoria 3D a spirale multi-giro che interpola in modo continuo gli elementi kepleriani
-static void write_spiral_trajectory_json_array(FILE *fp, KeplerianElements k1, KeplerianElements k2, double total_tof_sec, int visual_revs, int num_steps) {
+static void write_spiral_trajectory_json_array(FILE *fp, KeplerianElements k1, KeplerianElements k2,
+                                               double total_tof_sec, int visual_revs, int num_steps,
+                                               const GroundStation *station, double *t_cum, double *soc_pct) {
     Vector3D sun_dir = {1.0, 0.0, 0.0};
+    double vis_duration_sec = (double)visual_revs * 5600.0;
+    double dt_vis = vis_duration_sec / (double)num_steps;
+    const double P_SOLAR_MAX_W = 850.0;
+    const double P_LOAD_SPIRAL_W = 480.0; // Carico maggiorato durante spinta elettrica
+    const double BATT_CAP_WH = 1200.0;
+
     fprintf(fp, "[\n");
     for (int i = 0; i <= num_steps; i++) {
         double frac = (double)i / (double)num_steps;
@@ -109,18 +139,33 @@ static void write_spiral_trajectory_json_array(FILE *fp, KeplerianElements k1, K
         kt.omega = k1.omega + frac * (k2.omega - k1.omega);
         kt.theta = frac * ((double)visual_revs * 2.0 * PI + PI);
 
-        double t_cur = frac * total_tof_sec;
-        CartesianState s = keplerian_to_cartesian(kt, EARTH_MU, 500.0, t_cur);
-        Vector3D ecef = eci_to_ecef(s.position, t_cur, 0.0);
+        double t_global = *t_cum + frac * vis_duration_sec;
+        CartesianState s = keplerian_to_cartesian(kt, EARTH_MU, 500.0, t_global);
+        Vector3D ecef = eci_to_ecef(s.position, t_global, 0.0);
         GeodeticCoord geo = ecef_to_geodetic(ecef);
         SpaceEnvironment env = evaluate_environment(s.position, sun_dir);
+        AccessMetrics acc = compute_ground_access(ecef, station);
 
-        fprintf(fp, "    {\"t\":%.1f,\"x\":%.3f,\"y\":%.3f,\"z\":%.3f,\"lat\":%.3f,\"lon\":%.3f,\"alt\":%.2f,\"ecl\":%d}%s\n",
-                t_cur, s.position.x, s.position.y, s.position.z,
+        double v_mag = vec_norm(s.velocity);
+        double p_gen = env.in_eclipse ? 0.0 : P_SOLAR_MAX_W;
+
+        if (i > 0) {
+            double net_p = (p_gen >= P_LOAD_SPIRAL_W) ? (p_gen - P_LOAD_SPIRAL_W) * 0.90 : (p_gen - P_LOAD_SPIRAL_W);
+            double d_wh = net_p * (dt_vis / 3600.0);
+            *soc_pct += (d_wh / BATT_CAP_WH) * 100.0;
+            if (*soc_pct > 100.0) *soc_pct = 100.0;
+            if (*soc_pct < 15.0)  *soc_pct = 15.0;
+        }
+
+        fprintf(fp, "    {\"t\":%.1f,\"x\":%.2f,\"y\":%.2f,\"z\":%.2f,\"v\":%.3f,\"lat\":%.2f,\"lon\":%.2f,\"alt\":%.2f,\"ecl\":%d,\"el\":%.2f,\"rng\":%.1f,\"pwr\":%.0f,\"soc\":%.1f}%s\n",
+                t_global, s.position.x, s.position.y, s.position.z, v_mag,
                 geo.latitude * RAD2DEG, geo.longitude * RAD2DEG, geo.altitude,
-                env.in_eclipse ? 1 : 0, (i < num_steps) ? "," : "");
+                env.in_eclipse ? 1 : 0,
+                acc.elevation * RAD2DEG, acc.range, p_gen, *soc_pct,
+                (i < num_steps) ? "," : "");
     }
     fprintf(fp, "  ]");
+    *t_cum += vis_duration_sec;
 }
 
 bool export_web_mission_json(const char *filename,
@@ -200,13 +245,16 @@ bool export_web_mission_json(const char *filename,
     }
     fprintf(fp, "  ],\n");
 
+    double t_cum = 0.0;
+    double soc_pct = 98.0; // Batteria carica al 98% a inizio missione
+
     fprintf(fp, "  \"traj_initial\": ");
-    write_trajectory_json_array(fp, rep_init.initial_kep, rep_init.period_min * 60.0 * 2.0, 240, sc);
+    write_trajectory_json_array(fp, rep_init.initial_kep, rep_init.period_min * 60.0 * 2.0, 240, sc, station, &t_cum, &soc_pct);
     fprintf(fp, ",\n");
 
     fprintf(fp, "  \"traj_transfer\": ");
     if (plan.is_low_thrust) {
-        write_spiral_trajectory_json_array(fp, rep_init.initial_kep, rep_target.initial_kep, plan.transfer_time_sec, 6, 360);
+        write_spiral_trajectory_json_array(fp, rep_init.initial_kep, rep_target.initial_kep, plan.transfer_time_sec, 6, 360, station, &t_cum, &soc_pct);
     } else {
         double r1 = rep_init.initial_kep.a;
         double r2 = rep_target.initial_kep.a;
@@ -214,14 +262,14 @@ bool export_web_mission_json(const char *filename,
         kep_trans.a = 0.5 * (r1 + r2);
         kep_trans.e = fabs(r2 - r1) / (r1 + r2);
         kep_trans.theta = 0.0;
-        write_trajectory_json_array(fp, kep_trans, plan.transfer_time_sec, 100, sc);
+        write_trajectory_json_array(fp, kep_trans, plan.transfer_time_sec, 100, sc, station, &t_cum, &soc_pct);
     }
     fprintf(fp, ",\n");
 
     KeplerianElements kep_targ_start = rep_target.initial_kep;
     kep_targ_start.theta = PI;
     fprintf(fp, "  \"traj_target\": ");
-    write_trajectory_json_array(fp, kep_targ_start, rep_target.period_min * 60.0 * 2.0, 240, sc);
+    write_trajectory_json_array(fp, kep_targ_start, rep_target.period_min * 60.0 * 2.0, 240, sc, station, &t_cum, &soc_pct);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

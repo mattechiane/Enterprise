@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ENTERPRISE // Orbital Mission Architect & Lambert/Low-Thrust Optimizer</title>
+    <title>ENTERPRISE // Orbital Mission Architect & Subsystem Telemetry</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         :root {
@@ -78,6 +78,9 @@
         .plot-container-3d { width: 100%; height: 600px; }
         .plot-container-lambert { width: 100%; height: 400px; }
         .plot-container-2d { width: 100%; height: 500px; }
+        .telemetry-plots-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+        .plot-container-sub { width: 100%; height: 300px; background: var(--card-bg); border: 1px solid var(--border-col); border-radius: 8px; padding: 6px; }
+
         .plot-hint {
             position: absolute; bottom: 24px; left: 28px; z-index: 10;
             font-size: 11.5px; color: var(--text-muted); background: rgba(7,9,14,0.85);
@@ -171,7 +174,7 @@
 <header>
     <div class="brand">
         <h1>ENTERPRISE // ORBITAL MISSION ARCHITECT</h1>
-        <span>High-Precision 3D Propagator &bull; Lambert Solver &amp; Continuous Low-Thrust Spiral Engine</span>
+        <span>3D Propagator &bull; Lambert Solver &bull; Continuous Low-Thrust Spiral &bull; Onboard Subsystems</span>
     </div>
     <div class="header-actions">
         <button class="btn-primary" id="btnOpenModal">&#9881; Configure New Mission (Inputs)</button>
@@ -200,7 +203,8 @@
     <div class="live-telemetry">
         <span class="badge" id="phaseBadge" style="color:var(--cyan)">PHASE 1: INITIAL ORBIT</span>
         <span>Alt: <strong id="liveAlt">---</strong> km</span>
-        <span>Lat/Lon: <strong id="liveLatLon">---</strong></span>
+        <span>Vel: <strong id="liveVel">---</strong> km/s</span>
+        <span>Batt: <strong id="liveSoc" style="color:var(--green)">---</strong>%</span>
         <span class="badge" id="eclipseBadge" style="color:var(--amber)">&#9728; SUNLIGHT</span>
     </div>
 </div>
@@ -215,14 +219,14 @@
     <div class="plot-hint">&#128433; Left-Click + Drag: Rotate 3D Space | Scroll Wheel: Zoom | Right-Click: Pan</div>
 </section>
 
-<!-- 2. SECOND OUTPUT BLOCK (MIDDLE): MISSION & MANEUVER DATA SHEET -->
+<!-- 2. SECOND OUTPUT BLOCK: MISSION & MANEUVER DATA SHEET -->
 <section class="section-block">
     <div class="section-header">
         <h2>2. Mission Engineering Data Sheet &amp; Maneuver Telemetry</h2>
         <span>Optimal Transfer Selection, Burn Coordinates, Delta-V Budget &amp; RTN Thrust Vectors</span>
     </div>
 
-    <div class="maneuver-banner" id="maneuverBannerBox">
+    <div class="maneuver-banner">
         <div class="title-group">
             <h3 id="bannerManeuverType">OPTIMAL MANEUVER: Loading...</h3>
             <p id="bannerPropellant">Propellant: ---</p>
@@ -249,22 +253,35 @@
     </div>
 </section>
 
-<!-- 3. LAMBERT DELTA-V & FUEL TRADE-OFF PLOT -->
+<!-- 3. THIRD OUTPUT BLOCK: LAMBERT DELTA-V & FUEL TRADE-OFF PLOT -->
 <section class="section-block">
     <div class="section-header">
-        <h2 id="lambertSectionTitle">3. Lambert &Delta;V &amp; Propellant Trade-Off Analysis (Cost vs. Time of Flight)</h2>
-        <span id="lambertSectionSub">Universal Variable Lambert Solver &bull; Click any point on the curve to select that Transfer Time!</span>
+        <h2>3. Lambert &Delta;V &amp; Propellant Trade-Off Analysis (Cost vs. Time of Flight)</h2>
+        <span>Universal Variable Lambert Solver &bull; Click any point on the curve to select that Transfer Time!</span>
     </div>
     <div id="plotLambert" class="plot-container-lambert"></div>
 </section>
 
-<!-- 4. FOURTH OUTPUT BLOCK (BOTTOM): 2D GROUND TRACK -->
+<!-- 4. FOURTH OUTPUT BLOCK: 2D GROUND TRACK -->
 <section class="section-block">
     <div class="section-header">
         <h2>4. 2D World Ground Track &amp; Burn Projection (WGS84)</h2>
         <span>Sub-Satellite Geodetic Trace, Burn Ignition Locations &amp; Ground Station Horizon</span>
     </div>
     <div id="plotGround" class="plot-container-2d"></div>
+</section>
+
+<!-- 5. FIFTH OUTPUT BLOCK: ONBOARD SUBSYSTEMS & TIME-HISTORY TELEMETRY -->
+<section class="section-block">
+    <div class="section-header">
+        <h2>5. Onboard Subsystems &amp; Time-History Telemetry (Kinematics, Radar &amp; EPS Power)</h2>
+        <span>Full Mission Evolution: Geodetic Altitude &amp; Velocity &bull; Ground Station Radar Pass &bull; Solar Array &amp; Li-Ion Battery SoC</span>
+    </div>
+    <div class="telemetry-plots-grid">
+        <div id="plotKinematics" class="plot-container-sub"></div>
+        <div id="plotRadar" class="plot-container-sub"></div>
+        <div id="plotPower" class="plot-container-sub"></div>
+    </div>
 </section>
 
 
@@ -479,7 +496,58 @@
             lat = Math.atan2(ze + E2 * N * s, p);
         }
         const alt = (p / Math.cos(lat)) - N;
-        return { lat: lat * RAD2DEG, lon: lon, alt: alt };
+        return { lat: lat * RAD2DEG, lon: lon, alt: alt, xe: xe, ye: ye, ze: ze };
+    }
+
+    // Compute Radar Elevation & Range from Ground Station
+    function computeGroundRadarJS(xe, ye, ze, stLatDeg, stLonDeg) {
+        const stEcef = geodeticToWGS84(stLatDeg, stLonDeg, 0.14);
+        const dx = xe - stEcef.x, dy = ye - stEcef.y, dz = ze - stEcef.z;
+        const range = Math.hypot(dx, dy, dz) || 1;
+        const lat = stLatDeg * DEG2RAD, lon = stLonDeg * DEG2RAD;
+        const sinLat = Math.sin(lat), cosLat = Math.cos(lat);
+        const sinLon = Math.sin(lon), cosLon = Math.cos(lon);
+        const rhoZ = cosLat * cosLon * dx + cosLat * sinLon * dy + sinLat * dz;
+        const elDeg = Math.asin(Math.max(-1, Math.min(1, rhoZ / range))) * RAD2DEG;
+        return { el: +elDeg.toFixed(2), rng: +range.toFixed(1) };
+    }
+
+    // Enrich trajectory frames with velocity, radar access, solar power, and battery SoC
+    function enrichTelemetrySeries(frames, st, isLowThrust) {
+        let soc = 98.0;
+        let tRunning = 0.0;
+        const P_SOLAR = 850.0;
+        const P_LOAD  = isLowThrust ? 480.0 : 320.0;
+        const CAP_WH  = 1200.0;
+
+        for (let i = 0; i < frames.length; i++) {
+            const p = frames[i];
+            const dt = (i > 0) ? 25.0 : 0.0; // Normalized step for smooth time-history
+            tRunning += dt;
+            p.t_mission_min = +(tRunning / 60.0).toFixed(2);
+
+            const rMag = Math.hypot(p.x, p.y, p.z) || (R_EQ + 400);
+            if (p.v === undefined) {
+                p.v = +(Math.sqrt(MU / rMag)).toFixed(3);
+            }
+            if (p.el === undefined || p.rng === undefined) {
+                const gst = OMEGA_E * tRunning;
+                const xe =  Math.cos(gst) * p.x + Math.sin(gst) * p.y;
+                const ye = -Math.sin(gst) * p.x + Math.cos(gst) * p.y;
+                const rad = computeGroundRadarJS(xe, ye, p.z, st.lat, st.lon);
+                p.el  = rad.el;
+                p.rng = rad.rng;
+            }
+            if (p.pwr === undefined || p.soc === undefined) {
+                p.pwr = (p.ecl === 1) ? 0 : P_SOLAR;
+                if (i > 0) {
+                    const netP = (p.pwr >= P_LOAD) ? (p.pwr - P_LOAD) * 0.90 : (p.pwr - P_LOAD);
+                    soc += ((netP * (dt / 3600.0)) / CAP_WH) * 100.0;
+                    soc = Math.max(15.0, Math.min(100.0, soc));
+                }
+                p.soc = +soc.toFixed(1);
+            }
+        }
     }
 
     function cartToKep(rx, ry, rz, vx, vy, vz) {
@@ -599,7 +667,7 @@
     }
 
     // =========================================================================
-    // RENDER DASHBOARD + LAMBERT TRADE-OFF PLOT + SPIRAL LOW-THRUST SUPPORT
+    // RENDER DASHBOARD + ALL 5 ENGINEERING SECTIONS
     // =========================================================================
     function renderDashboard(data) {
         globalData = data;
@@ -672,92 +740,61 @@
     `;
 
         // ---------------------------------------------------------------------
-        // PLOT 3: LAMBERT DELTA-V & FUEL TRADE-OFF PLOT (WITH RED DOT & OFFSET LABEL)
+        // PLOT 3: LAMBERT DELTA-V & FUEL TRADE-OFF PLOT
         // ---------------------------------------------------------------------
         const mass0 = (m.final_mass_kg || 464) + (m.fuel_kg || 36);
         const aHohRef = 0.5 * ((r1.alt_km + R_EQ) + (r2.alt_km + R_EQ));
-        const tofHohRefMin = (Math.PI * Math.sqrt(aHohRef*aHohRef*aHohRef / MU)) / 60.0;
+        const tofHohRefMin = +(Math.PI * Math.sqrt(aHohRef*aHohRef*aHohRef / MU) / 60.0).toFixed(2);
         const lCurve = data.lambert_curve || buildLambertCurve(tofHohRefMin * 60.0, m.total_dv_ms, mass0, ispVal);
 
         const selX = isLowThrust ? tofHohRefMin : m.transfer_min;
         const selY = m.total_dv_ms;
 
-        const traceLambertDv = {
-            type: 'scatter', mode: 'lines', name: 'Lambert Total ΔV [m/s]',
-            x: lCurve.map(p => p.tof_min),
-            y: lCurve.map(p => p.dv_ms),
-            line: { color: '#00e5ff', width: 3.5, shape: 'spline' },
-            fill: 'tozeroy', fillcolor: 'rgba(0, 229, 255, 0.08)'
-        };
-
-        const traceLambertFuel = {
-            type: 'scatter', mode: 'lines', name: 'Propellant Consumed [kg]',
-            x: lCurve.map(p => p.tof_min),
-            y: lCurve.map(p => p.fuel_kg),
-            yaxis: 'y2',
-            line: { color: '#00e676', width: 2.5, dash: 'dot', shape: 'spline' }
-        };
-
-        // RED DOT MARKER (No overlapping text directly on the marker)
-        const traceOptimalMarker = {
-            type: 'scatter', mode: 'markers', name: 'Selected Operating Point',
-            x: [selX], y: [selY],
-            marker: { size: 12, color: '#ff1744', symbol: 'circle', line: { color: '#ffffff', width: 2.5 } }
-        };
-
-        Plotly.newPlot('plotLambert', [traceLambertDv, traceLambertFuel, traceOptimalMarker], {
+        Plotly.newPlot('plotLambert', [
+            {
+                type: 'scatter', mode: 'lines', name: 'Lambert Total ΔV [m/s]',
+                x: lCurve.map(p => p.tof_min), y: lCurve.map(p => p.dv_ms),
+                line: { color: '#00e5ff', width: 3.5, shape: 'spline' },
+                fill: 'tozeroy', fillcolor: 'rgba(0, 229, 255, 0.08)'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Propellant Consumed [kg]',
+                x: lCurve.map(p => p.tof_min), y: lCurve.map(p => p.fuel_kg),
+                yaxis: 'y2', line: { color: '#00e676', width: 2.5, dash: 'dot', shape: 'spline' }
+            },
+            {
+                type: 'scatter', mode: 'markers', name: 'Selected Operating Point',
+                x: [selX], y: [selY],
+                marker: { size: 12, color: '#ff1744', symbol: 'circle', line: { color: '#ffffff', width: 2.5 } }
+            }
+        ], {
             paper_bgcolor: '#111622', plot_bgcolor: '#111622',
             margin: { l: 65, r: 65, b: 48, t: 24 },
             hovermode: 'x unified',
-            xaxis: {
-                title: 'Impulsive Transfer Time of Flight (TOF) [minutes]',
-                color: '#e2e8f0', gridcolor: '#1e293b', zerolinecolor: '#334155'
-            },
-            yaxis: {
-                title: 'Total Maneuver Cost ΔV [m/s]',
-                titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' },
-                gridcolor: '#1e293b'
-            },
-            yaxis2: {
-                title: 'Propellant Mass Consumed [kg]',
-                titlefont: { color: '#00e676' }, tickfont: { color: '#00e676' },
-                overlaying: 'y', side: 'right', showgrid: false
-            },
-            // Floating Annotation Box lifted 48px ABOVE the curves with a pointer arrow
+            xaxis: { title: 'Impulsive Transfer Time of Flight (TOF) [minutes]', color: '#e2e8f0', gridcolor: '#1e293b' },
+            yaxis: { title: 'Total Maneuver Cost ΔV [m/s]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#1e293b' },
+            yaxis2: { title: 'Propellant Mass Consumed [kg]', titlefont: { color: '#00e676' }, tickfont: { color: '#00e676' }, overlaying: 'y', side: 'right', showgrid: false },
             annotations: [{
-                x: selX,
-                y: selY,
-                xref: 'x',
-                yref: 'y',
+                x: selX, y: selY, xref: 'x', yref: 'y',
                 text: isLowThrust
                     ? `<b>ELECTRIC SPIRAL</b>: ${selY} m/s | Fuel: ${m.fuel_kg} kg`
                     : `<b>SELECTED</b> (${selX} min | ${selY} m/s | ${m.fuel_kg} kg)`,
-                showarrow: true,
-                arrowhead: 2,
-                arrowsize: 1,
-                arrowwidth: 2,
-                arrowcolor: '#ff1744',
-                ax: 0,
-                ay: -48,
-                bgcolor: 'rgba(11, 15, 25, 0.92)',
-                bordercolor: '#ffab00',
-                borderwidth: 1.5,
-                borderpad: 6,
+                showarrow: true, arrowhead: 2, arrowsize: 1, arrowwidth: 2, arrowcolor: '#ff1744',
+                ax: 0, ay: -48,
+                bgcolor: 'rgba(11, 15, 25, 0.92)', bordercolor: '#ffab00', borderwidth: 1.5, borderpad: 6,
                 font: { color: '#ffab00', size: 12 }
             }],
             legend: { font: { color: '#e2e8f0', size: 11.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.02, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
-        const lambertDiv = document.getElementById('plotLambert');
-        lambertDiv.on('plotly_click', function(evtData) {
+        document.getElementById('plotLambert').on('plotly_click', function(evtData) {
             if (!evtData || !evtData.points || !evtData.points.length) return;
-            const clickedTofMin = evtData.points[0].x;
-            document.getElementById('inMaxTime').value = clickedTofMin.toFixed(1);
+            document.getElementById('inMaxTime').value = evtData.points[0].x.toFixed(1);
             document.getElementById('btnRunCustomMission').click();
         });
 
         // ---------------------------------------------------------------------
-        // PLOT 1: 3D WGS84 EARTH ELLIPSOID + ORBITS + SPIRAL/CONIC TRANSFER
+        // BUILD UNIFIED TIMELINE & ENRICH SUBSYSTEM TELEMETRY
         // ---------------------------------------------------------------------
         const trackMode = parseInt(document.getElementById('trackModeSelect').value, 10);
         const initSlice = trackMode === 1 ? data.traj_initial.slice(0, Math.ceil(data.traj_initial.length / 2)) : data.traj_initial;
@@ -772,9 +809,14 @@
         }));
         targSlice.forEach(p => animFrames.push({...p, phase: 'PHASE 3: TARGET ORBIT', color: '#00e676'}));
 
+        enrichTelemetrySeries(animFrames, st, isLowThrust);
+
         document.getElementById('timelineSlider').max = animFrames.length - 1;
         currentFrame = 0;
 
+        // ---------------------------------------------------------------------
+        // PLOT 1: 3D WGS84 EARTH ELLIPSOID
+        // ---------------------------------------------------------------------
         let sx = [], sy = [], sz = [];
         for (let i = 0; i <= 36; i++) {
             let latDeg = (i / 36) * 180.0 - 90.0;
@@ -822,9 +864,7 @@
         const burnEnd   = data.traj_transfer[data.traj_transfer.length - 1];
         const traceBurns3D = {
             type: 'scatter3d', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Maneuver Burn Points (ΔV)',
-            x: [burnStart.x, burnEnd.x],
-            y: [burnStart.y, burnEnd.y],
-            z: [burnStart.z, burnEnd.z],
+            x: [burnStart.x, burnEnd.x], y: [burnStart.y, burnEnd.y], z: [burnStart.z, burnEnd.z],
             text: isLowThrust
                 ? ['SPIRAL START (THRUST ON)', 'SPIRAL CUTOFF (MECO)']
                 : [`BURN 1 (ΔV1: ${m.dv1_ms} m/s)`, `BURN 2 (ΔV2: ${m.dv2_ms} m/s)`],
@@ -850,76 +890,115 @@
             margin: { l: 0, r: 0, b: 0, t: 10 },
             uirevision: 'keep_3d_camera',
             scene: {
-                uirevision: 'keep_3d_camera',
-                dragmode: 'orbit',
+                uirevision: 'keep_3d_camera', dragmode: 'orbit',
                 xaxis: { title: 'X [km]', color: '#94a3b8', gridcolor: '#1e293b' },
                 yaxis: { title: 'Y [km]', color: '#94a3b8', gridcolor: '#1e293b' },
                 zaxis: { title: 'Z [km]', color: '#94a3b8', gridcolor: '#1e293b' },
-                aspectmode: 'data',
-                camera: { eye: { x: 1.45, y: 1.25, z: 0.95 } }
+                aspectmode: 'data', camera: { eye: { x: 1.45, y: 1.25, z: 0.95 } }
             },
             legend: { font: { color: '#e2e8f0', size: 11.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
         // ---------------------------------------------------------------------
-        // PLOT 4 (BOTTOM): 2D WORLD GROUND TRACK
+        // PLOT 4: 2D WORLD GROUND TRACK
         // ---------------------------------------------------------------------
-        const traceInitGeo = {
-            type: 'scattergeo', mode: 'markers', name: 'Initial Orbit Track',
-            lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon),
-            marker: { size: 4, color: '#00e5ff' }
-        };
-        const traceTransGeo = {
-            type: 'scattergeo', mode: 'markers', name: isLowThrust ? 'Low-Thrust Spiral Track' : 'Transfer Maneuver Track',
-            lat: data.traj_transfer.map(p => p.lat), lon: data.traj_transfer.map(p => p.lon),
-            marker: { size: 3.5, color: isLowThrust ? '#e040fb' : '#ffab00' }
-        };
-        const traceTargGeo = {
-            type: 'scattergeo', mode: 'markers', name: 'Target Orbit Track',
-            lat: targSlice.map(p => p.lat), lon: targSlice.map(p => p.lon),
-            marker: { size: 4, color: '#00e676' }
-        };
-        const traceBurnsGeo = {
-            type: 'scattergeo', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Burn Locations (ΔV1 / ΔV2)',
-            lat: [burnStart.lat, burnEnd.lat], lon: [burnStart.lon, burnEnd.lon],
-            text: isLowThrust ? ['SPIRAL ON', 'MECO'] : ['BURN 1 (ΔV1)', 'BURN 2 (ΔV2)'],
-            textposition: 'top center',
-            textfont: { color: '#ffab00', size: 11 },
-            marker: { size: 12, color: ['#ffab00', '#d500f9'], symbol: 'star', line: { color: '#fff', width: 1.5 } }
-        };
-        const traceStation = {
-            type: 'scattergeo', mode: 'markers+text', name: st.name,
-            lat: [st.lat], lon: [st.lon], text: [st.name], textposition: 'bottom right',
-            marker: { size: 10, color: '#ff1744', symbol: 'triangle-up', line: { color: '#fff', width: 1 } },
-            textfont: { color: '#ffffff', size: 11 }
-        };
-        const traceSatGeo = {
-            type: 'scattergeo', mode: 'markers+text', name: 'Spacecraft (Live)',
-            lat: [p0.lat], lon: [p0.lon], text: ['SAT'], textposition: 'top right',
-            textfont: { color: '#ffffff', size: 11 },
-            marker: { size: 11, color: '#ffffff', line: { color: '#ff1744', width: 3 } }
-        };
-
-        const traces2D = [traceInitGeo, traceTransGeo, traceTargGeo, traceBurnsGeo, traceStation, traceSatGeo];
+        const traces2D = [
+            { type: 'scattergeo', mode: 'markers', name: 'Initial Orbit Track', lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon), marker: { size: 4, color: '#00e5ff' } },
+            { type: 'scattergeo', mode: 'markers', name: isLowThrust ? 'Low-Thrust Spiral Track' : 'Transfer Maneuver Track', lat: data.traj_transfer.map(p => p.lat), lon: data.traj_transfer.map(p => p.lon), marker: { size: 3.5, color: isLowThrust ? '#e040fb' : '#ffab00' } },
+            { type: 'scattergeo', mode: 'markers', name: 'Target Orbit Track', lat: targSlice.map(p => p.lat), lon: targSlice.map(p => p.lon), marker: { size: 4, color: '#00e676' } },
+            { type: 'scattergeo', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Burn Locations (ΔV1 / ΔV2)', lat: [burnStart.lat, burnEnd.lat], lon: [burnStart.lon, burnEnd.lon], text: isLowThrust ? ['SPIRAL ON', 'MECO'] : ['BURN 1 (ΔV1)', 'BURN 2 (ΔV2)'], textposition: 'top center', textfont: { color: '#ffab00', size: 11 }, marker: { size: 12, color: ['#ffab00', '#d500f9'], symbol: 'star', line: { color: '#fff', width: 1.5 } } },
+            { type: 'scattergeo', mode: 'markers+text', name: st.name, lat: [st.lat], lon: [st.lon], text: [st.name], textposition: 'bottom right', marker: { size: 10, color: '#ff1744', symbol: 'triangle-up', line: { color: '#fff', width: 1 } }, textfont: { color: '#ffffff', size: 11 } },
+            { type: 'scattergeo', mode: 'markers+text', name: 'Spacecraft (Live)', lat: [p0.lat], lon: [p0.lon], text: ['SAT'], textposition: 'top right', textfont: { color: '#ffffff', size: 11 }, marker: { size: 11, color: '#ffffff', line: { color: '#ff1744', width: 3 } } }
+        ];
         satTraceIndex2D = traces2D.length - 1;
 
         Plotly.newPlot('plotGround', traces2D, {
-            paper_bgcolor: '#111622',
-            margin: { l: 6, r: 6, b: 6, t: 10 },
-            uirevision: 'keep_2d_map',
+            paper_bgcolor: '#111622', margin: { l: 6, r: 6, b: 6, t: 10 }, uirevision: 'keep_2d_map',
             geo: {
-                bgcolor: '#111622',
-                projection: { type: 'natural earth' },
-                showland: true, landcolor: '#2e6b3e',
-                showocean: true, oceancolor: '#0a2e5c',
-                showlakes: true, lakecolor: '#0a2e5c',
-                showrivers: true, rivercolor: '#0a2e5c',
-                showcountries: true, countrycolor: '#64748b',
-                showcoastlines: true, coastlinecolor: '#cbd5e1',
+                bgcolor: '#111622', projection: { type: 'natural earth' },
+                showland: true, landcolor: '#2e6b3e', showocean: true, oceancolor: '#0a2e5c',
+                showlakes: true, lakecolor: '#0a2e5c', showrivers: true, rivercolor: '#0a2e5c',
+                showcountries: true, countrycolor: '#64748b', showcoastlines: true, coastlinecolor: '#cbd5e1',
                 lataxis: { showgrid: true, gridcolor: 'rgba(255,255,255,0.12)' },
                 lonaxis: { showgrid: true, gridcolor: 'rgba(255,255,255,0.12)' }
             },
             legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.98 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---------------------------------------------------------------------
+        // SECTION 5: ONBOARD SUBSYSTEMS TIME-HISTORY PLOTS (5A, 5B, 5C)
+        // ---------------------------------------------------------------------
+        const tAxis = animFrames.map(p => p.t_mission_min);
+
+        // 5A: Geodetic Altitude & Orbital Velocity vs Time
+        Plotly.newPlot('plotKinematics', [
+            {
+                type: 'scatter', mode: 'lines', name: 'WGS84 Geodetic Altitude [km]',
+                x: tAxis, y: animFrames.map(p => p.alt),
+                line: { color: '#00e5ff', width: 2.5 }, fill: 'tozeroy', fillcolor: 'rgba(0, 229, 255, 0.06)'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Inertial Velocity ||V|| [km/s]',
+                x: tAxis, y: animFrames.map(p => p.v), yaxis: 'y2',
+                line: { color: '#ffab00', width: 2.5, dash: 'dot' }
+            }
+        ], {
+            title: { text: '5A. Orbital Kinematics: WGS84 Altitude & Velocity Evolution (J2 + Eccentricity + Maneuver)', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 60, r: 60, b: 38, t: 36 }, hovermode: 'x unified',
+            xaxis: { title: 'Simulation Timeline [minutes]', color: '#94a3b8', gridcolor: '#222d42' },
+            yaxis: { title: 'Altitude [km]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#222d42' },
+            yaxis2: { title: 'Velocity [km/s]', titlefont: { color: '#ffab00' }, tickfont: { color: '#ffab00' }, overlaying: 'y', side: 'right', showgrid: false },
+            legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(17,22,34,0.8)', x: 0.01, y: 0.98 }
+        }, { responsive: true, displaylogo: false });
+
+        // 5B: Ground Station Radar Tracking (Elevation & Slant Range)
+        Plotly.newPlot('plotRadar', [
+            {
+                type: 'scatter', mode: 'lines', name: `Radar Elevation above ${st.name} [deg]`,
+                x: tAxis, y: animFrames.map(p => Math.max(0, p.el)),
+                line: { color: '#00e676', width: 2.8 }, fill: 'tozeroy', fillcolor: 'rgba(0, 230, 118, 0.14)'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Min Horizon Mask (10°)',
+                x: [tAxis[0], tAxis[tAxis.length - 1]], y: [st.min_el || 10, st.min_el || 10],
+                line: { color: '#ff1744', width: 1.5, dash: 'dash' }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Slant Range Distance [km]',
+                x: tAxis, y: animFrames.map(p => p.rng), yaxis: 'y2',
+                line: { color: '#94a3b8', width: 1.8, dash: 'dot' }
+            }
+        ], {
+            title: { text: `5B. Ground Station Radar Access (${st.name}): Elevation Pass Windows & Slant Range`, font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 60, r: 65, b: 38, t: 36 }, hovermode: 'x unified',
+            xaxis: { title: 'Simulation Timeline [minutes]', color: '#94a3b8', gridcolor: '#222d42' },
+            yaxis: { title: 'Elevation [deg]', titlefont: { color: '#00e676' }, tickfont: { color: '#00e676' }, range: [0, 92], gridcolor: '#222d42' },
+            yaxis2: { title: 'Slant Range [km]', titlefont: { color: '#94a3b8' }, tickfont: { color: '#94a3b8' }, overlaying: 'y', side: 'right', showgrid: false },
+            legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(17,22,34,0.8)', x: 0.01, y: 0.98 }
+        }, { responsive: true, displaylogo: false });
+
+        // 5C: EPS Electrical Power Subsystem (Solar Array Generation & Li-Ion Battery SoC)
+        Plotly.newPlot('plotPower', [
+            {
+                type: 'scatter', mode: 'lines', name: 'Solar Array Generation [W]',
+                x: tAxis, y: animFrames.map(p => p.pwr),
+                line: { color: '#ffab00', width: 2.2, shape: 'hv' }, fill: 'tozeroy', fillcolor: 'rgba(255, 171, 0, 0.10)'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Li-Ion Battery State of Charge (SoC) [%]',
+                x: tAxis, y: animFrames.map(p => p.soc), yaxis: 'y2',
+                line: { color: '#d500f9', width: 3.0 }
+            }
+        ], {
+            title: { text: '5C. Onboard Electrical Power Subsystem (EPS): Solar Array Generation (GaAs) & Li-Ion Battery SoC', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 60, r: 65, b: 38, t: 36 }, hovermode: 'x unified',
+            xaxis: { title: 'Simulation Timeline [minutes]', color: '#94a3b8', gridcolor: '#222d42' },
+            yaxis: { title: 'Solar Power [Watts]', titlefont: { color: '#ffab00' }, tickfont: { color: '#ffab00' }, range: [0, 1000], gridcolor: '#222d42' },
+            yaxis2: { title: 'Battery SoC [%]', titlefont: { color: '#d500f9' }, tickfont: { color: '#d500f9' }, range: [40, 105], overlaying: 'y', side: 'right', showgrid: false },
+            legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(17,22,34,0.8)', x: 0.01, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
         startAnimationLoop();
@@ -934,6 +1013,8 @@
 
         document.getElementById('timelineSlider').value = frameIdx;
         document.getElementById('liveAlt').textContent = pt.alt.toFixed(1);
+        document.getElementById('liveVel').textContent = (pt.v || 7.6).toFixed(2);
+        document.getElementById('liveSoc').textContent = (pt.soc || 95).toFixed(1);
         document.getElementById('liveLatLon').textContent = `${pt.lat.toFixed(1)}°, ${pt.lon.toFixed(1)}°`;
 
         const phaseBadge = document.getElementById('phaseBadge');
@@ -942,10 +1023,10 @@
 
         const eclBadge = document.getElementById('eclipseBadge');
         if (pt.ecl === 1) {
-            eclBadge.innerHTML = '&#9790; IN ECLIPSE';
+            eclBadge.innerHTML = '&#9790; IN ECLIPSE (0 W)';
             eclBadge.style.color = '#94a3b8';
         } else {
-            eclBadge.innerHTML = '&#9728; SUNLIGHT';
+            eclBadge.innerHTML = `&#9728; SUNLIGHT (${pt.pwr || 850} W)`;
             eclBadge.style.color = '#ffab00';
         }
     }
@@ -979,18 +1060,17 @@
             const x = R11 * rp + R12 * rq;
             const y = R21 * rp + R22 * rq;
             const z = R31 * rp + R32 * rq;
+            const vMag = Math.sqrt(MU * (2.0 / r - 1.0 / a));
             const t = tOffset + frac * period * ((thetaEnd - thetaStart) / (2.0 * Math.PI));
             const geo = eciToGeodetic(x, y, z, t);
             const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
-            pts.push({ t: t, x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
+            pts.push({ t: t, x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), v: +vMag.toFixed(3), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
         }
         return pts;
     }
 
-    // Generate Multi-Revolution 3D Continuous Spiral Trajectory for Electric Propulsion
     function generate3DSpiralTrajectory(orb1, orb2, visualRevs, steps, totalTofSec) {
         const pts = [];
-        // Visual time scaling so Ground Track shows a clean continuous spiral without aliasing
         const visualDurationSec = visualRevs * 5600.0;
         for (let k = 0; k <= steps; k++) {
             const frac = k / steps;
@@ -1009,13 +1089,14 @@
             const x = cO * rp - sO * ci * rq;
             const y = sO * rp + cO * ci * rq;
             const z = si * rq;
+            const vMag = Math.sqrt(MU * (2.0 / r - 1.0 / a));
 
             const tVis = frac * visualDurationSec;
             const geo = eciToGeodetic(x, y, z, tVis);
             const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
             pts.push({
                 t: +(frac * totalTofSec).toFixed(1),
-                x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2),
+                x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), v: +vMag.toFixed(3),
                 lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl
             });
         }
@@ -1055,10 +1136,11 @@
             const x = r * (Math.cos(nu) * u1[0] + Math.sin(nu) * tx);
             const y = r * (Math.cos(nu) * u1[1] + Math.sin(nu) * ty);
             const z = r * (Math.cos(nu) * u1[2] + Math.sin(nu) * tz);
+            const vMag = Math.sqrt(MU * (2.0 / r - 1.0 / aTrans));
             const t = frac * tofSec;
             const geo = eciToGeodetic(x, y, z, t);
             const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
-            pts.push({ t: t, x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
+            pts.push({ t: t, x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), v: +vMag.toFixed(3), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
         }
         return pts;
     }
@@ -1095,7 +1177,6 @@
         let typeName = '';
 
         if (isLowThrust) {
-            // EDELBAUM CONTINUOUS SPIRAL TRANSFER
             const v1c = Math.sqrt(MU / orb1.a), v2c = Math.sqrt(MU / orb2.a);
             const effAngle = Math.min(Math.PI, 0.5 * Math.PI * totalPlaneAngle);
             totalDv = Math.sqrt(v1c*v1c + v2c*v2c - 2*v1c*v2c*Math.cos(effAngle));
@@ -1111,7 +1192,6 @@
             spiralRevs = +(tofSec / meanPer).toFixed(1);
             typeName = `Continuous Low-Thrust Edelbaum Spiral (${spiralRevs} Revolutions)`;
         } else {
-            // IMPULSIVE CHEMICAL OPTIMIZER
             const vt1 = Math.sqrt(MU * (2.0 / r1 - 1.0 / aHoh));
             const vt2 = Math.sqrt(MU * (2.0 / r2 - 1.0 / aHoh));
             let bestAlpha = 0, minDv = 1e9;
