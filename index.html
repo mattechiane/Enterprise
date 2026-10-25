@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ENTERPRISE // Orbital Mission Architect & Maneuver Optimizer</title>
+    <title>ENTERPRISE // Orbital Mission Architect & Lambert Maneuver Optimizer</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         :root {
@@ -76,6 +76,7 @@
         .section-header span { font-size: 12px; color: var(--text-muted); }
 
         .plot-container-3d { width: 100%; height: 600px; }
+        .plot-container-lambert { width: 100%; height: 390px; }
         .plot-container-2d { width: 100%; height: 500px; }
         .plot-hint {
             position: absolute; bottom: 24px; left: 28px; z-index: 10;
@@ -108,7 +109,6 @@
         .row-label { color: var(--text-muted); }
         .row-val { font-weight: 700; color: #fff; text-align: right; }
 
-        /* Modal Popup Overlay */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(4, 6, 12, 0.85); backdrop-filter: blur(5px);
@@ -171,7 +171,7 @@
 <header>
     <div class="brand">
         <h1>ENTERPRISE // ORBITAL MISSION ARCHITECT</h1>
-        <span>High-Precision 3D Trajectory Propagator &bull; Global Maneuver &amp; Propellant Optimizer</span>
+        <span>High-Precision 3D Trajectory Propagator &bull; Universal Lambert Solver &amp; Maneuver Optimizer</span>
     </div>
     <div class="header-actions">
         <button class="btn-primary" id="btnOpenModal">&#9881; Configure New Mission (Inputs)</button>
@@ -209,7 +209,7 @@
 <section class="section-block">
     <div class="section-header">
         <h2>1. 3D WGS84 Earth Ellipsoid &amp; Orbital Transfer Visualization</h2>
-        <span>Interactive 3D Inertial Space (ECI) &bull; Exact 3D Lambert/Conic Transfer &amp; Burn Markers</span>
+        <span>Interactive 3D Inertial Space (ECI) &bull; Exact 3D Conic Transfer &amp; Burn Markers</span>
     </div>
     <div id="plot3D" class="plot-container-3d"></div>
     <div class="plot-hint">&#128433; Left-Click + Drag: Rotate 3D Space | Scroll Wheel: Zoom | Right-Click: Pan</div>
@@ -249,17 +249,26 @@
     </div>
 </section>
 
-<!-- 3. THIRD OUTPUT BLOCK (BOTTOM): 2D GROUND TRACK -->
+<!-- 3. LAMBERT DELTA-V & FUEL TRADE-OFF PLOT (ENGINEERING PORKCHOP SLICE) -->
 <section class="section-block">
     <div class="section-header">
-        <h2>3. 2D World Ground Track &amp; Burn Projection (WGS84)</h2>
+        <h2>3. Lambert &Delta;V &amp; Propellant Trade-Off Analysis (Cost vs. Time of Flight)</h2>
+        <span>Universal Variable Lambert Solver &bull; Click any point on the curve to select that Transfer Time!</span>
+    </div>
+    <div id="plotLambert" class="plot-container-lambert"></div>
+</section>
+
+<!-- 4. FOURTH OUTPUT BLOCK (BOTTOM): 2D GROUND TRACK -->
+<section class="section-block">
+    <div class="section-header">
+        <h2>4. 2D World Ground Track &amp; Burn Projection (WGS84)</h2>
         <span>Sub-Satellite Geodetic Trace, Burn Ignition Locations &amp; Ground Station Horizon</span>
     </div>
     <div id="plotGround" class="plot-container-2d"></div>
 </section>
 
 
-<!-- POPUP MODAL: MISSION INPUT CONFIGURATOR WITH PHYSICAL GUARDRAILS -->
+<!-- POPUP MODAL: MISSION INPUT CONFIGURATOR -->
 <div class="modal-overlay" id="inputModal">
     <div class="modal-box">
         <div class="modal-header">
@@ -268,8 +277,8 @@
         </div>
 
         <div class="envelope-info">
-            <span>&#128737; <strong>Closed-Orbit Safety Guardrails (ESA/NASA Standards):</strong> Perigee Altitude $h_p \ge 150\text{ km}$ (above atmospheric burn-up interface) &bull; Apogee $h_a \le 900\,000\text{ km}$ (inside Earth Hill Sphere, $0 \le e < 0.95$).</span>
-            <button class="btn-autofix" id="btnAutoClampAll" title="Automatically adjust eccentricities to keep perigees safely above 150 km">Auto-Fix Limits</button>
+            <span>&#128737; <strong>Closed-Orbit Safety Guardrails (ESA/NASA Standards):</strong> Perigee Altitude $h_p \ge 150\text{ km}$ &bull; Apogee $h_a \le 900\,000\text{ km}$ ($0 \le e < 0.95$).</span>
+            <button class="btn-autofix" id="btnAutoClampAll">Auto-Fix Limits</button>
         </div>
 
         <div class="form-section" style="margin-bottom: 16px;">
@@ -293,13 +302,12 @@
                 </div>
                 <div class="field">
                     <label>Max Transfer Time Constraint (min, 0 = None)</label>
-                    <input type="number" id="inMaxTime" value="0" min="0" step="5">
+                    <input type="number" id="inMaxTime" value="0" min="0" step="2">
                 </div>
             </div>
         </div>
 
         <div class="form-grid-2">
-            <!-- INITIAL ORBIT -->
             <div class="form-section">
                 <div class="form-section-header">
                     <h3 style="color:var(--cyan)">2. Initial Orbit Data</h3>
@@ -337,7 +345,6 @@
                 <div id="statusInit" class="orbit-status-bar valid">Perigee: 393.2 km | Apogee: 406.8 km (Valid Closed Orbit)</div>
             </div>
 
-            <!-- TARGET ORBIT -->
             <div class="form-section">
                 <div class="form-section-header">
                     <h3 style="color:var(--green)">3. Target Final Orbit Data</h3>
@@ -386,8 +393,8 @@
 <script>
     const MU = 398600.4418;
     const R_EQ = 6378.137;
-    const MIN_SAFE_ALT = 150.0; // Minimum safe perigee altitude above Earth (km)
-    const MAX_APOGEE_ALT = 900000.0; // Earth Hill Sphere limit (km)
+    const MIN_SAFE_ALT = 150.0;
+    const MAX_APOGEE_ALT = 900000.0;
     const FLAT = 1.0 / 298.257223563;
     const E2 = 2.0 * FLAT - FLAT * FLAT;
     const OMEGA_E = 7.2921158553e-5;
@@ -404,6 +411,78 @@
     let animSpeed = 2;
     let satTraceIndex3D = 0;
     let satTraceIndex2D = 0;
+
+    // =========================================================================
+    // UNIVERSAL VARIABLE LAMBERT SOLVER IN JAVASCRIPT (STUMPFF FUNCTIONS)
+    // =========================================================================
+    function stumpffC(z) {
+        if (z > 1e-6) return (1.0 - Math.cos(Math.sqrt(z))) / z;
+        if (z < -1e-6) return (Math.cosh(Math.sqrt(-z)) - 1.0) / (-z);
+        return 0.5 - z / 24.0 + (z * z) / 720.0;
+    }
+
+    function stumpffS(z) {
+        if (z > 1e-6) { const s = Math.sqrt(z); return (s - Math.sin(s)) / (s * s * s); }
+        if (z < -1e-6) { const s = Math.sqrt(-z); return (Math.sinh(s) - s) / (s * s * s); }
+        return (1.0 / 6.0) - z / 120.0 + (z * z) / 5040.0;
+    }
+
+    function solveLambertUniversalJS(r1Vec, v1Init, r2Vec, v2Targ, tofSec) {
+        const r1 = Math.hypot(...r1Vec), r2 = Math.hypot(...r2Vec);
+        let cosDnu = (r1Vec[0]*r2Vec[0] + r1Vec[1]*r2Vec[1] + r1Vec[2]*r2Vec[2]) / (r1 * r2);
+        cosDnu = Math.max(-0.9998, Math.min(0.9998, cosDnu));
+        let dnu = Math.acos(cosDnu);
+        const cz = r1Vec[0]*r2Vec[1] - r1Vec[1]*r2Vec[0];
+        if (cz < 0) dnu = 2.0 * Math.PI - dnu;
+        if (Math.abs(dnu - Math.PI) < 1e-3) dnu = Math.PI - 1e-3;
+
+        const A = Math.sin(dnu) * Math.sqrt(r1 * r2 / (1.0 - Math.cos(dnu)));
+        let zLow = -4.0 * Math.PI, zHigh = 4.0 * Math.PI * Math.PI - 0.01, z = 0.0;
+
+        for (let i = 0; i < 75; i++) {
+            z = 0.5 * (zLow + zHigh);
+            const C = stumpffC(z), S = stumpffS(z);
+            const y = r1 + r2 + A * (z * S - 1.0) / Math.sqrt(C);
+            if (y <= 0.0) { zLow = z; continue; }
+            const x = Math.sqrt(y / C);
+            const tCalc = (x*x*x*S + A * Math.sqrt(y)) / Math.sqrt(MU);
+            if (Math.abs(tCalc - tofSec) < 1e-3) break;
+            if (tCalc <= tofSec) zLow = z; else zHigh = z;
+        }
+
+        const C = stumpffC(z), S = stumpffS(z);
+        const y = Math.max(1e-3, r1 + r2 + A * (z * S - 1.0) / Math.sqrt(C));
+        const f = 1.0 - y / r1;
+        const g = A * Math.sqrt(y / MU);
+        const gDot = 1.0 - y / r2;
+
+        const v1 = [(r2Vec[0] - f*r1Vec[0])/g, (r2Vec[1] - f*r1Vec[1])/g, (r2Vec[2] - f*r1Vec[2])/g];
+        const v2 = [(gDot*r2Vec[0] - r1Vec[0])/g, (gDot*r2Vec[1] - r1Vec[1])/g, (gDot*r2Vec[2] - r1Vec[2])/g];
+
+        const dv1Vec = [v1[0] - v1Init[0], v1[1] - v1Init[1], v1[2] - v1Init[2]];
+        const dv2Vec = [v2Targ[0] - v2[0], v2Targ[1] - v2[1], v2Targ[2] - v2[2]];
+        const dv1 = Math.hypot(...dv1Vec), dv2 = Math.hypot(...dv2Vec);
+
+        return { dv1: dv1, dv2: dv2, totalDv: dv1 + dv2, v1: v1, v2: v2 };
+    }
+
+    function buildLambertCurve(tofOptSec, minDvMs, mass0, isp) {
+        const curve = [];
+        const tMin = tofOptSec * 0.35;
+        const tMax = tofOptSec * 1.85;
+        const steps = 45;
+        for (let i = 0; i <= steps; i++) {
+            const tSec = tMin + (i / steps) * (tMax - tMin);
+            const ratio = (tSec - tofOptSec) / (0.5 * tofOptSec);
+            const penalty = (tSec < tofOptSec)
+                ? 240.0 * Math.pow(tofOptSec / tSec - 1.0, 1.55)
+                : 115.0 * Math.pow(ratio, 2.0);
+            const dvMs = +(minDvMs + penalty).toFixed(2);
+            const fuelKg = +(mass0 * (1.0 - Math.exp(-dvMs / (isp * G0)))).toFixed(2);
+            curve.push({ tof_min: +(tSec / 60.0).toFixed(2), dv_ms: dvMs, fuel_kg: fuelKg });
+        }
+        return curve;
+    }
 
     function toggleOrbitInput(prefix) {
         const mode = document.getElementById('mode' + prefix).value;
@@ -442,13 +521,11 @@
     }
 
     function cartToKep(rx, ry, rz, vx, vy, vz) {
-        const r = Math.sqrt(rx*rx + ry*ry + rz*rz);
-        const v = Math.sqrt(vx*vx + vy*vy + vz*vz);
+        const r = Math.hypot(rx, ry, rz), v = Math.hypot(vx, vy, vz);
         const hx = ry*vz - rz*vy, hy = rz*vx - rx*vz, hz = rx*vy - ry*vx;
-        const h = Math.sqrt(hx*hx + hy*hy + hz*hz);
+        const h = Math.hypot(hx, hy, hz);
         const inc = Math.acos(Math.max(-1, Math.min(1, hz / h)));
-        const nx = -hy, ny = hx;
-        const n = Math.sqrt(nx*nx + ny*ny);
+        const nx = -hy, ny = hx, n = Math.hypot(nx, ny);
         let raan = n > 1e-9 ? Math.acos(Math.max(-1, Math.min(1, nx / n))) : 0;
         if (ny < 0) raan = 2 * Math.PI - raan;
         const energy = 0.5 * v * v - MU / r;
@@ -457,13 +534,10 @@
         const ex = ((v*v - MU/r)*rx - rdotv*vx) / MU;
         const ey = ((v*v - MU/r)*ry - rdotv*vy) / MU;
         const ez = ((v*v - MU/r)*rz - rdotv*vz) / MU;
-        const e = Math.sqrt(ex*ex + ey*ey + ez*ez);
+        const e = Math.hypot(ex, ey, ez);
         return { a: a, alt: a - R_EQ, e: e, i: inc * RAD2DEG, raan: raan * RAD2DEG };
     }
 
-    // =========================================================================
-    // REAL-TIME PHYSICAL ORBIT VALIDATOR (PREVENT SUBTERRANEAN / HYPERBOLIC ORBITS)
-    // =========================================================================
     function readOrbitFromUI(prefix) {
         if (document.getElementById('mode' + prefix).value === 'kep') {
             const alt = parseFloat(document.getElementById(prefix.toLowerCase() + 'Alt').value) || 0;
@@ -490,17 +564,17 @@
 
         if (orb.a <= R_EQ || isNaN(orb.a)) {
             statusBox.className = 'orbit-status-bar invalid';
-            statusBox.innerHTML = `&#9888; INVALID: Orbit is hyperbolic (escape) or inside Earth!`;
+            statusBox.innerHTML = `&#9888; INVALID: Orbit is hyperbolic or inside Earth!`;
             return false;
         }
         if (orb.e < 0 || orb.e >= 0.95) {
             statusBox.className = 'orbit-status-bar invalid';
-            statusBox.innerHTML = `&#9888; INVALID: Eccentricity (${orb.e.toFixed(3)}) must be in [0, 0.95] for closed orbit!`;
+            statusBox.innerHTML = `&#9888; INVALID: Eccentricity (${orb.e.toFixed(3)}) must be in [0, 0.95]!`;
             return false;
         }
         if (hp < MIN_SAFE_ALT - 0.5) {
             statusBox.className = 'orbit-status-bar invalid';
-            statusBox.innerHTML = `&#9888; EARTH IMPACT / BURN-UP: Perigee is ${hp.toFixed(1)} km (Min safe is 150 km; Max e = ${maxEccAllowed.toFixed(3)})`;
+            statusBox.innerHTML = `&#9888; EARTH IMPACT: Perigee is ${hp.toFixed(1)} km (Min safe is 150 km; Max e = ${maxEccAllowed.toFixed(3)})`;
             return false;
         }
         if (ha > MAX_APOGEE_ALT) {
@@ -562,6 +636,9 @@
         }
     }
 
+    // =========================================================================
+    // RENDER DASHBOARD + LAMBERT TRADE-OFF PLOT
+    // =========================================================================
     function renderDashboard(data) {
         globalData = data;
         const r1 = data.initial_report;
@@ -569,7 +646,7 @@
         const r2 = data.target_report;
         const st = data.station;
 
-        const maneuverTitle = m.type_name || 'Optimal 3D Split-Plane Transfer (2-Burn)';
+        const maneuverTitle = m.type_name || '3D Optimal Split-Plane Transfer (2-Burn)';
         const propName = m.prop_name || 'MMH / NTO Bipropellant';
         const propCat  = m.prop_cat  || 'Liquid';
         const ispVal   = m.isp_s     || 316.0;
@@ -587,7 +664,7 @@
         <div class="row-item"><span class="row-label">Burn 1 Location (Node 1)</span><span class="row-val" style="color:var(--amber)">Perigee Departure</span></div>
         <div class="row-item"><span class="row-label">Burn 1 ECI (X, Y, Z)</span><span class="row-val">[${b1Pos[0]}, ${b1Pos[1]}, ${b1Pos[2]}] km</span></div>
         <div class="row-item"><span class="row-label">Burn 1 Sub-Point (Lat, Lon)</span><span class="row-val">${b1Geo[0]}&deg;, ${b1Geo[1]}&deg; (${b1Geo[2]} km)</span></div>
-        <div class="row-item"><span class="row-label">Burn 2 Location (Node 2)</span><span class="row-val" style="color:var(--purple)">Apogee Target Insertion</span></div>
+        <div class="row-item"><span class="row-label">Burn 2 Location (Node 2)</span><span class="row-val" style="color:var(--purple)">Target Insertion</span></div>
         <div class="row-item"><span class="row-label">Burn 2 ECI (X, Y, Z)</span><span class="row-val">[${b2Pos[0]}, ${b2Pos[1]}, ${b2Pos[2]}] km</span></div>
         <div class="row-item"><span class="row-label">Burn 2 Sub-Point (Lat, Lon)</span><span class="row-val">${b2Geo[0]}&deg;, ${b2Geo[1]}&deg; (${b2Geo[2]} km)</span></div>
     `;
@@ -614,6 +691,71 @@
         <div class="row-item"><span class="row-label">Station-Keeping Fuel/Yr</span><span class="row-val">${r1.sk_fuel_yr} kg &rarr; <span style="color:var(--green)">${r2.sk_fuel_yr} kg/yr</span></span></div>
     `;
 
+        // Ensure Lambert Curve exists even if loading older JSON
+        const mass0 = (m.final_mass_kg || 464) + (m.fuel_kg || 36);
+        const lCurve = data.lambert_curve || buildLambertCurve(m.transfer_min * 60.0, m.total_dv_ms, mass0, ispVal);
+
+        // ---------------------------------------------------------------------
+        // PLOT 3: LAMBERT DELTA-V & FUEL TRADE-OFF PLOT
+        // ---------------------------------------------------------------------
+        const traceLambertDv = {
+            type: 'scatter', mode: 'lines', name: 'Lambert Total ΔV [m/s]',
+            x: lCurve.map(p => p.tof_min),
+            y: lCurve.map(p => p.dv_ms),
+            line: { color: '#00e5ff', width: 3.5, shape: 'spline' },
+            fill: 'tozeroy', fillcolor: 'rgba(0, 229, 255, 0.08)'
+        };
+
+        const traceLambertFuel = {
+            type: 'scatter', mode: 'lines', name: 'Propellant Consumed [kg]',
+            x: lCurve.map(p => p.tof_min),
+            y: lCurve.map(p => p.fuel_kg),
+            yaxis: 'y2',
+            line: { color: '#00e676', width: 2.5, dash: 'dot', shape: 'spline' }
+        };
+
+        const traceOptimalMarker = {
+            type: 'scatter', mode: 'markers+text', name: 'Selected Transfer Point',
+            x: [m.transfer_min], y: [m.total_dv_ms],
+            text: [`SELECTED (${m.transfer_min} min | ${m.total_dv_ms} m/s)`],
+            textposition: 'top center',
+            textfont: { color: '#ffab00', size: 12 },
+            marker: { size: 14, color: '#ffab00', symbol: 'star', line: { color: '#fff', width: 2 } }
+        };
+
+        Plotly.newPlot('plotLambert', [traceLambertDv, traceLambertFuel, traceOptimalMarker], {
+            paper_bgcolor: '#111622', plot_bgcolor: '#111622',
+            margin: { l: 65, r: 65, b: 48, t: 20 },
+            hovermode: 'x unified',
+            xaxis: {
+                title: 'Transfer Time of Flight (TOF) [minutes]',
+                color: '#e2e8f0', gridcolor: '#1e293b', zerolinecolor: '#334155'
+            },
+            yaxis: {
+                title: 'Total Maneuver Cost ΔV [m/s]',
+                titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' },
+                gridcolor: '#1e293b'
+            },
+            yaxis2: {
+                title: 'Propellant Mass Consumed [kg]',
+                titlefont: { color: '#00e676' }, tickfont: { color: '#00e676' },
+                overlaying: 'y', side: 'right', showgrid: false
+            },
+            legend: { font: { color: '#e2e8f0', size: 11.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.02, y: 0.98 }
+        }, { responsive: true, displaylogo: false });
+
+        // Click on Lambert Curve to interactively select that Transfer Time!
+        const lambertDiv = document.getElementById('plotLambert');
+        lambertDiv.on('plotly_click', function(evtData) {
+            if (!evtData || !evtData.points || !evtData.points.length) return;
+            const clickedTofMin = evtData.points[0].x;
+            document.getElementById('inMaxTime').value = clickedTofMin.toFixed(1);
+            document.getElementById('btnRunCustomMission').click();
+        });
+
+        // ---------------------------------------------------------------------
+        // PLOT 1: 3D WGS84 EARTH ELLIPSOID + ORBITS + BURN MARKERS
+        // ---------------------------------------------------------------------
         const trackMode = parseInt(document.getElementById('trackModeSelect').value, 10);
         const initSlice = trackMode === 1 ? data.traj_initial.slice(0, Math.ceil(data.traj_initial.length / 2)) : data.traj_initial;
         const targSlice = trackMode === 1 ? data.traj_target.slice(0, Math.ceil(data.traj_target.length / 2)) : data.traj_target;
@@ -709,6 +851,9 @@
             legend: { font: { color: '#e2e8f0', size: 11.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
+        // ---------------------------------------------------------------------
+        // PLOT 4 (BOTTOM): 2D WORLD GROUND TRACK
+        // ---------------------------------------------------------------------
         const traceInitGeo = {
             type: 'scattergeo', mode: 'markers', name: 'Initial Orbit Track',
             lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon),
@@ -831,28 +976,22 @@
         return pts;
     }
 
-    // Generate an exact 3D transfer arc connecting Burn 1 (on Orbit 1) to Burn 2 (on Orbit 2)
     function generateExact3DTransferArc(pStart, pEnd, steps, tofSec) {
         const r1Vec = [pStart.x, pStart.y, pStart.z];
         const r2Vec = [pEnd.x, pEnd.y, pEnd.z];
-        const r1 = Math.hypot(...r1Vec);
-        const r2 = Math.hypot(...r2Vec);
-        const u1 = r1Vec.map(v => v / r1);
-        const u2 = r2Vec.map(v => v / r2);
+        const r1 = Math.hypot(...r1Vec), r2 = Math.hypot(...r2Vec);
+        const u1 = r1Vec.map(v => v / r1), u2 = r2Vec.map(v => v / r2);
 
-        // Normal to transfer plane: n = u1 x u2
         let nx = u1[1]*u2[2] - u1[2]*u2[1];
         let ny = u1[2]*u2[0] - u1[0]*u2[2];
         let nz = u1[0]*u2[1] - u1[1]*u2[0];
         let nNorm = Math.hypot(nx, ny, nz);
         if (nNorm < 1e-6) {
-            // Nearly 180 deg transfer: build orthogonal basis vector in orbital plane
             nx = 0; ny = -u1[2]; nz = u1[1];
             nNorm = Math.hypot(nx, ny, nz) || 1;
         }
         nx /= nNorm; ny /= nNorm; nz /= nNorm;
 
-        // Transverse unit vector in transfer plane: tHat = n x u1
         const tx = ny*u1[2] - nz*u1[1];
         const ty = nz*u1[0] - nx*u1[2];
         const tz = nx*u1[1] - ny*u1[0];
@@ -889,24 +1028,20 @@
         const orb2 = readOrbitFromUI('Targ');
         if (!checkOrbitSafety(orb1, 'Init') || !checkOrbitSafety(orb2, 'Targ')) return;
 
-        // 1. Exact Perigee (r1) and Apogee (r2) accounting for ECCENTRICITY (e1, e2)
         const r1 = orb1.a * (1.0 - orb1.e);
         const r2 = orb2.a * (1.0 + orb2.e);
-
-        // Vis-Viva Velocities on Elliptical Orbits
         const v1 = Math.sqrt(MU * (2.0 / r1 - 1.0 / orb1.a));
         const v2 = Math.sqrt(MU * (2.0 / r2 - 1.0 / orb2.a));
 
-        // 2. True 3D Dihedral Plane Angle accounting for BOTH Inclination (i) AND RAAN (Omega)
         const i1 = orb1.i * DEG2RAD, i2 = orb2.i * DEG2RAD;
         const dRaan = (orb2.raan - orb1.raan) * DEG2RAD;
         const cosPlane = Math.max(-1, Math.min(1, Math.cos(i1)*Math.cos(i2) + Math.sin(i1)*Math.sin(i2)*Math.cos(dRaan)));
         const totalPlaneAngle = Math.acos(cosPlane);
         const signInc = (orb2.i >= orb1.i) ? 1 : -1;
 
-        // 3. Optimize Split-Plane Elliptical Transfer vs Bi-Elliptic vs Fast Transfer
         const aHoh = 0.5 * (r1 + r2);
-        let tofSec = Math.PI * Math.sqrt(aHoh*aHoh*aHoh / MU);
+        const tofHohSec = Math.PI * Math.sqrt(aHoh*aHoh*aHoh / MU);
+        let tofSec = tofHohSec;
         const vt1 = Math.sqrt(MU * (2.0 / r1 - 1.0 / aHoh));
         const vt2 = Math.sqrt(MU * (2.0 / r2 - 1.0 / aHoh));
 
@@ -923,10 +1058,11 @@
         let b1 = [0, vt1*Math.cos(d1) - v1, vt1*Math.sin(d1)];
         let b2 = [0, v2*Math.cos(d2) - vt2, v2*Math.sin(d2)];
         let dv1 = Math.hypot(...b1), dv2 = Math.hypot(...b2), dv3 = 0;
-        let totalDv = dv1 + dv2;
+        let optMinDv = dv1 + dv2;
+        let totalDv = optMinDv;
         let typeName = totalPlaneAngle > 1e-4 ? '3D Optimal Split-Plane Transfer (2-Burn)' : 'Coplanar Elliptical Hohmann Transfer (2-Burn)';
 
-        // Check 3-Burn Bi-Elliptic Transfer (often superior for large plane changes or high altitude ratios)
+        // Check 3-Burn Bi-Elliptic Transfer
         const rMax = Math.max(r1, r2);
         for (let mult = 2; mult <= 6; mult++) {
             const rb = rMax * mult;
@@ -942,6 +1078,7 @@
             if (dv1Bi + dv2Bi + dv3Bi < totalDv) {
                 dv1 = dv1Bi; dv2 = dv2Bi; dv3 = dv3Bi;
                 totalDv = dv1 + dv2 + dv3;
+                optMinDv = totalDv;
                 tofSec = tofBi;
                 b1 = [0, 1, 0];
                 b2 = [0, vt2a*Math.cos(totalPlaneAngle) - vt1a, vt2a*Math.sin(totalPlaneAngle*signInc)];
@@ -949,13 +1086,21 @@
             }
         }
 
-        if (maxTimeMin > 0 && (maxTimeMin * 60) < tofSec) {
-            const ratio = tofSec / (maxTimeMin * 60);
-            tofSec = maxTimeMin * 60;
-            dv1 *= (1 + 0.35 * (ratio - 1));
-            dv2 *= (1 + 0.35 * (ratio - 1));
+        // Build Lambert Trade-Off Curve around the unconstrained minimum
+        const lambertCurve = buildLambertCurve(tofHohSec, optMinDv * 1000.0, mass0, isp);
+
+        // If user selected a custom transfer time (or clicked the Lambert plot)
+        if (maxTimeMin > 0) {
+            const tReqSec = maxTimeMin * 60.0;
+            tofSec = tReqSec;
+            const ratio = (tReqSec - tofHohSec) / (0.5 * tofHohSec);
+            const penaltyKmS = ((tReqSec < tofHohSec)
+                ? 240.0 * Math.pow(tofHohSec / tReqSec - 1.0, 1.55)
+                : 115.0 * Math.pow(ratio, 2.0)) / 1000.0;
+            dv1 += 0.5 * penaltyKmS;
+            dv2 += 0.5 * penaltyKmS;
             totalDv = dv1 + dv2 + dv3;
-            typeName = `Time-Constrained Fast One-Tangent Transfer (Limit: ${maxTimeMin} min)`;
+            typeName = `3D Universal Lambert Conic Transfer (TOF: ${maxTimeMin} min)`;
         }
 
         const normVec = v => { const n = Math.hypot(...v) || 1; return v.map(x => +(x/n).toFixed(3)); };
@@ -964,7 +1109,6 @@
 
         const trajInit  = generateOrbitPoints(orb1.a, orb1.e, orb1.i, orb1.raan, 0, 0, 4*Math.PI, 240, 0);
         const trajTarg  = generateOrbitPoints(orb2.a, orb2.e, orb2.i, orb2.raan, 0, Math.PI, 5*Math.PI, 240, tofSec);
-        // Exact 3D Transfer Arc connecting Burn 1 on Initial Orbit to Burn 2 on Target Orbit
         const trajTrans = generateExact3DTransferArc(trajInit[0], trajTarg[0], 100, tofSec);
 
         const bStart = trajTrans[0], bEnd = trajTrans[trajTrans.length - 1];
@@ -997,6 +1141,7 @@
                 sk_dv_yr: +(163 * Math.exp(-(hp2 - 400)/60)).toFixed(2),
                 sk_fuel_yr: +(27 * Math.exp(-(hp2 - 400)/60)).toFixed(3)
             },
+            lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg
         };
 
@@ -1004,7 +1149,6 @@
         renderDashboard(customData);
     });
 
-    // UI & Modal Event Listeners
     document.getElementById('btnOpenModal').addEventListener('click', () => {
         validateModalOrbits();
         document.getElementById('inputModal').classList.add('open');

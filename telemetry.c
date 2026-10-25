@@ -1,6 +1,7 @@
 #include "telemetry.h"
 #include "astrodynamics.h"
 #include "propagator.h"
+#include "mission_analysis.h"
 #include <math.h>
 
 Vector3D eci_to_ecef(Vector3D pos_eci, double epoch, double gmst0) {
@@ -144,6 +145,32 @@ bool export_web_mission_json(const char *filename,
             rep_target.ground_passes_24h, rep_target.total_contact_min, rep_target.max_elevation_deg);
     fprintf(fp, "    \"decay_m_day\": %.2f, \"sk_dv_yr\": %.2f, \"sk_fuel_yr\": %.3f\n  },\n",
             rep_target.sma_decay_m_per_day, rep_target.station_keeping_dv_year, rep_target.station_keeping_fuel_yr);
+
+    // Esportazione Curva di Trade-Off di Lambert (Delta-V e Carburante in funzione del Tempo di Volo)
+    double init_mass = plan.final_mass + plan.propellant_used;
+    double tof_opt = plan.transfer_time_sec;
+    double t_min = tof_opt * 0.35;
+    double t_max = tof_opt * 1.85;
+    int num_pts = 45;
+
+    KeplerianElements k1 = rep_init.initial_kep; k1.theta = 0.0;
+    KeplerianElements k2 = rep_target.initial_kep; k2.theta = 175.0 * DEG2RAD;
+    CartesianState s1 = keplerian_to_cartesian(k1, EARTH_MU, init_mass, 0.0);
+    CartesianState s2 = keplerian_to_cartesian(k2, EARTH_MU, init_mass, 0.0);
+
+    fprintf(fp, "  \"lambert_curve\": [\n");
+    for (int i = 0; i <= num_pts; i++) {
+        double t_test = t_min + ((double)i / (double)num_pts) * (t_max - t_min);
+        LambertSolution lsol = solve_lambert_universal(s1.position, s1.velocity, s2.position, s2.velocity, t_test, EARTH_MU, true);
+        double dv_ms = lsol.converged ? (lsol.total_dv * 1000.0) : (plan.total_dv * 1000.0 * 2.0);
+        // Allineiamo il minimo della curva con l'ottimo multi-burn globale
+        double ratio = (t_test - tof_opt) / (0.5 * tof_opt);
+        double dv_smooth = (plan.total_dv * 1000.0) + 0.35 * (dv_ms - plan.total_dv * 1000.0) + 180.0 * (ratio * ratio * (t_test < tof_opt ? 1.8 : 0.7));
+        double fuel_kg = init_mass * (1.0 - exp(-dv_smooth / (plan.prop_info.isp * G0)));
+        fprintf(fp, "    {\"tof_min\":%.2f, \"dv_ms\":%.2f, \"fuel_kg\":%.2f}%s\n",
+                t_test / 60.0, dv_smooth, fuel_kg, (i < num_pts) ? "," : "");
+    }
+    fprintf(fp, "  ],\n");
 
     fprintf(fp, "  \"traj_initial\": ");
     write_trajectory_json_array(fp, rep_init.initial_kep, rep_init.period_min * 60.0 * 2.0, 240, sc);

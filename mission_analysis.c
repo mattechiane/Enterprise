@@ -6,6 +6,137 @@
 #include <string.h>
 #include <math.h>
 
+// =========================================================================
+// FUNZIONI DI STUMPFF C(z) E S(z) PER VARIABILI UNIVERSALI DI LAMBERT
+// =========================================================================
+static double stumpff_C(double z) {
+    if (z > 1e-6) {
+        double sz = sqrt(z);
+        return (1.0 - cos(sz)) / z;
+    } else if (z < -1e-6) {
+        double sz = sqrt(-z);
+        return (cosh(sz) - 1.0) / (-z);
+    }
+    return 0.5 - z / 24.0 + (z * z) / 720.0;
+}
+
+static double stumpff_S(double z) {
+    if (z > 1e-6) {
+        double sz = sqrt(z);
+        return (sz - sin(sz)) / (sz * sz * sz);
+    } else if (z < -1e-6) {
+        double sz = sqrt(-z);
+        return (sinh(sz) - sz) / (sz * sz * sz);
+    }
+    return (1.0 / 6.0) - z / 120.0 + (z * z) / 5040.0;
+}
+
+// Converte un vettore Delta-V dal sistema inerziale ECI al frame locale RTN del satellite
+static Vector3D eci_vec_to_rtn(Vector3D r_sat, Vector3D v_sat, Vector3D vec_eci) {
+    Vector3D u_R = vec_normalize(r_sat);
+    Vector3D h_vec = vec_cross(r_sat, v_sat);
+    Vector3D u_N = vec_normalize(h_vec);
+    Vector3D u_T = vec_cross(u_N, u_R);
+
+    Vector3D rtn = {
+        vec_dot(vec_eci, u_R),
+        vec_dot(vec_eci, u_T),
+        vec_dot(vec_eci, u_N)
+    };
+    return rtn;
+}
+
+LambertSolution solve_lambert_universal(Vector3D r1_vec, Vector3D v1_init,
+                                        Vector3D r2_vec, Vector3D v2_targ,
+                                        double tof_sec, double mu, bool prograde) {
+    LambertSolution sol = {0};
+    if (tof_sec <= 1.0) return sol;
+
+    double r1 = vec_norm(r1_vec);
+    double r2 = vec_norm(r2_vec);
+    if (r1 < 1e-6 || r2 < 1e-6) return sol;
+
+    double cos_dnu = vec_dot(r1_vec, r2_vec) / (r1 * r2);
+    if (cos_dnu >  1.0) cos_dnu =  1.0;
+    if (cos_dnu < -1.0) cos_dnu = -1.0;
+
+    Vector3D cross_r1r2 = vec_cross(r1_vec, r2_vec);
+    double dnu = acos(cos_dnu);
+
+    if (prograde) {
+        if (cross_r1r2.z < 0.0) dnu = 2.0 * PI - dnu;
+    } else {
+        if (cross_r1r2.z >= 0.0) dnu = 2.0 * PI - dnu;
+    }
+
+    // Se l'angolo è quasi esattamente 180 gradi (trasferimento antipodale),
+    // applichiamo una perturbazione millimetrica per evitare la singolarità di piano di Lambert
+    if (fabs(dnu - PI) < 1e-4) {
+        dnu = PI - 1e-4;
+    }
+
+    double A = sin(dnu) * sqrt(r1 * r2 / (1.0 - cos(dnu)));
+    if (fabs(A) < 1e-9) return sol;
+
+    // Ricerca robusta di z tramite bisezione + raffinamento su [-4*PI, 4*PI^2]
+    double z_low = -4.0 * PI;
+    double z_high = 4.0 * PI * PI - 1e-3;
+    double z = 0.0;
+
+    for (int iter = 0; iter < 90; iter++) {
+        z = 0.5 * (z_low + z_high);
+        double C = stumpff_C(z);
+        double S = stumpff_S(z);
+        double y = r1 + r2 + A * (z * S - 1.0) / sqrt(C);
+
+        if (y <= 0.0) {
+            z_low = z;
+            continue;
+        }
+
+        double x = sqrt(y / C);
+        double t_calc = (x * x * x * S + A * sqrt(y)) / sqrt(mu);
+
+        if (fabs(t_calc - tof_sec) < 1e-5) break;
+
+        if (t_calc <= tof_sec) {
+            z_low = z;
+        } else {
+            z_high = z;
+        }
+    }
+
+    double C = stumpff_C(z);
+    double S = stumpff_S(z);
+    double y = r1 + r2 + A * (z * S - 1.0) / sqrt(C);
+    if (y <= 0.0) return sol;
+
+    // Coefficienti di Lagrange f, g, g_dot
+    double f     = 1.0 - (y / r1);
+    double g     = A * sqrt(y / mu);
+    double g_dot = 1.0 - (y / r2);
+
+    if (fabs(g) < 1e-9) return sol;
+
+    // v1 = (r2 - f * r1) / g
+    sol.v1_eci = vec_scale(vec_sub(r2_vec, vec_scale(r1_vec, f)), 1.0 / g);
+    // v2 = (g_dot * r2 - r1) / g
+    sol.v2_eci = vec_scale(vec_sub(vec_scale(r2_vec, g_dot), r1_vec), 1.0 / g);
+
+    Vector3D dv1_eci = vec_sub(sol.v1_eci, v1_init);
+    Vector3D dv2_eci = vec_sub(v2_targ, sol.v2_eci);
+
+    sol.dv1_mag  = vec_norm(dv1_eci);
+    sol.dv2_mag  = vec_norm(dv2_eci);
+    sol.total_dv = sol.dv1_mag + sol.dv2_mag;
+
+    sol.burn1_dir_rtn = vec_normalize(eci_vec_to_rtn(r1_vec, v1_init, dv1_eci));
+    sol.burn2_dir_rtn = vec_normalize(eci_vec_to_rtn(r2_vec, v2_targ, dv2_eci));
+    sol.converged = true;
+
+    return sol;
+}
+
 PropellantSpec get_propellant_specs(PropellantType type) {
     PropellantSpec p;
     p.type = type;
@@ -46,21 +177,18 @@ bool validate_and_clamp_closed_orbit(KeplerianElements *kep, char *warning_msg) 
 
     double r_min_safe = EARTH_RADIUS + MIN_SAFE_PERIGEE_ALT_KM;
 
-    // 1. Controllo Semiasse Maggiore minimo
     if (kep->a < r_min_safe) {
         kep->a = r_min_safe;
         valid = false;
         if (warning_msg) strcpy(warning_msg, "Semi-major axis raised to minimum safe LEO altitude (150 km).");
     }
 
-    // 2. Controllo Orbita Chiusa (0 <= e < 0.95)
     if (kep->e < 0.0) kep->e = 0.0;
     if (kep->e > 0.95) {
         kep->e = 0.95;
         valid = false;
     }
 
-    // 3. Controllo Anti-Impatto Terrestre: r_perigee = a * (1 - e) >= R_earth + 150 km
     double e_max_perigee = 1.0 - (r_min_safe / kep->a);
     if (e_max_perigee < 0.0) e_max_perigee = 0.0;
 
@@ -168,20 +296,15 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
     best.time_constrained = (max_transfer_time_sec > 0.0);
     best.max_time_limit_s = max_transfer_time_sec;
 
-    // 1. Validazione fisica anti-impatto terrestre
     validate_and_clamp_closed_orbit(&orb_init, NULL);
     validate_and_clamp_closed_orbit(&orb_target, NULL);
 
-    // 2. Calcolo raggi e velocità reali tenendo conto dell'ECCENTRICITA' (e1, e2)
-    // Partenza dal perigeo dell'orbita 1 (r1_p) e arrivo all'apogeo dell'orbita 2 (r2_a)
     double r1 = orb_init.a * (1.0 - orb_init.e);
     double r2 = orb_target.a * (1.0 + orb_target.e);
 
-    // Velocità vis-viva esatte su orbite ellittiche
     double v1 = sqrt(mu * ((2.0 / r1) - (1.0 / orb_init.a)));
     double v2 = sqrt(mu * ((2.0 / r2) - (1.0 / orb_target.a)));
 
-    // 3. Angolo diedro 3D reale tra i piani orbitali (include sia Inclinazione sia RAAN!)
     double cos_theta = cos(orb_init.i) * cos(orb_target.i) +
                        sin(orb_init.i) * sin(orb_target.i) * cos(orb_target.RAAN - orb_init.RAAN);
     if (cos_theta >  1.0) cos_theta =  1.0;
@@ -190,7 +313,7 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
     double sign_inc = (orb_target.i >= orb_init.i) ? 1.0 : -1.0;
 
     // ------------------------------------------------------------------
-    // CANDIDATO 1 & 2: ELLIPTICAL SPLIT-PLANE HOHMANN (Perigeo -> Apogeo)
+    // CANDIDATO 1: 3D OPTIMAL SPLIT-PLANE HOHMANN
     // ------------------------------------------------------------------
     double a_hoh = 0.5 * (r1 + r2);
     double tof_hoh = PI * sqrt((a_hoh * a_hoh * a_hoh) / mu);
@@ -231,7 +354,7 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
     best.transfer_time_sec = tof_hoh;
 
     // ------------------------------------------------------------------
-    // CANDIDATO 3: TRASFERIMENTO BI-ELLITTICO 3D (3 Impulsi)
+    // CANDIDATO 2: BI-ELLITTICA 3D (3 Impulsi)
     // ------------------------------------------------------------------
     double r_max = (r2 > r1) ? r2 : r1;
     for (int mult = 2; mult <= 6; mult++) {
@@ -269,60 +392,41 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
     }
 
     // ------------------------------------------------------------------
-    // CANDIDATO 4: FAST ONE-TANGENT TRANSFER (Con vincolo di tempo)
+    // CANDIDATO 3: RISOLUTORE UNIVERSALE DI LAMBERT 3D (Se c'è vincolo tempo)
     // ------------------------------------------------------------------
+    KeplerianElements k_b1 = orb_init;
+    k_b1.theta = 0.0;
+    CartesianState s_b1 = keplerian_to_cartesian(k_b1, mu, init_mass, 0.0);
+
+    KeplerianElements k_b2 = orb_target;
+    k_b2.theta = 165.0 * DEG2RAD; // Target non-antipodale per trasferimento veloce di Lambert
+    CartesianState s_b2_lam = keplerian_to_cartesian(k_b2, mu, init_mass, 0.0);
+
     if (best.time_constrained && max_transfer_time_sec < tof_hoh) {
-        double e_min = fabs(r2 - r1) / (r1 + r2);
-        for (int step = 1; step <= 800; step++) {
-            double e_fast = e_min + (0.88 - e_min) * ((double)step / 800.0);
-            double a_fast = (r2 >= r1) ? (r1 / (1.0 - e_fast)) : (r1 / (1.0 + e_fast));
-            double p_fast = a_fast * (1.0 - e_fast * e_fast);
-
-            double cos_nu2 = (p_fast / r2 - 1.0) / e_fast;
-            if (cos_nu2 < -1.0 || cos_nu2 > 1.0) continue;
-            double nu2 = acos(cos_nu2);
-
-            double tan_E2 = sqrt((1.0 - e_fast) / (1.0 + e_fast)) * tan(0.5 * nu2);
-            double E2 = 2.0 * atan(tan_E2);
-            double M2 = E2 - e_fast * sin(E2);
-            double tof_fast = M2 * sqrt((a_fast * a_fast * a_fast) / mu);
-
-            if (tof_fast <= max_transfer_time_sec) {
-                double vt1_f = sqrt(mu * ((2.0 / r1) - (1.0 / a_fast)));
-                double vt2_f = sqrt(mu * ((2.0 / r2) - (1.0 / a_fast)));
-                double h_fast = sqrt(mu * p_fast);
-                double vt2_transverse = h_fast / r2;
-                double vt2_radial = sqrt(fmax(0.0, vt2_f*vt2_f - vt2_transverse*vt2_transverse));
-
-                Vector3D b1_f = {0.0, vt1_f - v1, 0.0};
-                Vector3D b2_f = {-vt2_radial, v2 * cos(total_plane_angle) - vt2_transverse, v2 * sin(total_plane_angle * sign_inc)};
-
-                strcpy(best.maneuver_name, "Time-Constrained Fast One-Tangent Transfer");
-                best.num_burns = 2;
-                best.dv1_mag = vec_norm(b1_f);
-                best.dv2_mag = vec_norm(b2_f);
-                best.dv3_mag = 0.0;
-                best.total_dv = best.dv1_mag + best.dv2_mag;
-                best.burn1_dir_rtn = vec_normalize(b1_f);
-                best.burn2_dir_rtn = vec_normalize(b2_f);
-                best.transfer_apogee_km = a_fast * (1.0 + e_fast);
-                best.transfer_time_sec = tof_fast;
-                break;
-            }
+        LambertSolution lam = solve_lambert_universal(s_b1.position, s_b1.velocity,
+                                                      s_b2_lam.position, s_b2_lam.velocity,
+                                                      max_transfer_time_sec, mu, true);
+        if (lam.converged) {
+            strcpy(best.maneuver_name, "3D Universal Lambert Conic Transfer (Time-Constrained)");
+            best.num_burns = 2;
+            best.dv1_mag = lam.dv1_mag;
+            best.dv2_mag = lam.dv2_mag;
+            best.dv3_mag = 0.0;
+            best.total_dv = lam.total_dv;
+            best.burn1_dir_rtn = lam.burn1_dir_rtn;
+            best.burn2_dir_rtn = lam.burn2_dir_rtn;
+            best.transfer_time_sec = max_transfer_time_sec;
         }
     }
 
     // Coordinate spaziali ECI e Geodetiche dei Burn Points
-    KeplerianElements k_b1 = orb_init;
-    k_b1.theta = 0.0;
-    CartesianState s_b1 = keplerian_to_cartesian(k_b1, mu, init_mass, 0.0);
     best.burn1_pos_eci = s_b1.position;
     best.burn1_geo     = ecef_to_geodetic(eci_to_ecef(s_b1.position, 0.0, 0.0));
 
-    KeplerianElements k_b2 = orb_target;
-    if (best.num_burns == 3) k_b2.a = best.transfer_apogee_km;
-    k_b2.theta = PI;
-    CartesianState s_b2 = keplerian_to_cartesian(k_b2, mu, init_mass, best.transfer_time_sec);
+    KeplerianElements k_b2_std = orb_target;
+    if (best.num_burns == 3) k_b2_std.a = best.transfer_apogee_km;
+    k_b2_std.theta = PI;
+    CartesianState s_b2 = keplerian_to_cartesian(k_b2_std, mu, init_mass, best.transfer_time_sec);
     best.burn2_pos_eci = s_b2.position;
     best.burn2_geo     = ecef_to_geodetic(eci_to_ecef(s_b2.position, best.transfer_time_sec, 0.0));
 
@@ -339,7 +443,6 @@ OrbitReport evaluate_orbit_regime(KeplerianElements kep, double mass, const Spac
     rep.initial_kep = kep;
     rep.period_min  = orbital_period(kep.a, EARTH_MU) / 60.0;
 
-    // Valutiamo il drag alla quota del perigeo (dove l'attrito atmosferico è massimo)
     double r_perigee = kep.a * (1.0 - kep.e);
     Vector3D r_dummy = {r_perigee, 0.0, 0.0};
     Vector3D sun_dir = {1.0, 0.0, 0.0};
