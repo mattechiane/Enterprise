@@ -95,6 +95,34 @@ static void write_trajectory_json_array(FILE *fp, KeplerianElements kep, double 
     fprintf(fp, "  ]");
 }
 
+// Genera una traiettoria 3D a spirale multi-giro che interpola in modo continuo gli elementi kepleriani
+static void write_spiral_trajectory_json_array(FILE *fp, KeplerianElements k1, KeplerianElements k2, double total_tof_sec, int visual_revs, int num_steps) {
+    Vector3D sun_dir = {1.0, 0.0, 0.0};
+    fprintf(fp, "[\n");
+    for (int i = 0; i <= num_steps; i++) {
+        double frac = (double)i / (double)num_steps;
+        KeplerianElements kt;
+        kt.a     = k1.a + frac * (k2.a - k1.a);
+        kt.e     = k1.e + frac * (k2.e - k1.e);
+        kt.i     = k1.i + frac * (k2.i - k1.i);
+        kt.RAAN  = k1.RAAN + frac * (k2.RAAN - k1.RAAN);
+        kt.omega = k1.omega + frac * (k2.omega - k1.omega);
+        kt.theta = frac * ((double)visual_revs * 2.0 * PI + PI);
+
+        double t_cur = frac * total_tof_sec;
+        CartesianState s = keplerian_to_cartesian(kt, EARTH_MU, 500.0, t_cur);
+        Vector3D ecef = eci_to_ecef(s.position, t_cur, 0.0);
+        GeodeticCoord geo = ecef_to_geodetic(ecef);
+        SpaceEnvironment env = evaluate_environment(s.position, sun_dir);
+
+        fprintf(fp, "    {\"t\":%.1f,\"x\":%.3f,\"y\":%.3f,\"z\":%.3f,\"lat\":%.3f,\"lon\":%.3f,\"alt\":%.2f,\"ecl\":%d}%s\n",
+                t_cur, s.position.x, s.position.y, s.position.z,
+                geo.latitude * RAD2DEG, geo.longitude * RAD2DEG, geo.altitude,
+                env.in_eclipse ? 1 : 0, (i < num_steps) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
@@ -120,7 +148,8 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"maneuver\": {\n");
     fprintf(fp, "    \"type_name\": \"%s\",\n", plan.maneuver_name);
-    fprintf(fp, "    \"num_burns\": %d,\n", plan.num_burns);
+    fprintf(fp, "    \"num_burns\": %d, \"is_low_thrust\": %d, \"thrust_n\": %.3f, \"spiral_revs\": %.1f,\n",
+            plan.num_burns, plan.is_low_thrust ? 1 : 0, plan.continuous_thrust_n, plan.spiral_revolutions);
     fprintf(fp, "    \"prop_name\": \"%s\", \"prop_cat\": \"%s\", \"isp_s\": %.1f,\n",
             plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     fprintf(fp, "    \"dv1_ms\": %.2f, \"dir1\": [%.3f, %.3f, %.3f],\n",
@@ -146,9 +175,9 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"decay_m_day\": %.2f, \"sk_dv_yr\": %.2f, \"sk_fuel_yr\": %.3f\n  },\n",
             rep_target.sma_decay_m_per_day, rep_target.station_keeping_dv_year, rep_target.station_keeping_fuel_yr);
 
-    // Esportazione Curva di Trade-Off di Lambert (Delta-V e Carburante in funzione del Tempo di Volo)
     double init_mass = plan.final_mass + plan.propellant_used;
-    double tof_opt = plan.transfer_time_sec;
+    double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
+    double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
     double t_min = tof_opt * 0.35;
     double t_max = tof_opt * 1.85;
     int num_pts = 45;
@@ -163,7 +192,6 @@ bool export_web_mission_json(const char *filename,
         double t_test = t_min + ((double)i / (double)num_pts) * (t_max - t_min);
         LambertSolution lsol = solve_lambert_universal(s1.position, s1.velocity, s2.position, s2.velocity, t_test, EARTH_MU, true);
         double dv_ms = lsol.converged ? (lsol.total_dv * 1000.0) : (plan.total_dv * 1000.0 * 2.0);
-        // Allineiamo il minimo della curva con l'ottimo multi-burn globale
         double ratio = (t_test - tof_opt) / (0.5 * tof_opt);
         double dv_smooth = (plan.total_dv * 1000.0) + 0.35 * (dv_ms - plan.total_dv * 1000.0) + 180.0 * (ratio * ratio * (t_test < tof_opt ? 1.8 : 0.7));
         double fuel_kg = init_mass * (1.0 - exp(-dv_smooth / (plan.prop_info.isp * G0)));
@@ -176,14 +204,18 @@ bool export_web_mission_json(const char *filename,
     write_trajectory_json_array(fp, rep_init.initial_kep, rep_init.period_min * 60.0 * 2.0, 240, sc);
     fprintf(fp, ",\n");
 
-    double r1 = rep_init.initial_kep.a;
-    double r2 = rep_target.initial_kep.a;
-    KeplerianElements kep_trans = rep_init.initial_kep;
-    kep_trans.a = 0.5 * (r1 + r2);
-    kep_trans.e = fabs(r2 - r1) / (r1 + r2);
-    kep_trans.theta = 0.0;
     fprintf(fp, "  \"traj_transfer\": ");
-    write_trajectory_json_array(fp, kep_trans, plan.transfer_time_sec, 100, sc);
+    if (plan.is_low_thrust) {
+        write_spiral_trajectory_json_array(fp, rep_init.initial_kep, rep_target.initial_kep, plan.transfer_time_sec, 6, 360);
+    } else {
+        double r1 = rep_init.initial_kep.a;
+        double r2 = rep_target.initial_kep.a;
+        KeplerianElements kep_trans = rep_init.initial_kep;
+        kep_trans.a = 0.5 * (r1 + r2);
+        kep_trans.e = fabs(r2 - r1) / (r1 + r2);
+        kep_trans.theta = 0.0;
+        write_trajectory_json_array(fp, kep_trans, plan.transfer_time_sec, 100, sc);
+    }
     fprintf(fp, ",\n");
 
     KeplerianElements kep_targ_start = rep_target.initial_kep;

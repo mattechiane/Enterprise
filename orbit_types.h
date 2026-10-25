@@ -47,7 +47,6 @@ typedef struct {
     double altitude;  // Quota reale sopra l'ellissoide WGS84 (km)
 } GeodeticCoord;
 
-// Selettore formato input utente (Cartesiano vs Parametrico Kepleriano)
 typedef enum {
     INPUT_KEPLERIAN = 0,
     INPUT_CARTESIAN = 1
@@ -60,21 +59,25 @@ typedef struct {
 } OrbitInputSpec;
 
 // ==========================================
-// 4. DATABASE PROPELLENTI (SOLIDI E LIQUIDI)
+// 4. DATABASE PROPELLENTI (SOLIDI, LIQUIDI ED ELETTRICI LOW-THRUST)
 // ==========================================
 typedef enum {
-    PROP_SOLID_HTPB = 0,       // Solido: HTPB/AP (Star-48B) -> Isp = 292 s
-    PROP_LIQUID_HYDRAZINE = 1, // Liquido Monopropellente: Idrazina -> Isp = 235 s
-    PROP_LIQUID_MMH_NTO = 2,   // Liquido Bipropellente: MMH/NTO -> Isp = 316 s
-    PROP_LIQUID_LOX_LCH4 = 3,  // Liquido Green: LOX/Metano -> Isp = 365 s
-    PROP_LIQUID_LOX_LH2 = 4    // Liquido Criogenico: LOX/Idrogeno -> Isp = 450 s
+    PROP_SOLID_HTPB = 0,          // Solido: HTPB/AP (Star-48B) -> Isp = 292 s
+    PROP_LIQUID_HYDRAZINE = 1,    // Liquido Monopropellente: Idrazina -> Isp = 235 s
+    PROP_LIQUID_MMH_NTO = 2,      // Liquido Bipropellente: MMH/NTO -> Isp = 316 s
+    PROP_LIQUID_LOX_LCH4 = 3,     // Liquido Green: LOX/Metano -> Isp = 365 s
+    PROP_LIQUID_LOX_LH2 = 4,      // Liquido Criogenico: LOX/Idrogeno -> Isp = 450 s
+    PROP_ELECTRIC_HALL_XE = 5,    // Elettrico Hall-Effect: Xenon HET -> Isp = 1650 s, Spinta continua
+    PROP_ELECTRIC_ION_NEXT = 6    // Elettrico Gridded Ion: Xenon Ion -> Isp = 3200 s, Spinta continua
 } PropellantType;
 
 typedef struct {
     PropellantType type;
     char name[64];
-    char category[32]; // "Solid" oppure "Liquid"
-    double isp;        // Impulso specifico (s)
+    char category[32];      // "Solid", "Liquid", oppure "Electric"
+    double isp;             // Impulso specifico (s)
+    double default_thrust_n;// Spinta nominale del motore in Newton (N)
+    bool is_low_thrust;     // true se è propulsione elettrica a spirale continua
 } PropellantSpec;
 
 // ==========================================
@@ -100,25 +103,25 @@ typedef struct {
     double transfer_time;
 } HohmannTransfer;
 
-// Piano di trasferimento ottimizzato (supporta Hohmann, Split-Plane, Bi-Ellittica e Fast Transfer)
+// Piano di trasferimento (supporta sia Impulsivo Chimico sia Low-Thrust Elettrico a Spirale)
 typedef struct {
-    char maneuver_name[80];   // Nome della strategia ottimale selezionata
-    int num_burns;            // 2 per Hohmann/Fast, 3 per Bi-Ellittica
-    bool time_constrained;    // true se c'era un vincolo sul tempo massimo
-    double max_time_limit_s;  // Tempo massimo richiesto dall'utente (0 = nessun limite)
+    char maneuver_name[80];
+    int num_burns;            // 2 o 3 per chimico, 1 (accensione continua) per elettrico
+    bool is_low_thrust;       // true se trasferimento a spirale continua
+    double continuous_thrust_n;// Spinta continua applicata (N)
+    double spiral_revolutions;// Numero di rivoluzioni complessive della spirale
+    bool time_constrained;
+    double max_time_limit_s;
 
-    // Costi impulsivi (km/s)
     double dv1_mag;
     double dv2_mag;
-    double dv3_mag;           // Usato solo se Bi-Ellittica (altrimenti 0.0)
+    double dv3_mag;
     double total_dv;
 
-    // Direzioni di spinta nel sistema satellite RTN (Radiale, Tangenziale, Normale)
     Vector3D burn1_dir_rtn;
     Vector3D burn2_dir_rtn;
     Vector3D burn3_dir_rtn;
 
-    // Coordinate spaziali ECI (km) e Geodetiche dei punti in cui avvengono i Delta-V
     Vector3D burn1_pos_eci;
     GeodeticCoord burn1_geo;
     Vector3D burn2_pos_eci;
@@ -126,11 +129,11 @@ typedef struct {
     Vector3D burn3_pos_eci;
     GeodeticCoord burn3_geo;
 
-    double transfer_apogee_km; // Raggio di apogeo dell'orbita di trasferimento (km)
-    double transfer_time_sec;  // Durata totale del trasferimento (secondi)
-    double propellant_used;    // Massa di propellente consumata (kg)
-    double final_mass;         // Massa finale del satellite (kg)
-    PropellantSpec prop_info;  // Dati del propellente utilizzato
+    double transfer_apogee_km;
+    double transfer_time_sec;
+    double propellant_used;
+    double final_mass;
+    PropellantSpec prop_info;
 } OptimalTransferPlan;
 
 typedef struct {

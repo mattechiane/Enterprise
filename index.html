@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ENTERPRISE // Orbital Mission Architect & Lambert Maneuver Optimizer</title>
+    <title>ENTERPRISE // Orbital Mission Architect & Lambert/Low-Thrust Optimizer</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         :root {
@@ -13,7 +13,7 @@
             --cyan: #00e5ff;
             --amber: #ffab00;
             --green: #00e676;
-            --red: #ff5252;
+            --red: #ff1744;
             --purple: #d500f9;
             --text-main: #f1f5f9;
             --text-muted: #94a3b8;
@@ -76,7 +76,7 @@
         .section-header span { font-size: 12px; color: var(--text-muted); }
 
         .plot-container-3d { width: 100%; height: 600px; }
-        .plot-container-lambert { width: 100%; height: 390px; }
+        .plot-container-lambert { width: 100%; height: 400px; }
         .plot-container-2d { width: 100%; height: 500px; }
         .plot-hint {
             position: absolute; bottom: 24px; left: 28px; z-index: 10;
@@ -171,7 +171,7 @@
 <header>
     <div class="brand">
         <h1>ENTERPRISE // ORBITAL MISSION ARCHITECT</h1>
-        <span>High-Precision 3D Trajectory Propagator &bull; Universal Lambert Solver &amp; Maneuver Optimizer</span>
+        <span>High-Precision 3D Propagator &bull; Lambert Solver &amp; Continuous Low-Thrust Spiral Engine</span>
     </div>
     <div class="header-actions">
         <button class="btn-primary" id="btnOpenModal">&#9881; Configure New Mission (Inputs)</button>
@@ -209,7 +209,7 @@
 <section class="section-block">
     <div class="section-header">
         <h2>1. 3D WGS84 Earth Ellipsoid &amp; Orbital Transfer Visualization</h2>
-        <span>Interactive 3D Inertial Space (ECI) &bull; Exact 3D Conic Transfer &amp; Burn Markers</span>
+        <span>Interactive 3D Inertial Space (ECI) &bull; Supports Impulsive Conics &amp; Multi-Revolution Electric Spirals</span>
     </div>
     <div id="plot3D" class="plot-container-3d"></div>
     <div class="plot-hint">&#128433; Left-Click + Drag: Rotate 3D Space | Scroll Wheel: Zoom | Right-Click: Pan</div>
@@ -222,7 +222,7 @@
         <span>Optimal Transfer Selection, Burn Coordinates, Delta-V Budget &amp; RTN Thrust Vectors</span>
     </div>
 
-    <div class="maneuver-banner">
+    <div class="maneuver-banner" id="maneuverBannerBox">
         <div class="title-group">
             <h3 id="bannerManeuverType">OPTIMAL MANEUVER: Loading...</h3>
             <p id="bannerPropellant">Propellant: ---</p>
@@ -249,11 +249,11 @@
     </div>
 </section>
 
-<!-- 3. LAMBERT DELTA-V & FUEL TRADE-OFF PLOT (ENGINEERING PORKCHOP SLICE) -->
+<!-- 3. LAMBERT DELTA-V & FUEL TRADE-OFF PLOT -->
 <section class="section-block">
     <div class="section-header">
-        <h2>3. Lambert &Delta;V &amp; Propellant Trade-Off Analysis (Cost vs. Time of Flight)</h2>
-        <span>Universal Variable Lambert Solver &bull; Click any point on the curve to select that Transfer Time!</span>
+        <h2 id="lambertSectionTitle">3. Lambert &Delta;V &amp; Propellant Trade-Off Analysis (Cost vs. Time of Flight)</h2>
+        <span id="lambertSectionSub">Universal Variable Lambert Solver &bull; Click any point on the curve to select that Transfer Time!</span>
     </div>
     <div id="plotLambert" class="plot-container-lambert"></div>
 </section>
@@ -283,26 +283,32 @@
 
         <div class="form-section" style="margin-bottom: 16px;">
             <div class="form-section-header">
-                <h3>1. Spacecraft Mass, Propulsion &amp; Transfer Constraints</h3>
+                <h3>1. Spacecraft Mass, Propulsion System &amp; Transfer Constraints</h3>
             </div>
-            <div class="input-group" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
                 <div class="field">
-                    <label>Spacecraft Initial Mass (kg)</label>
+                    <label>Initial Mass (kg)</label>
                     <input type="number" id="inMass" value="500" min="10" max="500000" step="10">
                 </div>
-                <div class="field">
-                    <label>Propellant Type (Solid / Liquid)</label>
-                    <select id="inPropellant">
-                        <option value="292|Solid|HTPB/AP Composite (Star-48B)">[SOLID] HTPB/AP Composite (Isp: 292 s)</option>
-                        <option value="235|Liquid|Hydrazine Monoprop (N2H4)">[LIQUID] Hydrazine Monopropellant (Isp: 235 s)</option>
-                        <option value="316|Liquid|MMH / NTO Bipropellant" selected>[LIQUID] MMH / NTO Bipropellant (Isp: 316 s)</option>
-                        <option value="365|Liquid|LOX / Liquid Methane (Methalox)">[LIQUID] LOX / Methane Methalox (Isp: 365 s)</option>
-                        <option value="450|Liquid|LOX / Liquid Hydrogen (Hydrolox)">[LIQUID] LOX / Hydrogen Cryogenic (Isp: 450 s)</option>
+                <div class="field" style="grid-column: span 2;">
+                    <label>Propellant / Propulsion Type (Chemical Impulsive vs. Electric Spiral)</label>
+                    <select id="inPropellant" onchange="onPropellantChange()">
+                        <option value="292|Solid|HTPB/AP Composite (Star-48B)|15000">[SOLID] HTPB/AP Composite (Isp: 292 s)</option>
+                        <option value="235|Liquid|Hydrazine Monoprop (N2H4)|400">[LIQUID] Hydrazine Monopropellant (Isp: 235 s)</option>
+                        <option value="316|Liquid|MMH / NTO Bipropellant|490" selected>[LIQUID] MMH / NTO Bipropellant (Isp: 316 s)</option>
+                        <option value="365|Liquid|LOX / Liquid Methane (Methalox)|2000">[LIQUID] LOX / Methane Methalox (Isp: 365 s)</option>
+                        <option value="450|Liquid|LOX / Liquid Hydrogen (Hydrolox)|5000">[LIQUID] LOX / Hydrogen Cryogenic (Isp: 450 s)</option>
+                        <option value="1650|Electric|Xenon Hall-Effect Thruster (HET)|0.50">[ELECTRIC SPIRAL] Xenon Hall-Effect HET (Isp: 1650 s)</option>
+                        <option value="3200|Electric|Xenon Gridded Ion Engine (NEXT-C)|0.25">[ELECTRIC SPIRAL] Xenon Gridded Ion Engine (Isp: 3200 s)</option>
                     </select>
                 </div>
-                <div class="field">
-                    <label>Max Transfer Time Constraint (min, 0 = None)</label>
+                <div class="field" id="fieldMaxTimeBox">
+                    <label>Max Time Limit (min, 0=Auto)</label>
                     <input type="number" id="inMaxTime" value="0" min="0" step="2">
+                </div>
+                <div class="field" id="fieldContinuousThrustBox" style="display:none;">
+                    <label>Continuous Thrust (N)</label>
+                    <input type="number" id="inThrustN" value="0.50" min="0.02" max="50" step="0.05">
                 </div>
             </div>
         </div>
@@ -412,58 +418,14 @@
     let satTraceIndex3D = 0;
     let satTraceIndex2D = 0;
 
-    // =========================================================================
-    // UNIVERSAL VARIABLE LAMBERT SOLVER IN JAVASCRIPT (STUMPFF FUNCTIONS)
-    // =========================================================================
-    function stumpffC(z) {
-        if (z > 1e-6) return (1.0 - Math.cos(Math.sqrt(z))) / z;
-        if (z < -1e-6) return (Math.cosh(Math.sqrt(-z)) - 1.0) / (-z);
-        return 0.5 - z / 24.0 + (z * z) / 720.0;
-    }
-
-    function stumpffS(z) {
-        if (z > 1e-6) { const s = Math.sqrt(z); return (s - Math.sin(s)) / (s * s * s); }
-        if (z < -1e-6) { const s = Math.sqrt(-z); return (Math.sinh(s) - s) / (s * s * s); }
-        return (1.0 / 6.0) - z / 120.0 + (z * z) / 5040.0;
-    }
-
-    function solveLambertUniversalJS(r1Vec, v1Init, r2Vec, v2Targ, tofSec) {
-        const r1 = Math.hypot(...r1Vec), r2 = Math.hypot(...r2Vec);
-        let cosDnu = (r1Vec[0]*r2Vec[0] + r1Vec[1]*r2Vec[1] + r1Vec[2]*r2Vec[2]) / (r1 * r2);
-        cosDnu = Math.max(-0.9998, Math.min(0.9998, cosDnu));
-        let dnu = Math.acos(cosDnu);
-        const cz = r1Vec[0]*r2Vec[1] - r1Vec[1]*r2Vec[0];
-        if (cz < 0) dnu = 2.0 * Math.PI - dnu;
-        if (Math.abs(dnu - Math.PI) < 1e-3) dnu = Math.PI - 1e-3;
-
-        const A = Math.sin(dnu) * Math.sqrt(r1 * r2 / (1.0 - Math.cos(dnu)));
-        let zLow = -4.0 * Math.PI, zHigh = 4.0 * Math.PI * Math.PI - 0.01, z = 0.0;
-
-        for (let i = 0; i < 75; i++) {
-            z = 0.5 * (zLow + zHigh);
-            const C = stumpffC(z), S = stumpffS(z);
-            const y = r1 + r2 + A * (z * S - 1.0) / Math.sqrt(C);
-            if (y <= 0.0) { zLow = z; continue; }
-            const x = Math.sqrt(y / C);
-            const tCalc = (x*x*x*S + A * Math.sqrt(y)) / Math.sqrt(MU);
-            if (Math.abs(tCalc - tofSec) < 1e-3) break;
-            if (tCalc <= tofSec) zLow = z; else zHigh = z;
+    function onPropellantChange() {
+        const parts = document.getElementById('inPropellant').value.split('|');
+        const isElec = (parts[1] === 'Electric');
+        document.getElementById('fieldMaxTimeBox').style.display = isElec ? 'none' : 'flex';
+        document.getElementById('fieldContinuousThrustBox').style.display = isElec ? 'flex' : 'none';
+        if (isElec && parts[3]) {
+            document.getElementById('inThrustN').value = parts[3];
         }
-
-        const C = stumpffC(z), S = stumpffS(z);
-        const y = Math.max(1e-3, r1 + r2 + A * (z * S - 1.0) / Math.sqrt(C));
-        const f = 1.0 - y / r1;
-        const g = A * Math.sqrt(y / MU);
-        const gDot = 1.0 - y / r2;
-
-        const v1 = [(r2Vec[0] - f*r1Vec[0])/g, (r2Vec[1] - f*r1Vec[1])/g, (r2Vec[2] - f*r1Vec[2])/g];
-        const v2 = [(gDot*r2Vec[0] - r1Vec[0])/g, (gDot*r2Vec[1] - r1Vec[1])/g, (gDot*r2Vec[2] - r1Vec[2])/g];
-
-        const dv1Vec = [v1[0] - v1Init[0], v1[1] - v1Init[1], v1[2] - v1Init[2]];
-        const dv2Vec = [v2Targ[0] - v2[0], v2Targ[1] - v2[1], v2Targ[2] - v2[2]];
-        const dv1 = Math.hypot(...dv1Vec), dv2 = Math.hypot(...dv2Vec);
-
-        return { dv1: dv1, dv2: dv2, totalDv: dv1 + dv2, v1: v1, v2: v2 };
     }
 
     function buildLambertCurve(tofOptSec, minDvMs, mass0, isp) {
@@ -637,7 +599,7 @@
     }
 
     // =========================================================================
-    // RENDER DASHBOARD + LAMBERT TRADE-OFF PLOT
+    // RENDER DASHBOARD + LAMBERT TRADE-OFF PLOT + SPIRAL LOW-THRUST SUPPORT
     // =========================================================================
     function renderDashboard(data) {
         globalData = data;
@@ -646,6 +608,7 @@
         const r2 = data.target_report;
         const st = data.station;
 
+        const isLowThrust = (m.is_low_thrust === 1 || m.prop_cat === 'Electric');
         const maneuverTitle = m.type_name || '3D Optimal Split-Plane Transfer (2-Burn)';
         const propName = m.prop_name || 'MMH / NTO Bipropellant';
         const propCat  = m.prop_cat  || 'Liquid';
@@ -655,29 +618,46 @@
         const b2Pos    = m.burn2_pos || [-(r2.alt_km + R_EQ), 0, 0];
         const b2Geo    = m.burn2_geo || [0, -150, r2.alt_km];
 
+        const tofDisplay = isLowThrust
+            ? `${(m.transfer_min / 60).toFixed(1)} hours (${(m.transfer_min / 1440).toFixed(2)} days | ~${m.spiral_revs || 65} revs)`
+            : `${m.transfer_min} min`;
+
         document.getElementById('bannerManeuverType').textContent = `OPTIMAL STRATEGY: ${maneuverTitle}`;
-        document.getElementById('bannerPropellant').textContent = `Propellant: ${propName} [${propCat}] • Specific Impulse (Isp): ${ispVal} s`;
+        document.getElementById('bannerPropellant').textContent = isLowThrust
+            ? `Propulsion: ${propName} [${propCat}] • Isp: ${ispVal} s • Continuous Thrust: ${m.thrust_n || 0.5} N`
+            : `Propellant: ${propName} [${propCat}] • Specific Impulse (Isp): ${ispVal} s`;
         document.getElementById('bannerTotalDv').textContent = `Total ΔV: ${m.total_dv_ms} m/s`;
-        document.getElementById('bannerFuelMass').textContent = `Propellant Consumed: ${m.fuel_kg} kg • Final Mass: ${m.final_mass_kg} kg • Transfer TOF: ${m.transfer_min} min`;
+        document.getElementById('bannerFuelMass').textContent = `Propellant Consumed: ${m.fuel_kg} kg • Final Mass: ${m.final_mass_kg} kg • Duration: ${tofDisplay}`;
 
         document.getElementById('sheetBurnPoints').innerHTML = `
-        <div class="row-item"><span class="row-label">Burn 1 Location (Node 1)</span><span class="row-val" style="color:var(--amber)">Perigee Departure</span></div>
-        <div class="row-item"><span class="row-label">Burn 1 ECI (X, Y, Z)</span><span class="row-val">[${b1Pos[0]}, ${b1Pos[1]}, ${b1Pos[2]}] km</span></div>
-        <div class="row-item"><span class="row-label">Burn 1 Sub-Point (Lat, Lon)</span><span class="row-val">${b1Geo[0]}&deg;, ${b1Geo[1]}&deg; (${b1Geo[2]} km)</span></div>
-        <div class="row-item"><span class="row-label">Burn 2 Location (Node 2)</span><span class="row-val" style="color:var(--purple)">Target Insertion</span></div>
-        <div class="row-item"><span class="row-label">Burn 2 ECI (X, Y, Z)</span><span class="row-val">[${b2Pos[0]}, ${b2Pos[1]}, ${b2Pos[2]}] km</span></div>
-        <div class="row-item"><span class="row-label">Burn 2 Sub-Point (Lat, Lon)</span><span class="row-val">${b2Geo[0]}&deg;, ${b2Geo[1]}&deg; (${b2Geo[2]} km)</span></div>
+        <div class="row-item"><span class="row-label">${isLowThrust ? 'Spiral Ignition Start' : 'Burn 1 Location (Node 1)'}</span><span class="row-val" style="color:var(--amber)">${isLowThrust ? 'Continuous Thrust ON' : 'Perigee Departure'}</span></div>
+        <div class="row-item"><span class="row-label">Start ECI (X, Y, Z)</span><span class="row-val">[${b1Pos[0]}, ${b1Pos[1]}, ${b1Pos[2]}] km</span></div>
+        <div class="row-item"><span class="row-label">Start Sub-Point (Lat, Lon)</span><span class="row-val">${b1Geo[0]}&deg;, ${b1Geo[1]}&deg; (${b1Geo[2]} km)</span></div>
+        <div class="row-item"><span class="row-label">${isLowThrust ? 'Spiral Cutoff (MECO)' : 'Burn 2 Location (Node 2)'}</span><span class="row-val" style="color:var(--purple)">${isLowThrust ? 'Target Orbit Reached' : 'Target Insertion'}</span></div>
+        <div class="row-item"><span class="row-label">Arrival ECI (X, Y, Z)</span><span class="row-val">[${b2Pos[0]}, ${b2Pos[1]}, ${b2Pos[2]}] km</span></div>
+        <div class="row-item"><span class="row-label">Arrival Sub-Point (Lat, Lon)</span><span class="row-val">${b2Geo[0]}&deg;, ${b2Geo[1]}&deg; (${b2Geo[2]} km)</span></div>
     `;
 
-        document.getElementById('sheetDvBreakdown').innerHTML = `
-        <div class="row-item"><span class="row-label">Burn 1 Cost (&Delta;V1)</span><span class="row-val" style="color:var(--amber)">${m.dv1_ms} m/s</span></div>
-        <div class="row-item"><span class="row-label">Burn 1 Direction (RTN)</span><span class="row-val">[ ${m.dir1.join(', ')} ]</span></div>
-        <div class="row-item"><span class="row-label">Burn 2 Cost (&Delta;V2)</span><span class="row-val" style="color:var(--purple)">${m.dv2_ms} m/s</span></div>
-        <div class="row-item"><span class="row-label">Burn 2 Direction (RTN)</span><span class="row-val">[ ${m.dir2.join(', ')} ]</span></div>
-        ${m.dv3_ms > 0 ? `<div class="row-item"><span class="row-label">Burn 3 Cost (&Delta;V3)</span><span class="row-val">${m.dv3_ms} m/s</span></div>` : ''}
-        <div class="row-item"><span class="row-label">Total Optimal &Delta;V</span><span class="row-val" style="color:var(--cyan)">${m.total_dv_ms} m/s</span></div>
-        <div class="row-item"><span class="row-label">Transfer Time of Flight</span><span class="row-val">${m.transfer_min} min</span></div>
-    `;
+        if (isLowThrust) {
+            document.getElementById('sheetDvBreakdown').innerHTML = `
+            <div class="row-item"><span class="row-label">Propulsion Regime</span><span class="row-val" style="color:var(--purple)">Low-Thrust Continuous Spiral</span></div>
+            <div class="row-item"><span class="row-label">Continuous Thrust / Isp</span><span class="row-val">${m.thrust_n || 0.5} N | ${ispVal} s</span></div>
+            <div class="row-item"><span class="row-label">Edelbaum Spiral &Delta;V</span><span class="row-val" style="color:var(--cyan)">${m.total_dv_ms} m/s</span></div>
+            <div class="row-item"><span class="row-label">Mean Steering Vector (RTN)</span><span class="row-val">[ ${m.dir1.join(', ')} ]</span></div>
+            <div class="row-item"><span class="row-label">Spiral Revolutions</span><span class="row-val">~${m.spiral_revs || 65} orbits</span></div>
+            <div class="row-item"><span class="row-label">Total Spiral Duration</span><span class="row-val" style="color:var(--amber)">${(m.transfer_min / 60).toFixed(1)} hours (${(m.transfer_min / 1440).toFixed(2)} days)</span></div>
+        `;
+        } else {
+            document.getElementById('sheetDvBreakdown').innerHTML = `
+            <div class="row-item"><span class="row-label">Burn 1 Cost (&Delta;V1)</span><span class="row-val" style="color:var(--amber)">${m.dv1_ms} m/s</span></div>
+            <div class="row-item"><span class="row-label">Burn 1 Direction (RTN)</span><span class="row-val">[ ${m.dir1.join(', ')} ]</span></div>
+            <div class="row-item"><span class="row-label">Burn 2 Cost (&Delta;V2)</span><span class="row-val" style="color:var(--purple)">${m.dv2_ms} m/s</span></div>
+            <div class="row-item"><span class="row-label">Burn 2 Direction (RTN)</span><span class="row-val">[ ${m.dir2.join(', ')} ]</span></div>
+            ${m.dv3_ms > 0 ? `<div class="row-item"><span class="row-label">Burn 3 Cost (&Delta;V3)</span><span class="row-val">${m.dv3_ms} m/s</span></div>` : ''}
+            <div class="row-item"><span class="row-label">Total Optimal &Delta;V</span><span class="row-val" style="color:var(--cyan)">${m.total_dv_ms} m/s</span></div>
+            <div class="row-item"><span class="row-label">Transfer Time of Flight</span><span class="row-val">${m.transfer_min} min</span></div>
+        `;
+        }
 
         const raan1 = r1.raan_deg !== undefined ? r1.raan_deg : 30.0;
         const raan2 = r2.raan_deg !== undefined ? r2.raan_deg : 30.0;
@@ -691,13 +671,17 @@
         <div class="row-item"><span class="row-label">Station-Keeping Fuel/Yr</span><span class="row-val">${r1.sk_fuel_yr} kg &rarr; <span style="color:var(--green)">${r2.sk_fuel_yr} kg/yr</span></span></div>
     `;
 
-        // Ensure Lambert Curve exists even if loading older JSON
+        // ---------------------------------------------------------------------
+        // PLOT 3: LAMBERT DELTA-V & FUEL TRADE-OFF PLOT (WITH RED DOT & OFFSET LABEL)
+        // ---------------------------------------------------------------------
         const mass0 = (m.final_mass_kg || 464) + (m.fuel_kg || 36);
-        const lCurve = data.lambert_curve || buildLambertCurve(m.transfer_min * 60.0, m.total_dv_ms, mass0, ispVal);
+        const aHohRef = 0.5 * ((r1.alt_km + R_EQ) + (r2.alt_km + R_EQ));
+        const tofHohRefMin = (Math.PI * Math.sqrt(aHohRef*aHohRef*aHohRef / MU)) / 60.0;
+        const lCurve = data.lambert_curve || buildLambertCurve(tofHohRefMin * 60.0, m.total_dv_ms, mass0, ispVal);
 
-        // ---------------------------------------------------------------------
-        // PLOT 3: LAMBERT DELTA-V & FUEL TRADE-OFF PLOT
-        // ---------------------------------------------------------------------
+        const selX = isLowThrust ? tofHohRefMin : m.transfer_min;
+        const selY = m.total_dv_ms;
+
         const traceLambertDv = {
             type: 'scatter', mode: 'lines', name: 'Lambert Total ΔV [m/s]',
             x: lCurve.map(p => p.tof_min),
@@ -714,21 +698,19 @@
             line: { color: '#00e676', width: 2.5, dash: 'dot', shape: 'spline' }
         };
 
+        // RED DOT MARKER (No overlapping text directly on the marker)
         const traceOptimalMarker = {
-            type: 'scatter', mode: 'markers+text', name: 'Selected Transfer Point',
-            x: [m.transfer_min], y: [m.total_dv_ms],
-            text: [`SELECTED (${m.transfer_min} min | ${m.total_dv_ms} m/s)`],
-            textposition: 'top center',
-            textfont: { color: '#ffab00', size: 12 },
-            marker: { size: 14, color: '#ffab00', symbol: 'star', line: { color: '#fff', width: 2 } }
+            type: 'scatter', mode: 'markers', name: 'Selected Operating Point',
+            x: [selX], y: [selY],
+            marker: { size: 12, color: '#ff1744', symbol: 'circle', line: { color: '#ffffff', width: 2.5 } }
         };
 
         Plotly.newPlot('plotLambert', [traceLambertDv, traceLambertFuel, traceOptimalMarker], {
             paper_bgcolor: '#111622', plot_bgcolor: '#111622',
-            margin: { l: 65, r: 65, b: 48, t: 20 },
+            margin: { l: 65, r: 65, b: 48, t: 24 },
             hovermode: 'x unified',
             xaxis: {
-                title: 'Transfer Time of Flight (TOF) [minutes]',
+                title: 'Impulsive Transfer Time of Flight (TOF) [minutes]',
                 color: '#e2e8f0', gridcolor: '#1e293b', zerolinecolor: '#334155'
             },
             yaxis: {
@@ -741,10 +723,31 @@
                 titlefont: { color: '#00e676' }, tickfont: { color: '#00e676' },
                 overlaying: 'y', side: 'right', showgrid: false
             },
+            // Floating Annotation Box lifted 48px ABOVE the curves with a pointer arrow
+            annotations: [{
+                x: selX,
+                y: selY,
+                xref: 'x',
+                yref: 'y',
+                text: isLowThrust
+                    ? `<b>ELECTRIC SPIRAL</b>: ${selY} m/s | Fuel: ${m.fuel_kg} kg`
+                    : `<b>SELECTED</b> (${selX} min | ${selY} m/s | ${m.fuel_kg} kg)`,
+                showarrow: true,
+                arrowhead: 2,
+                arrowsize: 1,
+                arrowwidth: 2,
+                arrowcolor: '#ff1744',
+                ax: 0,
+                ay: -48,
+                bgcolor: 'rgba(11, 15, 25, 0.92)',
+                bordercolor: '#ffab00',
+                borderwidth: 1.5,
+                borderpad: 6,
+                font: { color: '#ffab00', size: 12 }
+            }],
             legend: { font: { color: '#e2e8f0', size: 11.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.02, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
-        // Click on Lambert Curve to interactively select that Transfer Time!
         const lambertDiv = document.getElementById('plotLambert');
         lambertDiv.on('plotly_click', function(evtData) {
             if (!evtData || !evtData.points || !evtData.points.length) return;
@@ -754,7 +757,7 @@
         });
 
         // ---------------------------------------------------------------------
-        // PLOT 1: 3D WGS84 EARTH ELLIPSOID + ORBITS + BURN MARKERS
+        // PLOT 1: 3D WGS84 EARTH ELLIPSOID + ORBITS + SPIRAL/CONIC TRANSFER
         // ---------------------------------------------------------------------
         const trackMode = parseInt(document.getElementById('trackModeSelect').value, 10);
         const initSlice = trackMode === 1 ? data.traj_initial.slice(0, Math.ceil(data.traj_initial.length / 2)) : data.traj_initial;
@@ -762,7 +765,11 @@
 
         animFrames = [];
         initSlice.forEach(p => animFrames.push({...p, phase: 'PHASE 1: INITIAL ORBIT', color: '#00e5ff'}));
-        data.traj_transfer.forEach(p => animFrames.push({...p, phase: 'PHASE 2: TRANSFER MANEUVER', color: '#ffab00'}));
+        data.traj_transfer.forEach(p => animFrames.push({
+            ...p,
+            phase: isLowThrust ? 'PHASE 2: CONTINUOUS LOW-THRUST SPIRAL' : 'PHASE 2: IMPULSIVE TRANSFER',
+            color: isLowThrust ? '#d500f9' : '#ffab00'
+        }));
         targSlice.forEach(p => animFrames.push({...p, phase: 'PHASE 3: TARGET ORBIT', color: '#00e676'}));
 
         document.getElementById('timelineSlider').max = animFrames.length - 1;
@@ -793,19 +800,20 @@
         };
 
         const traceInit3D = {
-            type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (a=${(r1.alt_km+R_EQ).toFixed(0)} km, e=${r1.ecc})`,
+            type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (${r1.alt_km} km)`,
             x: initSlice.map(p => p.x), y: initSlice.map(p => p.y), z: initSlice.map(p => p.z),
             line: { color: '#00e5ff', width: 4.5 }
         };
 
         const traceTrans3D = {
-            type: 'scatter3d', mode: 'lines', name: '2. 3D Transfer Trajectory',
+            type: 'scatter3d', mode: 'lines',
+            name: isLowThrust ? '2. Low-Thrust Multi-Rev Spiral' : '2. 3D Transfer Trajectory',
             x: data.traj_transfer.map(p => p.x), y: data.traj_transfer.map(p => p.y), z: data.traj_transfer.map(p => p.z),
-            line: { color: '#ffab00', width: 6, dash: 'dash' }
+            line: { color: isLowThrust ? '#e040fb' : '#ffab00', width: isLowThrust ? 3.5 : 6, dash: isLowThrust ? 'solid' : 'dash' }
         };
 
         const traceTarg3D = {
-            type: 'scatter3d', mode: 'lines', name: `3. Target Orbit (a=${(r2.alt_km+R_EQ).toFixed(0)} km, e=${r2.ecc})`,
+            type: 'scatter3d', mode: 'lines', name: `3. Target Orbit (${r2.alt_km} km)`,
             x: targSlice.map(p => p.x), y: targSlice.map(p => p.y), z: targSlice.map(p => p.z),
             line: { color: '#00e676', width: 4.5 }
         };
@@ -813,11 +821,13 @@
         const burnStart = data.traj_transfer[0];
         const burnEnd   = data.traj_transfer[data.traj_transfer.length - 1];
         const traceBurns3D = {
-            type: 'scatter3d', mode: 'markers+text', name: 'Maneuver Burn Points (ΔV)',
+            type: 'scatter3d', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Maneuver Burn Points (ΔV)',
             x: [burnStart.x, burnEnd.x],
             y: [burnStart.y, burnEnd.y],
             z: [burnStart.z, burnEnd.z],
-            text: [`BURN 1 (ΔV1: ${m.dv1_ms} m/s)`, `BURN 2 (ΔV2: ${m.dv2_ms} m/s)`],
+            text: isLowThrust
+                ? ['SPIRAL START (THRUST ON)', 'SPIRAL CUTOFF (MECO)']
+                : [`BURN 1 (ΔV1: ${m.dv1_ms} m/s)`, `BURN 2 (ΔV2: ${m.dv2_ms} m/s)`],
             textposition: 'top center',
             textfont: { color: '#ffab00', size: 11.5 },
             marker: { size: 8, color: ['#ffab00', '#d500f9'], symbol: 'diamond', line: { color: '#fff', width: 2 } }
@@ -860,9 +870,9 @@
             marker: { size: 4, color: '#00e5ff' }
         };
         const traceTransGeo = {
-            type: 'scattergeo', mode: 'markers', name: 'Transfer Maneuver Track',
+            type: 'scattergeo', mode: 'markers', name: isLowThrust ? 'Low-Thrust Spiral Track' : 'Transfer Maneuver Track',
             lat: data.traj_transfer.map(p => p.lat), lon: data.traj_transfer.map(p => p.lon),
-            marker: { size: 4.5, color: '#ffab00' }
+            marker: { size: 3.5, color: isLowThrust ? '#e040fb' : '#ffab00' }
         };
         const traceTargGeo = {
             type: 'scattergeo', mode: 'markers', name: 'Target Orbit Track',
@@ -870,9 +880,10 @@
             marker: { size: 4, color: '#00e676' }
         };
         const traceBurnsGeo = {
-            type: 'scattergeo', mode: 'markers+text', name: 'Burn Locations (ΔV1 / ΔV2)',
+            type: 'scattergeo', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Burn Locations (ΔV1 / ΔV2)',
             lat: [burnStart.lat, burnEnd.lat], lon: [burnStart.lon, burnEnd.lon],
-            text: ['BURN 1 (ΔV1)', 'BURN 2 (ΔV2)'], textposition: 'top center',
+            text: isLowThrust ? ['SPIRAL ON', 'MECO'] : ['BURN 1 (ΔV1)', 'BURN 2 (ΔV2)'],
+            textposition: 'top center',
             textfont: { color: '#ffab00', size: 11 },
             marker: { size: 12, color: ['#ffab00', '#d500f9'], symbol: 'star', line: { color: '#fff', width: 1.5 } }
         };
@@ -976,6 +987,41 @@
         return pts;
     }
 
+    // Generate Multi-Revolution 3D Continuous Spiral Trajectory for Electric Propulsion
+    function generate3DSpiralTrajectory(orb1, orb2, visualRevs, steps, totalTofSec) {
+        const pts = [];
+        // Visual time scaling so Ground Track shows a clean continuous spiral without aliasing
+        const visualDurationSec = visualRevs * 5600.0;
+        for (let k = 0; k <= steps; k++) {
+            const frac = k / steps;
+            const a    = orb1.a + frac * (orb2.a - orb1.a);
+            const e    = orb1.e + frac * (orb2.e - orb1.e);
+            const inc  = (orb1.i + frac * (orb2.i - orb1.i)) * DEG2RAD;
+            const raan = (orb1.raan + frac * (orb2.raan - orb1.raan)) * DEG2RAD;
+            const theta = frac * (visualRevs * 2.0 * Math.PI + Math.PI);
+
+            const cO = Math.cos(raan), sO = Math.sin(raan);
+            const ci = Math.cos(inc),  si = Math.sin(inc);
+            const p = a * (1.0 - e * e);
+            const r = p / (1.0 + e * Math.cos(theta));
+            const rp = r * Math.cos(theta), rq = r * Math.sin(theta);
+
+            const x = cO * rp - sO * ci * rq;
+            const y = sO * rp + cO * ci * rq;
+            const z = si * rq;
+
+            const tVis = frac * visualDurationSec;
+            const geo = eciToGeodetic(x, y, z, tVis);
+            const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
+            pts.push({
+                t: +(frac * totalTofSec).toFixed(1),
+                x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2),
+                lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl
+            });
+        }
+        return pts;
+    }
+
     function generateExact3DTransferArc(pStart, pEnd, steps, tofSec) {
         const r1Vec = [pStart.x, pStart.y, pStart.z];
         const r2Vec = [pEnd.x, pEnd.y, pEnd.z];
@@ -1022,6 +1068,8 @@
         const propParts = document.getElementById('inPropellant').value.split('|');
         const isp = parseFloat(propParts[0]);
         const propCat = propParts[1], propName = propParts[2];
+        const isLowThrust = (propCat === 'Electric');
+        const thrustN = parseFloat(document.getElementById('inThrustN').value) || parseFloat(propParts[3]) || 0.5;
         const maxTimeMin = parseFloat(document.getElementById('inMaxTime').value) || 0;
 
         const orb1 = readOrbitFromUI('Init');
@@ -1041,75 +1089,70 @@
 
         const aHoh = 0.5 * (r1 + r2);
         const tofHohSec = Math.PI * Math.sqrt(aHoh*aHoh*aHoh / MU);
-        let tofSec = tofHohSec;
-        const vt1 = Math.sqrt(MU * (2.0 / r1 - 1.0 / aHoh));
-        const vt2 = Math.sqrt(MU * (2.0 / r2 - 1.0 / aHoh));
 
-        let bestAlpha = 0, minDv = 1e9;
-        for (let k = 0; k <= 1000; k++) {
-            const a = k / 1000.0;
-            const dvA = Math.sqrt(v1*v1 + vt1*vt1 - 2*v1*vt1*Math.cos(a * totalPlaneAngle));
-            const dvB = Math.sqrt(v2*v2 + vt2*vt2 - 2*v2*vt2*Math.cos((1 - a) * totalPlaneAngle));
-            if (dvA + dvB < minDv) { minDv = dvA + dvB; bestAlpha = a; }
-        }
+        let dv1 = 0, dv2 = 0, dv3 = 0, totalDv = 0, tofSec = tofHohSec, spiralRevs = 0;
+        let b1 = [0, 1, 0], b2 = [0, 1, 0];
+        let typeName = '';
 
-        const d1 = bestAlpha * totalPlaneAngle * signInc;
-        const d2 = (1.0 - bestAlpha) * totalPlaneAngle * signInc;
-        let b1 = [0, vt1*Math.cos(d1) - v1, vt1*Math.sin(d1)];
-        let b2 = [0, v2*Math.cos(d2) - vt2, v2*Math.sin(d2)];
-        let dv1 = Math.hypot(...b1), dv2 = Math.hypot(...b2), dv3 = 0;
-        let optMinDv = dv1 + dv2;
-        let totalDv = optMinDv;
-        let typeName = totalPlaneAngle > 1e-4 ? '3D Optimal Split-Plane Transfer (2-Burn)' : 'Coplanar Elliptical Hohmann Transfer (2-Burn)';
+        if (isLowThrust) {
+            // EDELBAUM CONTINUOUS SPIRAL TRANSFER
+            const v1c = Math.sqrt(MU / orb1.a), v2c = Math.sqrt(MU / orb2.a);
+            const effAngle = Math.min(Math.PI, 0.5 * Math.PI * totalPlaneAngle);
+            totalDv = Math.sqrt(v1c*v1c + v2c*v2c - 2*v1c*v2c*Math.cos(effAngle));
+            dv1 = totalDv;
+            const yaw = Math.atan2(v2c * Math.sin(effAngle), Math.abs(v1c - v2c * Math.cos(effAngle)) + 1e-6);
+            b1 = [0, Math.cos(yaw) * (orb2.a >= orb1.a ? 1 : -1), Math.sin(yaw) * signInc];
+            b2 = b1;
 
-        // Check 3-Burn Bi-Elliptic Transfer
-        const rMax = Math.max(r1, r2);
-        for (let mult = 2; mult <= 6; mult++) {
-            const rb = rMax * mult;
-            const at1 = 0.5 * (r1 + rb), at2 = 0.5 * (r2 + rb);
-            const tofBi = Math.PI * (Math.sqrt(at1*at1*at1/MU) + Math.sqrt(at2*at2*at2/MU));
-            if (maxTimeMin > 0 && tofBi > maxTimeMin * 60) continue;
+            const fuelSpiral = mass0 * (1.0 - Math.exp(-(totalDv * 1000.0) / (isp * G0)));
+            const mdot = thrustN / (isp * G0);
+            tofSec = fuelSpiral / mdot;
+            const meanPer = 2 * Math.PI * Math.sqrt(Math.pow(0.5*(orb1.a + orb2.a), 3) / MU);
+            spiralRevs = +(tofSec / meanPer).toFixed(1);
+            typeName = `Continuous Low-Thrust Edelbaum Spiral (${spiralRevs} Revolutions)`;
+        } else {
+            // IMPULSIVE CHEMICAL OPTIMIZER
+            const vt1 = Math.sqrt(MU * (2.0 / r1 - 1.0 / aHoh));
+            const vt2 = Math.sqrt(MU * (2.0 / r2 - 1.0 / aHoh));
+            let bestAlpha = 0, minDv = 1e9;
+            for (let k = 0; k <= 1000; k++) {
+                const a = k / 1000.0;
+                const dvA = Math.sqrt(v1*v1 + vt1*vt1 - 2*v1*vt1*Math.cos(a * totalPlaneAngle));
+                const dvB = Math.sqrt(v2*v2 + vt2*vt2 - 2*v2*vt2*Math.cos((1 - a) * totalPlaneAngle));
+                if (dvA + dvB < minDv) { minDv = dvA + dvB; bestAlpha = a; }
+            }
+            const d1 = bestAlpha * totalPlaneAngle * signInc;
+            const d2 = (1.0 - bestAlpha) * totalPlaneAngle * signInc;
+            b1 = [0, vt1*Math.cos(d1) - v1, vt1*Math.sin(d1)];
+            b2 = [0, v2*Math.cos(d2) - vt2, v2*Math.sin(d2)];
+            dv1 = Math.hypot(...b1); dv2 = Math.hypot(...b2);
+            totalDv = dv1 + dv2;
+            typeName = totalPlaneAngle > 1e-4 ? '3D Optimal Split-Plane Transfer (2-Burn)' : 'Coplanar Elliptical Hohmann Transfer (2-Burn)';
 
-            const vt1p = Math.sqrt(MU * (2/r1 - 1/at1)), vt1a = Math.sqrt(MU * (2/rb - 1/at1));
-            const vt2a = Math.sqrt(MU * (2/rb - 1/at2)), vt2p = Math.sqrt(MU * (2/r2 - 1/at2));
-            const dv1Bi = Math.abs(vt1p - v1);
-            const dv2Bi = Math.sqrt(vt1a*vt1a + vt2a*vt2a - 2*vt1a*vt2a*Math.cos(totalPlaneAngle));
-            const dv3Bi = Math.abs(v2 - vt2p);
-            if (dv1Bi + dv2Bi + dv3Bi < totalDv) {
-                dv1 = dv1Bi; dv2 = dv2Bi; dv3 = dv3Bi;
-                totalDv = dv1 + dv2 + dv3;
-                optMinDv = totalDv;
-                tofSec = tofBi;
-                b1 = [0, 1, 0];
-                b2 = [0, vt2a*Math.cos(totalPlaneAngle) - vt1a, vt2a*Math.sin(totalPlaneAngle*signInc)];
-                typeName = `Optimal 3-Burn Bi-Elliptic Transfer (Apogee: ${(rb-R_EQ).toFixed(0)} km)`;
+            if (maxTimeMin > 0) {
+                const tReqSec = maxTimeMin * 60.0;
+                tofSec = tReqSec;
+                const ratio = (tReqSec - tofHohSec) / (0.5 * tofHohSec);
+                const penaltyKmS = ((tReqSec < tofHohSec)
+                    ? 240.0 * Math.pow(tofHohSec / tReqSec - 1.0, 1.55)
+                    : 115.0 * Math.pow(ratio, 2.0)) / 1000.0;
+                dv1 += 0.5 * penaltyKmS;
+                dv2 += 0.5 * penaltyKmS;
+                totalDv = dv1 + dv2;
+                typeName = `3D Universal Lambert Conic Transfer (TOF: ${maxTimeMin} min)`;
             }
         }
 
-        // Build Lambert Trade-Off Curve around the unconstrained minimum
-        const lambertCurve = buildLambertCurve(tofHohSec, optMinDv * 1000.0, mass0, isp);
-
-        // If user selected a custom transfer time (or clicked the Lambert plot)
-        if (maxTimeMin > 0) {
-            const tReqSec = maxTimeMin * 60.0;
-            tofSec = tReqSec;
-            const ratio = (tReqSec - tofHohSec) / (0.5 * tofHohSec);
-            const penaltyKmS = ((tReqSec < tofHohSec)
-                ? 240.0 * Math.pow(tofHohSec / tReqSec - 1.0, 1.55)
-                : 115.0 * Math.pow(ratio, 2.0)) / 1000.0;
-            dv1 += 0.5 * penaltyKmS;
-            dv2 += 0.5 * penaltyKmS;
-            totalDv = dv1 + dv2 + dv3;
-            typeName = `3D Universal Lambert Conic Transfer (TOF: ${maxTimeMin} min)`;
-        }
-
+        const lambertCurve = buildLambertCurve(tofHohSec, totalDv * 1000.0, mass0, isp);
         const normVec = v => { const n = Math.hypot(...v) || 1; return v.map(x => +(x/n).toFixed(3)); };
         const fuelUsed = mass0 * (1.0 - Math.exp(-(totalDv * 1000.0) / (isp * G0)));
         const finalMass = mass0 - fuelUsed;
 
         const trajInit  = generateOrbitPoints(orb1.a, orb1.e, orb1.i, orb1.raan, 0, 0, 4*Math.PI, 240, 0);
         const trajTarg  = generateOrbitPoints(orb2.a, orb2.e, orb2.i, orb2.raan, 0, Math.PI, 5*Math.PI, 240, tofSec);
-        const trajTrans = generateExact3DTransferArc(trajInit[0], trajTarg[0], 100, tofSec);
+        const trajTrans = isLowThrust
+            ? generate3DSpiralTrajectory(orb1, orb2, 6, 360, tofSec)
+            : generateExact3DTransferArc(trajInit[0], trajTarg[0], 100, tofSec);
 
         const bStart = trajTrans[0], bEnd = trajTrans[trajTrans.length - 1];
         const per1 = 2*Math.PI*Math.sqrt(orb1.a*orb1.a*orb1.a/MU)/60;
@@ -1126,12 +1169,14 @@
                 sk_fuel_yr: +(27 * Math.exp(-(hp1 - 400)/60)).toFixed(3)
             },
             maneuver: {
-                type_name: typeName, num_burns: dv3 > 0 ? 3 : 2, prop_name: propName, prop_cat: propCat, isp_s: isp,
+                type_name: typeName, num_burns: isLowThrust ? 1 : 2, is_low_thrust: isLowThrust ? 1 : 0,
+                thrust_n: thrustN, spiral_revs: spiralRevs,
+                prop_name: propName, prop_cat: propCat, isp_s: isp,
                 dv1_ms: +(dv1*1000).toFixed(2), dir1: normVec(b1),
                 burn1_pos: [bStart.x, bStart.y, bStart.z], burn1_geo: [bStart.lat, bStart.lon, bStart.alt],
                 dv2_ms: +(dv2*1000).toFixed(2), dir2: normVec(b2),
                 burn2_pos: [bEnd.x, bEnd.y, bEnd.z], burn2_geo: [bEnd.lat, bEnd.lon, bEnd.alt],
-                dv3_ms: +(dv3*1000).toFixed(2), total_dv_ms: +(totalDv*1000).toFixed(2), transfer_min: +(tofSec/60).toFixed(2),
+                dv3_ms: 0, total_dv_ms: +(totalDv*1000).toFixed(2), transfer_min: +(tofSec/60).toFixed(2),
                 fuel_kg: +fuelUsed.toFixed(2), final_mass_kg: +finalMass.toFixed(2)
             },
             target_report: {

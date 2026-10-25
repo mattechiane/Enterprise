@@ -6,9 +6,6 @@
 #include <string.h>
 #include <math.h>
 
-// =========================================================================
-// FUNZIONI DI STUMPFF C(z) E S(z) PER VARIABILI UNIVERSALI DI LAMBERT
-// =========================================================================
 static double stumpff_C(double z) {
     if (z > 1e-6) {
         double sz = sqrt(z);
@@ -31,7 +28,6 @@ static double stumpff_S(double z) {
     return (1.0 / 6.0) - z / 120.0 + (z * z) / 5040.0;
 }
 
-// Converte un vettore Delta-V dal sistema inerziale ECI al frame locale RTN del satellite
 static Vector3D eci_vec_to_rtn(Vector3D r_sat, Vector3D v_sat, Vector3D vec_eci) {
     Vector3D u_R = vec_normalize(r_sat);
     Vector3D h_vec = vec_cross(r_sat, v_sat);
@@ -69,16 +65,11 @@ LambertSolution solve_lambert_universal(Vector3D r1_vec, Vector3D v1_init,
         if (cross_r1r2.z >= 0.0) dnu = 2.0 * PI - dnu;
     }
 
-    // Se l'angolo è quasi esattamente 180 gradi (trasferimento antipodale),
-    // applichiamo una perturbazione millimetrica per evitare la singolarità di piano di Lambert
-    if (fabs(dnu - PI) < 1e-4) {
-        dnu = PI - 1e-4;
-    }
+    if (fabs(dnu - PI) < 1e-4) dnu = PI - 1e-4;
 
     double A = sin(dnu) * sqrt(r1 * r2 / (1.0 - cos(dnu)));
     if (fabs(A) < 1e-9) return sol;
 
-    // Ricerca robusta di z tramite bisezione + raffinamento su [-4*PI, 4*PI^2]
     double z_low = -4.0 * PI;
     double z_high = 4.0 * PI * PI - 1e-3;
     double z = 0.0;
@@ -99,11 +90,8 @@ LambertSolution solve_lambert_universal(Vector3D r1_vec, Vector3D v1_init,
 
         if (fabs(t_calc - tof_sec) < 1e-5) break;
 
-        if (t_calc <= tof_sec) {
-            z_low = z;
-        } else {
-            z_high = z;
-        }
+        if (t_calc <= tof_sec) z_low = z;
+        else z_high = z;
     }
 
     double C = stumpff_C(z);
@@ -111,16 +99,13 @@ LambertSolution solve_lambert_universal(Vector3D r1_vec, Vector3D v1_init,
     double y = r1 + r2 + A * (z * S - 1.0) / sqrt(C);
     if (y <= 0.0) return sol;
 
-    // Coefficienti di Lagrange f, g, g_dot
     double f     = 1.0 - (y / r1);
     double g     = A * sqrt(y / mu);
     double g_dot = 1.0 - (y / r2);
 
     if (fabs(g) < 1e-9) return sol;
 
-    // v1 = (r2 - f * r1) / g
     sol.v1_eci = vec_scale(vec_sub(r2_vec, vec_scale(r1_vec, f)), 1.0 / g);
-    // v2 = (g_dot * r2 - r1) / g
     sol.v2_eci = vec_scale(vec_sub(vec_scale(r2_vec, g_dot), r1_vec), 1.0 / g);
 
     Vector3D dv1_eci = vec_sub(sol.v1_eci, v1_init);
@@ -138,34 +123,44 @@ LambertSolution solve_lambert_universal(Vector3D r1_vec, Vector3D v1_init,
 }
 
 PropellantSpec get_propellant_specs(PropellantType type) {
-    PropellantSpec p;
+    PropellantSpec p = {0};
     p.type = type;
     switch (type) {
         case PROP_SOLID_HTPB:
             strcpy(p.name, "HTPB/AP Composite (Star-48B)");
             strcpy(p.category, "Solid");
-            p.isp = 292.0;
+            p.isp = 292.0; p.default_thrust_n = 15000.0; p.is_low_thrust = false;
             break;
         case PROP_LIQUID_HYDRAZINE:
             strcpy(p.name, "Hydrazine Monopropellant (N2H4)");
             strcpy(p.category, "Liquid");
-            p.isp = 235.0;
+            p.isp = 235.0; p.default_thrust_n = 400.0; p.is_low_thrust = false;
             break;
         case PROP_LIQUID_MMH_NTO:
             strcpy(p.name, "MMH / NTO Bipropellant");
             strcpy(p.category, "Liquid");
-            p.isp = 316.0;
+            p.isp = 316.0; p.default_thrust_n = 490.0; p.is_low_thrust = false;
             break;
         case PROP_LIQUID_LOX_LCH4:
             strcpy(p.name, "LOX / Liquid Methane (Methalox)");
             strcpy(p.category, "Liquid");
-            p.isp = 365.0;
+            p.isp = 365.0; p.default_thrust_n = 2000.0; p.is_low_thrust = false;
+            break;
+        case PROP_ELECTRIC_HALL_XE:
+            strcpy(p.name, "Xenon Hall-Effect Thruster (HET)");
+            strcpy(p.category, "Electric");
+            p.isp = 1650.0; p.default_thrust_n = 0.50; p.is_low_thrust = true;
+            break;
+        case PROP_ELECTRIC_ION_NEXT:
+            strcpy(p.name, "Xenon Gridded Ion Engine (NEXT-C)");
+            strcpy(p.category, "Electric");
+            p.isp = 3200.0; p.default_thrust_n = 0.25; p.is_low_thrust = true;
             break;
         case PROP_LIQUID_LOX_LH2:
         default:
             strcpy(p.name, "LOX / Liquid Hydrogen (Hydrolox)");
             strcpy(p.category, "Liquid");
-            p.isp = 450.0;
+            p.isp = 450.0; p.default_thrust_n = 5000.0; p.is_low_thrust = false;
             break;
     }
     return p;
@@ -293,6 +288,8 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
                                               double mu) {
     OptimalTransferPlan best = {0};
     best.prop_info = get_propellant_specs(prop_type);
+    best.is_low_thrust = best.prop_info.is_low_thrust;
+    best.continuous_thrust_n = best.prop_info.default_thrust_n;
     best.time_constrained = (max_transfer_time_sec > 0.0);
     best.max_time_limit_s = max_transfer_time_sec;
 
@@ -312,9 +309,57 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
     double total_plane_angle = acos(cos_theta);
     double sign_inc = (orb_target.i >= orb_init.i) ? 1.0 : -1.0;
 
-    // ------------------------------------------------------------------
-    // CANDIDATO 1: 3D OPTIMAL SPLIT-PLANE HOHMANN
-    // ------------------------------------------------------------------
+    // ==================================================================
+    // CASO A: PROPULSIONE ELETTRICA CONTINUA A SPIRALE (EDELBAUM THEORY)
+    // ==================================================================
+    if (best.is_low_thrust) {
+        double v1_c = sqrt(mu / orb_init.a);
+        double v2_c = sqrt(mu / orb_target.a);
+        // Formula di Edelbaum per il Delta-V di una spirale continua 3D
+        double eff_angle = (PI / 2.0) * total_plane_angle;
+        if (eff_angle > PI) eff_angle = PI;
+        double dv_edelbaum = sqrt(v1_c*v1_c + v2_c*v2_c - 2.0*v1_c*v2_c*cos(eff_angle));
+
+        strcpy(best.maneuver_name, "Continuous Low-Thrust Edelbaum Spiral Transfer");
+        best.num_burns = 1; // Unica accensione continua dall'inizio alla fine
+        best.dv1_mag = dv_edelbaum;
+        best.dv2_mag = 0.0;
+        best.dv3_mag = 0.0;
+        best.total_dv = dv_edelbaum;
+
+        // Angolo medio di imbardata (Yaw) per spingere sia lungo la traccia che fuori piano
+        double yaw = atan2(v2_c * sin(eff_angle), fabs(v1_c - v2_c * cos(eff_angle)) + 1e-6);
+        best.burn1_dir_rtn = (Vector3D){0.0, cos(yaw) * ((orb_target.a >= orb_init.a) ? 1.0 : -1.0), sin(yaw) * sign_inc};
+        best.burn2_dir_rtn = best.burn1_dir_rtn;
+
+        double total_dv_ms = best.total_dv * 1000.0;
+        best.final_mass = init_mass * exp(-total_dv_ms / (best.prop_info.isp * G0));
+        best.propellant_used = init_mass - best.final_mass;
+
+        // Durata reale di accensione continua: t = (m_prop * Isp * g0) / Thrust
+        double mdot = best.continuous_thrust_n / (best.prop_info.isp * G0);
+        best.transfer_time_sec = best.propellant_used / mdot;
+
+        double mean_period = 2.0 * PI * sqrt(pow(0.5*(orb_init.a + orb_target.a), 3) / mu);
+        best.spiral_revolutions = best.transfer_time_sec / mean_period;
+        best.transfer_apogee_km = orb_target.a;
+
+        KeplerianElements k_start = orb_init; k_start.theta = 0.0;
+        CartesianState s_start = keplerian_to_cartesian(k_start, mu, init_mass, 0.0);
+        best.burn1_pos_eci = s_start.position;
+        best.burn1_geo     = ecef_to_geodetic(eci_to_ecef(s_start.position, 0.0, 0.0));
+
+        KeplerianElements k_end = orb_target; k_end.theta = PI;
+        CartesianState s_end = keplerian_to_cartesian(k_end, mu, best.final_mass, best.transfer_time_sec);
+        best.burn2_pos_eci = s_end.position;
+        best.burn2_geo     = ecef_to_geodetic(eci_to_ecef(s_end.position, best.transfer_time_sec, 0.0));
+
+        return best;
+    }
+
+    // ==================================================================
+    // CASO B: PROPULSIONE CHIMICA IMPULSIVA (HOHMANN / BI-ELLITTICA / LAMBERT)
+    // ==================================================================
     double a_hoh = 0.5 * (r1 + r2);
     double tof_hoh = PI * sqrt((a_hoh * a_hoh * a_hoh) / mu);
     double vt1_hoh = sqrt(mu * ((2.0 / r1) - (1.0 / a_hoh)));
@@ -353,9 +398,7 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
     best.transfer_apogee_km = (r2 >= r1) ? r2 : r1;
     best.transfer_time_sec = tof_hoh;
 
-    // ------------------------------------------------------------------
-    // CANDIDATO 2: BI-ELLITTICA 3D (3 Impulsi)
-    // ------------------------------------------------------------------
+    // Candidato Bi-Ellittica
     double r_max = (r2 > r1) ? r2 : r1;
     for (int mult = 2; mult <= 6; mult++) {
         double rb = r_max * (double)mult;
@@ -391,15 +434,13 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
         }
     }
 
-    // ------------------------------------------------------------------
-    // CANDIDATO 3: RISOLUTORE UNIVERSALE DI LAMBERT 3D (Se c'è vincolo tempo)
-    // ------------------------------------------------------------------
+    // Candidato Lambert Veloce
     KeplerianElements k_b1 = orb_init;
     k_b1.theta = 0.0;
     CartesianState s_b1 = keplerian_to_cartesian(k_b1, mu, init_mass, 0.0);
 
     KeplerianElements k_b2 = orb_target;
-    k_b2.theta = 165.0 * DEG2RAD; // Target non-antipodale per trasferimento veloce di Lambert
+    k_b2.theta = 165.0 * DEG2RAD;
     CartesianState s_b2_lam = keplerian_to_cartesian(k_b2, mu, init_mass, 0.0);
 
     if (best.time_constrained && max_transfer_time_sec < tof_hoh) {
@@ -419,7 +460,6 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
         }
     }
 
-    // Coordinate spaziali ECI e Geodetiche dei Burn Points
     best.burn1_pos_eci = s_b1.position;
     best.burn1_geo     = ecef_to_geodetic(eci_to_ecef(s_b1.position, 0.0, 0.0));
 
