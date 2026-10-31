@@ -214,11 +214,27 @@
 <!-- 1. FIRST OUTPUT BLOCK (TOP): 3D WGS84 EARTH ELLIPSOID & BURN POINTS -->
 <section class="section-block">
     <div class="section-header">
-        <h2>1. 3D WGS84 Earth Ellipsoid &amp; Orbital Transfer Visualization</h2>
-        <span>Interactive 3D Inertial Space (ECI) &bull; Supports Impulsive Conics &amp; Multi-Revolution Electric Spirals</span>
+        <div>
+            <h2>1. 3D WGS84 Earth Ellipsoid &amp; Orbital Transfer Visualization</h2>
+            <span>WGS84 Oblate Ellipsoid: R_eq = 6378.137 km &bull; R_pol = 6356.752 km (f = 1/298.257) &bull; NASA Blue Marble Satellite Biomes &amp; Country Borders</span>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <div style="display:inline-flex; gap:4px; align-items:center; background:#0b0f19; padding:3px 6px; border-radius:6px; border:1px solid var(--border);" title="Use keyboard arrow keys (← ↑ ↓ →) or click these buttons to rotate without changing zoom">
+                <span style="font-size:11px; color:var(--muted); margin-right:4px;">&#9000; Rotate:</span>
+                <button type="button" class="btn-sim" id="btnRotLeft3D" style="padding:3px 8px;" title="Rotate Left (ArrowLeft)">&#9664;</button>
+                <button type="button" class="btn-sim" id="btnRotUp3D" style="padding:3px 8px;" title="Rotate Up (ArrowUp)">&#9650;</button>
+                <button type="button" class="btn-sim" id="btnRotDown3D" style="padding:3px 8px;" title="Rotate Down (ArrowDown)">&#9660;</button>
+                <button type="button" class="btn-sim" id="btnRotRight3D" style="padding:3px 8px;" title="Rotate Right (ArrowRight)">&#9654;</button>
+            </div>
+            <select id="dragMode3DSelect" class="btn-sim" title="Choose 3D rotation style">
+                <option value="turntable" selected>&#127760; Rotation: Turntable (Stable North-Up)</option>
+                <option value="orbit">&#128260; Rotation: Free 3D Trackball</option>
+            </select>
+            <button class="btn-sim" id="btnResetCamera3D" title="Reset 3D camera orientation">&#127909; Reset 3D View</button>
+        </div>
     </div>
     <div id="plot3D" class="plot-container-3d"></div>
-    <div class="plot-hint">&#128433; Left-Click + Drag: Rotate 3D Space | Scroll Wheel: Zoom | Right-Click: Pan</div>
+    <div class="plot-hint">&#9000; <b>Keyboard Arrows (&#8592; &#8593; &#8595; &#8594;)</b>: Rotate Globe Left / Right / Up / Down (Preserves Current Zoom) &nbsp;|&nbsp; &#128433; Mouse Drag: Rotate &nbsp;|&nbsp; Scroll Wheel: Zoom</div>
 </section>
 
 <!-- 2. SECOND OUTPUT BLOCK: MISSION & MANEUVER DATA SHEET -->
@@ -430,6 +446,13 @@
     let globalData = null;
     let defaultJsonBackup = null;
     let continent3DCoords = { x: [], y: [], z: [] };
+    let countryBorders3DCoords = { x: [], y: [], z: [] };
+    let earthEllipsoidMesh = null;
+    let landMaskCanvas = null;
+    let landMaskData = null;
+    let isInteracting3D = false;
+    let interact3DTimer = null;
+    let isRestyling3D = false;
     let animFrames = [];
     let currentFrame = 0;
     let isPlaying = true;
@@ -736,28 +759,207 @@
         validateModalOrbits();
     });
 
+    // Gaussian helper for realistic satellite biome / mountain / desert distribution
+    function gauss2D(lat, lon, cLat, cLon, sLat, sLon) {
+        const dLat = (lat - cLat) / sLat;
+        let dLon = lon - cLon;
+        if (dLon >  180) dLon -= 360;
+        if (dLon < -180) dLon += 360;
+        dLon /= sLon;
+        return Math.exp(-0.5 * (dLat * dLat + dLon * dLon));
+    }
+
+    function isLandPixel(latDeg, lonDeg) {
+        if (!landMaskData) return false;
+        const w = 720, h = 360;
+        let x = Math.floor(((lonDeg + 180.0) / 360.0) * w);
+        let y = Math.floor(((90.0 - latDeg) / 180.0) * h);
+        x = Math.max(0, Math.min(w - 1, x));
+        y = Math.max(0, Math.min(h - 1, y));
+        return landMaskData[(y * w + x) * 4 + 3] > 90;
+    }
+
+    function isNearCoast(latDeg, lonDeg) {
+        if (!landMaskData) return false;
+        return isLandPixel(latDeg + 2.5, lonDeg) || isLandPixel(latDeg - 2.5, lonDeg) ||
+               isLandPixel(latDeg, lonDeg + 2.5) || isLandPixel(latDeg, lonDeg - 2.5) ||
+               isLandPixel(latDeg + 4.5, lonDeg + 4.5) || isLandPixel(latDeg - 4.5, lonDeg - 4.5);
+    }
+
+    // Compute Blue Marble satellite surface color index in [0.0, 1.0]
+    function computeSatelliteSurfaceColor(lat, lon) {
+        const absLat = Math.abs(lat);
+        const land = isLandPixel(lat, lon);
+
+        if (!land) {
+            // Polar sea ice fringe near extreme Antarctica
+            if (lat < -75.0) return 0.91;
+            const shelf = isNearCoast(lat, lon) ? 0.08 : 0.0;
+            // Realistic ocean bathymetry (deep trenches vs mid-ocean ridges & tropical waters)
+            const tropicalWarmth = 0.06 * Math.cos(lat * DEG2RAD);
+            const ridgeWave = 0.025 * Math.sin(lon * 3.0 * DEG2RAD) * Math.cos(lat * 2.0 * DEG2RAD);
+            return Math.max(0.02, Math.min(0.36, 0.14 + tropicalWarmth + ridgeWave + shelf));
+        }
+
+        // 1. Polar Ice Caps: Antarctica & Interior Greenland & High Arctic Glaciers
+        if (lat < -60.0) {
+            return 0.94 + 0.05 * Math.min(1.0, (-60.0 - lat) / 25.0);
+        }
+        const greenlandIce = (lat > 60.5 && lon > -72.0 && lon < -19.0)
+            ? gauss2D(lat, lon, 72.5, -41.0, 8.5, 13.0)
+            : 0.0;
+        if (greenlandIce > 0.28 || lat > 78.5) {
+            return Math.min(0.99, 0.90 + 0.09 * greenlandIce);
+        }
+
+        // 2. Major World Deserts (Sahara, Arabian, Syrian, Iranian/Thar, Gobi/Taklamakan, Australian Outback, Kalahari/Namib, Sonoran/Mojave, Atacama/Patagonia)
+        const sahara    = (lat > 13 && lat < 35 && lon > -18 && lon < 36) ? gauss2D(lat, lon, 23.5, 11.0, 6.5, 18.0) : 0;
+        const arabia    = (lat > 12 && lat < 34 && lon >= 35 && lon < 62) ? gauss2D(lat, lon, 23.0, 46.5, 6.0, 9.0) : 0;
+        const iranThar  = (lat > 20 && lat < 44 && lon > 50 && lon < 78) ? gauss2D(lat, lon, 31.0, 62.0, 6.5, 9.5) : 0;
+        const gobi      = (lat > 36 && lat < 49 && lon > 76 && lon < 118) ? gauss2D(lat, lon, 41.5, 96.0, 4.5, 14.0) : 0;
+        const outback   = (lat < -17 && lat > -33 && lon > 113 && lon < 143) ? gauss2D(lat, lon, -24.5, 128.0, 4.5, 10.0) : 0;
+        const kalahari  = (lat < -17 && lat > -32 && lon > 12 && lon < 27) ? gauss2D(lat, lon, -24.0, 19.0, 4.5, 4.5) : 0;
+        const swUsa     = (lat > 23 && lat < 41 && lon > -119 && lon < -101) ? gauss2D(lat, lon, 32.0, -111.0, 5.5, 5.5) : 0;
+        const atacama   = (lat < -15 && lat > -32 && lon > -72 && lon < -66) ? gauss2D(lat, lon, -23.5, -69.0, 5.0, 2.5) : 0;
+        const hornAfrica = (lat > 2 && lat < 13 && lon > 40 && lon < 52) ? gauss2D(lat, lon, 8.0, 46.5, 4.0, 4.0) : 0;
+
+        const desertScore = Math.min(1.0, Math.max(sahara * 1.15, arabia * 1.15, iranThar, gobi, outback * 1.1, kalahari, swUsa * 0.9, atacama, hornAfrica * 0.9));
+
+        // 3. Major Mountain Chains (Himalayas/Tibet, Andes, Rockies, European Alps, Caucasus/Zagros, Ethiopian Highlands)
+        const himalaya = gauss2D(lat, lon, 32.5, 86.0, 4.5, 11.5);
+        const andesN   = (lat < 8 && lat > -22 && lon > -81 && lon < -63) ? gauss2D(lat, lon, -10.0, -73.5, 9.0, 3.0) : 0;
+        const andesS   = (lat <= -20 && lat > -54 && lon > -76 && lon < -65) ? gauss2D(lat, lon, -35.0, -70.0, 12.0, 2.5) : 0;
+        const rockies  = (lat > 35 && lat < 62 && lon > -126 && lon < -105) ? gauss2D(lat, lon, 48.0, -114.0, 9.0, 5.0) : 0;
+        const alps     = gauss2D(lat, lon, 46.3, 10.5, 1.8, 4.2);
+        const caucasus = gauss2D(lat, lon, 41.0, 44.5, 2.5, 5.5);
+        const ethiopia = gauss2D(lat, lon, 9.5, 39.0, 3.5, 3.5);
+
+        const mountainScore = Math.min(1.0, Math.max(himalaya * 1.2, andesN, andesS, rockies * 0.85, alps * 0.85, caucasus * 0.8, ethiopia * 0.75));
+
+        if (mountainScore > 0.55) {
+            return Math.min(0.89, 0.77 + 0.12 * mountainScore);
+        }
+        if (desertScore > 0.32) {
+            return 0.60 + 0.14 * desertScore;
+        }
+
+        // 4. Vegetated Land: Rainforests (Amazon, Congo, SE Asia), Temperate Forests/Plains (Europe, US, China), Boreal Taiga & Tundra
+        const rainforest = Math.exp(-Math.pow(lat / 13.0, 2)); // Lush equatorial deep green
+        const tundra     = absLat > 62.0 ? Math.min(1.0, (absLat - 62.0) / 14.0) : 0.0;
+        if (tundra > 0.35) {
+            return 0.74 + 0.12 * tundra;
+        }
+        return 0.42 + 0.14 * (1.0 - rainforest * 0.65) + 0.04 * mountainScore + 0.06 * desertScore;
+    }
+
+    function buildWGS84EllipsoidSurfaceMesh() {
+        const latSteps = 90;  // 2 deg resolution
+        const lonSteps = 180; // 2 deg resolution
+        const sx = [], sy = [], sz = [], sc = [];
+
+        for (let i = 0; i <= latSteps; i++) {
+            const latDeg = (i / latSteps) * 180.0 - 90.0;
+            const rowX = [], rowY = [], rowZ = [], rowC = [];
+            for (let j = 0; j <= lonSteps; j++) {
+                const lonDeg = (j / lonSteps) * 360.0 - 180.0;
+                // Exact WGS84 Oblate Ellipsoid surface point (h = 0 km)
+                const pt = geodeticToWGS84(latDeg, lonDeg, 0.0);
+                rowX.push(+pt.x.toFixed(2));
+                rowY.push(+pt.y.toFixed(2));
+                rowZ.push(+pt.z.toFixed(2));
+                rowC.push(+computeSatelliteSurfaceColor(latDeg, lonDeg).toFixed(3));
+            }
+            sx.push(rowX); sy.push(rowY); sz.push(rowZ); sc.push(rowC);
+        }
+        earthEllipsoidMesh = { x: sx, y: sy, z: sz, surfacecolor: sc };
+    }
+
     async function load3DContinents() {
         try {
-            const res = await fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson');
-            const geo = await res.json();
+            const [resLand, resCountries] = await Promise.all([
+                fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson'),
+                fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson').catch(() => null)
+            ]);
+            const geoLand = await resLand.json();
+            const geoCountries = resCountries && resCountries.ok ? await resCountries.json() : null;
+
+            // 1. Rasterize land polygons onto an offscreen canvas (720x360) for exact Land/Ocean mask
+            const canvas = document.createElement('canvas');
+            canvas.width = 720;
+            canvas.height = 360;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 720, 360);
+            ctx.fillStyle = '#ffffff';
+
+            const drawGeoFeatures = (features) => {
+                features.forEach(feat => {
+                    const geom = feat.geometry;
+                    if (!geom) return;
+                    const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+                    polys.forEach(poly => {
+                        poly.forEach((ring, ringIdx) => {
+                            if (ringIdx > 0) return;
+                            ctx.beginPath();
+                            ring.forEach((pt, idx) => {
+                                const px = ((pt[0] + 180.0) / 360.0) * 720.0;
+                                const py = ((90.0 - pt[1]) / 180.0) * 360.0;
+                                if (idx === 0) ctx.moveTo(px, py);
+                                else ctx.lineTo(px, py);
+                            });
+                            ctx.closePath();
+                            ctx.fill();
+                        });
+                    });
+                });
+            };
+
+            drawGeoFeatures(geoLand.features);
+            if (geoCountries) drawGeoFeatures(geoCountries.features);
+            landMaskData = ctx.getImageData(0, 0, 720, 360).data;
+
+            // 2. Build 3D Coastlines on the WGS84 Ellipsoid (alt = 4.5 km, flush with surface)
             let cx = [], cy = [], cz = [];
-            geo.features.forEach(feat => {
+            geoLand.features.forEach(feat => {
                 const geom = feat.geometry;
                 const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
                 polys.forEach(poly => {
                     poly.forEach(ring => {
                         ring.forEach(pt => {
-                            const v = geodeticToWGS84(pt[1], pt[0], 18.0);
-                            cx.push(v.x); cy.push(v.y); cz.push(v.z);
+                            const v = geodeticToWGS84(pt[1], pt[0], 4.5);
+                            cx.push(+v.x.toFixed(1)); cy.push(+v.y.toFixed(1)); cz.push(+v.z.toFixed(1));
                         });
                         cx.push(null); cy.push(null); cz.push(null);
                     });
                 });
             });
             continent3DCoords = { x: cx, y: cy, z: cz };
+
+            // 3. Build 3D National Borders on the WGS84 Ellipsoid (alt = 5.0 km)
+            if (geoCountries) {
+                let bx = [], by = [], bz = [];
+                geoCountries.features.forEach(feat => {
+                    const geom = feat.geometry;
+                    if (!geom) return;
+                    const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+                    polys.forEach(poly => {
+                        poly.forEach(ring => {
+                            ring.forEach(pt => {
+                                const v = geodeticToWGS84(pt[1], pt[0], 5.0);
+                                bx.push(+v.x.toFixed(1)); by.push(+v.y.toFixed(1)); bz.push(+v.z.toFixed(1));
+                            });
+                            bx.push(null); by.push(null); bz.push(null);
+                        });
+                    });
+                });
+                countryBorders3DCoords = { x: bx, y: by, z: bz };
+            }
+
+            // 4. Build the high-res 3D WGS84 Ellipsoid with satellite biome colors
+            buildWGS84EllipsoidSurfaceMesh();
             if (globalData) renderDashboard(globalData);
         } catch (e) {
             console.warn('3D continent outlines fallback:', e);
+            buildWGS84EllipsoidSurfaceMesh();
         }
     }
 
@@ -911,49 +1113,89 @@
         currentFrame = 0;
 
         // ---------------------------------------------------------------------
-        // PLOT 1: 3D WGS84 EARTH ELLIPSOID
+        // PLOT 1: 3D WGS84 EARTH ELLIPSOID (NASA BLUE MARBLE SATELLITE BIOMES)
         // ---------------------------------------------------------------------
-        let sx = [], sy = [], sz = [];
-        for (let i = 0; i <= 36; i++) {
-            let latDeg = (i / 36) * 180.0 - 90.0;
-            let rowX = [], rowY = [], rowZ = [];
-            for (let j = 0; j <= 36; j++) {
-                let lonDeg = (j / 36) * 360.0 - 180.0;
-                let pt = geodeticToWGS84(latDeg, lonDeg, 0.0);
-                rowX.push(pt.x); rowY.push(pt.y); rowZ.push(pt.z);
-            }
-            sx.push(rowX); sy.push(rowY); sz.push(rowZ);
+        if (!earthEllipsoidMesh) {
+            buildWGS84EllipsoidSurfaceMesh();
         }
 
+        const blueMarbleColorscale = [
+            [0.00, '#041022'], // Deep Ocean Trench
+            [0.12, '#071d3d'], // Abyssal Ocean
+            [0.24, '#0b3162'], // Open Ocean (Atlantic / Pacific / Indian)
+            [0.34, '#134e8a'], // Shallow Sea
+            [0.38, '#1d6ca8'], // Continental Shelf / Turquoise Coast
+            [0.40, '#1f542c'], // Tropical Rainforest (Amazon / Congo / Indonesia)
+            [0.46, '#2d6b37'], // Dense Temperate Forest
+            [0.52, '#427f42'], // Cultivated Plains & Grasslands (Europe / Americas / Asia)
+            [0.57, '#6b944e'], // Savannah & Steppe Transition
+            [0.62, '#b8a468'], // Semi-Arid Scrubland
+            [0.68, '#d4bc7c'], // Sahara / Arabian / Outback Sandy Desert
+            [0.74, '#c29b61'], // Dry Rocky Plateau & Badlands
+            [0.80, '#8a6d4b'], // Mountain Ranges (Alps / Rockies / Andes / Zagros)
+            [0.86, '#6e5a47'], // High Alpine / Tibetan Plateau
+            [0.91, '#cfd8dc'], // Glacial Ice & Snow Line
+            [0.96, '#eaf2f8'], // Antarctic & Greenland Ice Sheet
+            [1.00, '#ffffff']  // Polar Ice Cap Peak
+        ];
+
         const earthEllipsoid = {
-            type: 'surface', x: sx, y: sy, z: sz,
-            colorscale: [[0, '#071c38'], [0.5, '#0c3666'], [1, '#154c8a']],
-            showscale: false, opacity: 0.94, hoverinfo: 'skip', name: 'WGS84 Earth'
+            type: 'surface',
+            x: earthEllipsoidMesh.x,
+            y: earthEllipsoidMesh.y,
+            z: earthEllipsoidMesh.z,
+            surfacecolor: earthEllipsoidMesh.surfacecolor,
+            cmin: 0.0,
+            cmax: 1.0,
+            colorscale: blueMarbleColorscale,
+            showscale: false,
+            opacity: 1.0,
+            lighting: { ambient: 0.72, diffuse: 0.85, specular: 0.22, roughness: 0.55, fresnel: 0.2 },
+            lightposition: { x: 10000, y: 4000, z: 4000 },
+            hoverinfo: 'skip',
+            name: 'WGS84 Earth Ellipsoid'
         };
 
         const traceContinents3D = {
-            type: 'scatter3d', mode: 'lines', name: 'Continents (WGS84)',
+            type: 'scatter3d', mode: 'lines', name: 'Coastlines (WGS84)',
             x: continent3DCoords.x, y: continent3DCoords.y, z: continent3DCoords.z,
-            line: { color: '#4ade80', width: 2.2 }, hoverinfo: 'skip'
+            line: { color: 'rgba(226, 232, 240, 0.65)', width: 1.6 }, hoverinfo: 'skip'
+        };
+
+        const traceBorders3D = {
+            type: 'scatter3d', mode: 'lines', name: 'Country Borders (WGS84)',
+            x: countryBorders3DCoords.x, y: countryBorders3DCoords.y, z: countryBorders3DCoords.z,
+            line: { color: 'rgba(203, 213, 225, 0.38)', width: 1.1 }, hoverinfo: 'skip'
+        };
+
+        const stPos3D = geodeticToWGS84(st.lat, st.lon, 12.0);
+        const traceStation3D = {
+            type: 'scatter3d', mode: 'markers+text', name: `Ground Station (${st.name})`,
+            x: [stPos3D.x], y: [stPos3D.y], z: [stPos3D.z],
+            text: [st.name], textposition: 'top right',
+            textfont: { color: '#ff1744', size: 10.5 },
+            marker: { size: 5, color: '#ff1744', symbol: 'diamond', line: { color: '#ffffff', width: 1.5 } },
+            hoverinfo: 'name+text'
         };
 
         const traceInit3D = {
             type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (${r1.alt_km} km, i=${r1.inc_deg}°)`,
             x: initSlice.map(p => p.x), y: initSlice.map(p => p.y), z: initSlice.map(p => p.z),
-            line: { color: '#00e5ff', width: 4.5 }
+            line: { color: '#00e5ff', width: 4.5 }, hoverinfo: 'name'
         };
 
         const traceTrans3D = {
             type: 'scatter3d', mode: 'lines',
             name: isLowThrust ? '2. Low-Thrust Multi-Rev Spiral' : '2. 3D Transfer Trajectory',
             x: data.traj_transfer.map(p => p.x), y: data.traj_transfer.map(p => p.y), z: data.traj_transfer.map(p => p.z),
-            line: { color: isLowThrust ? '#e040fb' : '#ffab00', width: isLowThrust ? 3.5 : 6, dash: isLowThrust ? 'solid' : 'dash' }
+            line: { color: isLowThrust ? '#e040fb' : '#ffab00', width: isLowThrust ? 3.5 : 6, dash: isLowThrust ? 'solid' : 'dash' },
+            hoverinfo: 'name'
         };
 
         const traceTarg3D = {
             type: 'scatter3d', mode: 'lines', name: `3. Target Orbit (${r2.alt_km} km, i=${r2.inc_deg}°)`,
             x: targSlice.map(p => p.x), y: targSlice.map(p => p.y), z: targSlice.map(p => p.z),
-            line: { color: '#00e676', width: 4.5 }
+            line: { color: '#00e676', width: 4.5 }, hoverinfo: 'name'
         };
 
         const burnStart = data.traj_transfer[0];
@@ -966,7 +1208,8 @@
                 : [`BURN 1 (ΔV1: ${m.dv1_ms} m/s)`, `BURN 2 (ΔV2: ${m.dv2_ms} m/s)`],
             textposition: 'top center',
             textfont: { color: '#ffab00', size: 11.5 },
-            marker: { size: 8, color: ['#ffab00', '#d500f9'], symbol: 'diamond', line: { color: '#fff', width: 2 } }
+            marker: { size: 8, color: ['#ffab00', '#d500f9'], symbol: 'diamond', line: { color: '#fff', width: 2 } },
+            hoverinfo: 'text'
         };
 
         const p0 = animFrames[0];
@@ -975,25 +1218,36 @@
             x: [p0.x], y: [p0.y], z: [p0.z],
             text: ['SAT'], textposition: 'bottom center',
             textfont: { color: '#ffffff', size: 11 },
-            marker: { size: 8, color: '#ffffff', line: { color: '#ff1744', width: 3 }, symbol: 'circle' }
+            marker: { size: 8, color: '#ffffff', line: { color: '#ff1744', width: 3 }, symbol: 'circle' },
+            hoverinfo: 'name'
         };
 
-        const traces3D = [earthEllipsoid, traceContinents3D, traceInit3D, traceTrans3D, traceTarg3D, traceBurns3D, traceSat3D];
+        const traces3D = [earthEllipsoid, traceContinents3D, traceBorders3D, traceStation3D, traceInit3D, traceTrans3D, traceTarg3D, traceBurns3D, traceSat3D];
         satTraceIndex3D = traces3D.length - 1;
 
-        Plotly.newPlot('plot3D', traces3D, {
-            paper_bgcolor: '#111622', plot_bgcolor: '#111622',
+        const selectedDragMode3D = document.getElementById('dragMode3DSelect') ? document.getElementById('dragMode3DSelect').value : 'turntable';
+        const plot3DEl = document.getElementById('plot3D');
+        const currentCamera = (plot3DEl && plot3DEl._fullLayout && plot3DEl._fullLayout.scene && plot3DEl._fullLayout.scene._scene)
+            ? plot3DEl._fullLayout.scene._scene.getCamera()
+            : { eye: { x: 1.45, y: 1.25, z: 0.90 }, up: { x: 0, y: 0, z: 1 }, center: { x: 0, y: 0, z: 0 } };
+
+        Plotly.react('plot3D', traces3D, {
+            paper_bgcolor: '#0b0f19', plot_bgcolor: '#0b0f19',
             margin: { l: 0, r: 0, b: 0, t: 10 },
             uirevision: 'keep_3d_camera',
+            hovermode: 'closest',
             scene: {
-                uirevision: 'keep_3d_camera', dragmode: 'orbit',
-                xaxis: { title: 'X [km]', color: '#94a3b8', gridcolor: '#1e293b' },
-                yaxis: { title: 'Y [km]', color: '#94a3b8', gridcolor: '#1e293b' },
-                zaxis: { title: 'Z [km]', color: '#94a3b8', gridcolor: '#1e293b' },
-                aspectmode: 'data', camera: { eye: { x: 1.45, y: 1.25, z: 0.95 } }
+                uirevision: 'keep_3d_camera',
+                dragmode: selectedDragMode3D,
+                 bgcolor: '#070a12',
+                xaxis: { title: 'X ECI [km]', color: '#94a3b8', gridcolor: '#1e293b', zerolinecolor: '#334155', showspikes: false },
+                yaxis: { title: 'Y ECI [km]', color: '#94a3b8', gridcolor: '#1e293b', zerolinecolor: '#334155', showspikes: false },
+                zaxis: { title: 'Z ECI [km]', color: '#94a3b8', gridcolor: '#1e293b', zerolinecolor: '#334155', showspikes: false },
+                aspectmode: 'data',
+                camera: currentCamera
             },
-            legend: { font: { color: '#e2e8f0', size: 11.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.98 }
-        }, { responsive: true, displaylogo: false });
+            legend: { font: { color: '#e2e8f0', size: 11.5 }, bgcolor: 'rgba(11,15,25,0.85)', x: 0.01, y: 0.98 }
+        }, { responsive: true, displaylogo: false, scrollZoom: true });
 
         // ---------------------------------------------------------------------
         // PLOT 4: 2D WORLD GROUND TRACK (SYNCHRONIZED WITH CONTINUOUS EARTH ROTATION)
@@ -1097,11 +1351,117 @@
         startAnimationLoop();
     }
 
-    function updateSatellitePosition(frameIdx) {
+    // Pause 3D WebGL restyle updates while user is rotating/zooming #plot3D so rotation is 100% smooth
+    (function setupSmooth3DInteraction() {
+        const el3D = document.getElementById('plot3D');
+        const pause3D = (cooldownMs = 350) => {
+            isInteracting3D = true;
+            if (interact3DTimer) clearTimeout(interact3DTimer);
+            if (cooldownMs > 0) {
+                interact3DTimer = setTimeout(() => { isInteracting3D = false; }, cooldownMs);
+            }
+        };
+        el3D.addEventListener('pointerdown', () => { isInteracting3D = true; if (interact3DTimer) clearTimeout(interact3DTimer); }, { passive: true });
+        window.addEventListener('pointerup', () => { if (isInteracting3D) pause3D(250); }, { passive: true });
+        el3D.addEventListener('wheel', () => pause3D(350), { passive: true });
+        el3D.addEventListener('touchstart', () => { isInteracting3D = true; }, { passive: true });
+        window.addEventListener('touchend', () => { if (isInteracting3D) pause3D(250); }, { passive: true });
+
+        document.getElementById('dragMode3DSelect').addEventListener('change', function() {
+            Plotly.relayout('plot3D', { 'scene.dragmode': this.value });
+        });
+        document.getElementById('btnResetCamera3D').addEventListener('click', function() {
+            Plotly.relayout('plot3D', {
+                'scene.camera': { eye: { x: 1.45, y: 1.25, z: 0.90 }, up: { x: 0, y: 0, z: 1 }, center: { x: 0, y: 0, z: 0 } }
+            });
+        });
+
+        // Pure spherical rotation around the Earth (azimuth & elevation) at constant radial distance R (zero zoom change)
+        function rotateCamera3D(dAzimuthDeg, dElevationDeg) {
+            pause3D(400);
+            const sceneGl = (el3D && el3D._fullLayout && el3D._fullLayout.scene && el3D._fullLayout.scene._scene)
+                ? el3D._fullLayout.scene._scene
+                : null;
+            const curCam = (sceneGl && typeof sceneGl.getCamera === 'function')
+                ? sceneGl.getCamera()
+                : ((el3D && el3D.layout && el3D.layout.scene && el3D.layout.scene.camera)
+                    ? el3D.layout.scene.camera
+                    : { eye: { x: 1.45, y: 1.25, z: 0.90 }, up: { x: 0, y: 0, z: 1 }, center: { x: 0, y: 0, z: 0 } });
+
+            const cx = (curCam.center && typeof curCam.center.x === 'number') ? curCam.center.x : 0;
+            const cy = (curCam.center && typeof curCam.center.y === 'number') ? curCam.center.y : 0;
+            const cz = (curCam.center && typeof curCam.center.z === 'number') ? curCam.center.z : 0;
+
+            const dx = curCam.eye.x - cx;
+            const dy = curCam.eye.y - cy;
+            const dz = curCam.eye.z - cz;
+
+            // Exact radial distance from center (preserves current zoom level 100%)
+            const radius = Math.sqrt(dx * dx + dy * dy + dz * dz) || 2.114;
+
+            let azimuth = Math.atan2(dy, dx);
+            let elevation = Math.asin(Math.max(-1, Math.min(1, dz / radius)));
+
+            azimuth += dAzimuthDeg * (Math.PI / 180.0);
+            elevation += dElevationDeg * (Math.PI / 180.0);
+
+            // Clamp elevation to [-85°, +85°] to prevent pole flip while keeping North-Up
+            const maxElev = 85.0 * (Math.PI / 180.0);
+            elevation = Math.max(-maxElev, Math.min(maxElev, elevation));
+
+            const newCam = {
+                eye: {
+                    x: cx + radius * Math.cos(elevation) * Math.cos(azimuth),
+                    y: cy + radius * Math.cos(elevation) * Math.sin(azimuth),
+                    z: cz + radius * Math.sin(elevation)
+                },
+                up: { x: 0, y: 0, z: 1 },
+                center: { x: cx, y: cy, z: cz }
+            };
+
+            if (sceneGl && typeof sceneGl.setCamera === 'function') {
+                sceneGl.setCamera(newCam);
+            }
+            if (el3D && el3D.layout && el3D.layout.scene) {
+                el3D.layout.scene.camera = newCam;
+            }
+            Plotly.relayout('plot3D', { 'scene.camera': newCam });
+        }
+
+        // On-screen directional buttons
+        document.getElementById('btnRotLeft3D').addEventListener('click', () => rotateCamera3D(-8, 0));
+        document.getElementById('btnRotRight3D').addEventListener('click', () => rotateCamera3D(8, 0));
+        document.getElementById('btnRotUp3D').addEventListener('click', () => rotateCamera3D(0, 7));
+        document.getElementById('btnRotDown3D').addEventListener('click', () => rotateCamera3D(0, -7));
+
+        // Keyboard arrow keys (ArrowLeft, ArrowRight, ArrowUp, ArrowDown)
+        window.addEventListener('keydown', function(e) {
+            if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+
+            // Do not hijack arrow keys if user is editing an input/select or if modal is open
+            const activeTag = document.activeElement ? document.activeElement.tagName : '';
+            if (activeTag === 'INPUT' || activeTag === 'SELECT' || activeTag === 'TEXTAREA') return;
+            const modalEl = document.getElementById('inputModal');
+            if (modalEl && modalEl.classList.contains('open')) return;
+
+            e.preventDefault(); // Prevent page scroll on ArrowUp/ArrowDown
+            const stepDeg = e.shiftKey ? 15 : 7;
+            if (e.key === 'ArrowLeft')  rotateCamera3D(-stepDeg, 0);
+            if (e.key === 'ArrowRight') rotateCamera3D(stepDeg, 0);
+            if (e.key === 'ArrowUp')    rotateCamera3D(0, stepDeg);
+            if (e.key === 'ArrowDown')  rotateCamera3D(0, -stepDeg);
+        }, { passive: false });
+    })();
+
+    function updateSatellitePosition(frameIdx, force3D = false) {
         if (!animFrames.length) return;
         const pt = animFrames[frameIdx];
 
-        Plotly.restyle('plot3D', { x: [[pt.x]], y: [[pt.y]], z: [[pt.z]] }, [satTraceIndex3D]);
+        if ((force3D || !isInteracting3D) && !isRestyling3D) {
+            isRestyling3D = true;
+            Promise.resolve(Plotly.restyle('plot3D', { x: [[pt.x]], y: [[pt.y]], z: [[pt.z]] }, [satTraceIndex3D]))
+                .finally(() => { isRestyling3D = false; });
+        }
         Plotly.restyle('plotGround', { lat: [[pt.lat]], lon: [[pt.lon]] }, [satTraceIndex2D]);
 
         document.getElementById('timelineSlider').value = frameIdx;
@@ -1129,8 +1489,8 @@
         animTimer = setInterval(() => {
             if (!isPlaying || !animFrames.length) return;
             currentFrame = (currentFrame + animSpeed) % animFrames.length;
-            updateSatellitePosition(currentFrame);
-        }, 60);
+            updateSatellitePosition(currentFrame, false);
+        }, 100);
     }
 
     const EARTH_J2 = 0.00108262668;
