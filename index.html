@@ -360,12 +360,12 @@
                     </div>
                 </div>
                 <div id="fieldsInitCart" class="input-group" style="display:none;">
-                    <div class="field"><label>Rx (km)</label><input type="number" id="initRx" value="5870.0" step="10" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Ry (km)</label><input type="number" id="initRy" value="3389.0" step="10" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Rx (km)</label><input type="number" id="initRx" value="5864.17" step="10" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Ry (km)</label><input type="number" id="initRy" value="3385.68" step="10" oninput="validateModalOrbits()"></div>
                     <div class="field"><label>Rz (km)</label><input type="number" id="initRz" value="0.0" step="10" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vx (km/s)</label><input type="number" id="initVx" value="-2.38" step="0.1" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vy (km/s)</label><input type="number" id="initVy" value="4.12" step="0.1" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vz (km/s)</label><input type="number" id="initVz" value="6.01" step="0.1" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vx (km/s)</label><input type="number" id="initVx" value="-2.384" step="0.1" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vy (km/s)</label><input type="number" id="initVy" value="4.129" step="0.1" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vz (km/s)</label><input type="number" id="initVz" value="6.015" step="0.1" oninput="validateModalOrbits()"></div>
                 </div>
                 <div id="statusInit" class="orbit-status-bar valid">Perigee: 393.2 km | Apogee: 406.8 km (Valid Closed Orbit)</div>
             </div>
@@ -397,12 +397,12 @@
                     </div>
                 </div>
                 <div id="fieldsTargCart" class="input-group" style="display:none;">
-                    <div class="field"><label>Rx (km)</label><input type="number" id="targRx" value="6086.0" step="10" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Ry (km)</label><input type="number" id="targRy" value="3514.0" step="10" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Rx (km)</label><input type="number" id="targRx" value="6080.47" step="10" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Ry (km)</label><input type="number" id="targRy" value="3510.56" step="10" oninput="validateModalOrbits()"></div>
                     <div class="field"><label>Rz (km)</label><input type="number" id="targRz" value="0.0" step="10" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vx (km/s)</label><input type="number" id="targVx" value="-2.27" step="0.1" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vy (km/s)</label><input type="number" id="targVy" value="3.93" step="0.1" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vz (km/s)</label><input type="number" id="targVz" value="6.02" step="0.1" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vx (km/s)</label><input type="number" id="targVx" value="-2.268" step="0.1" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vy (km/s)</label><input type="number" id="targVy" value="3.928" step="0.1" oninput="validateModalOrbits()"></div>
+                    <div class="field"><label>Vz (km/s)</label><input type="number" id="targVz" value="6.019" step="0.1" oninput="validateModalOrbits()"></div>
                 </div>
                 <div id="statusTarg" class="orbit-status-bar valid">Perigee: 643.0 km | Apogee: 657.0 km (Valid Closed Orbit)</div>
             </div>
@@ -466,11 +466,56 @@
         return curve;
     }
 
+    let lambertClickedFlag = false;
+
+    function kepToCart(a, e, incDeg, raanDeg) {
+        const inc = incDeg * DEG2RAD, raan = raanDeg * DEG2RAD;
+        const p = a * (1.0 - e * e);
+        const r = a * (1.0 - e);
+        const v = Math.sqrt(MU / p) * (1.0 + e);
+        const rx = r * Math.cos(raan);
+        const ry = r * Math.sin(raan);
+        const rz = 0.0;
+        const vx = -v * Math.sin(raan) * Math.cos(inc);
+        const vy =  v * Math.cos(raan) * Math.cos(inc);
+        const vz =  v * Math.sin(inc);
+        return { rx, ry, rz, vx, vy, vz };
+    }
+
     function toggleOrbitInput(prefix) {
         const mode = document.getElementById('mode' + prefix).value;
+        const p = prefix.toLowerCase();
+        if (mode === 'cart') {
+            const alt  = parseFloat(document.getElementById(p + 'Alt').value) || 0;
+            const e    = parseFloat(document.getElementById(p + 'Ecc').value) || 0;
+            const inc  = parseFloat(document.getElementById(p + 'Inc').value) || 0;
+            const raan = parseFloat(document.getElementById(p + 'Raan').value) || 0;
+            const c = kepToCart(R_EQ + alt, e, inc, raan);
+            document.getElementById(p + 'Rx').value = c.rx.toFixed(2);
+            document.getElementById(p + 'Ry').value = c.ry.toFixed(2);
+            document.getElementById(p + 'Rz').value = c.rz.toFixed(2);
+            document.getElementById(p + 'Vx').value = c.vx.toFixed(3);
+            document.getElementById(p + 'Vy').value = c.vy.toFixed(3);
+            document.getElementById(p + 'Vz').value = c.vz.toFixed(3);
+        } else {
+            const k = cartToKep(
+                +document.getElementById(p + 'Rx').value,
+                +document.getElementById(p + 'Ry').value,
+                +document.getElementById(p + 'Rz').value,
+                +document.getElementById(p + 'Vx').value,
+                +document.getElementById(p + 'Vy').value,
+                +document.getElementById(p + 'Vz').value
+            );
+            if (!isNaN(k.alt) && isFinite(k.alt)) {
+                document.getElementById(p + 'Alt').value  = k.alt.toFixed(1);
+                document.getElementById(p + 'Ecc').value  = k.e.toFixed(4);
+                document.getElementById(p + 'Inc').value  = k.i.toFixed(2);
+                document.getElementById(p + 'Raan').value = k.raan.toFixed(1);
+            }
+        }
         document.getElementById('fields' + prefix + 'Kep').style.display  = (mode === 'kep')  ? 'grid' : 'none';
         document.getElementById('fields' + prefix + 'Cart').style.display = (mode === 'cart') ? 'grid' : 'none';
-        validateModalOrbits();
+        validateModalOrbits(false);
     }
 
     function geodeticToWGS84(latDeg, lonDeg, altKm = 0.0) {
@@ -620,10 +665,58 @@
         return true;
     }
 
-    function validateModalOrbits() {
+    function validateModalOrbits(fromOrbitEdit = true) {
+        if (fromOrbitEdit && lambertClickedFlag) {
+            document.getElementById('inMaxTime').value = 0;
+            lambertClickedFlag = false;
+        }
         const ok1 = checkOrbitSafety(readOrbitFromUI('Init'), 'Init');
         const ok2 = checkOrbitSafety(readOrbitFromUI('Targ'), 'Targ');
         document.getElementById('btnRunCustomMission').disabled = !(ok1 && ok2);
+    }
+
+    function syncModalInputsFromData(data) {
+        if (!data || !data.initial_report || !data.target_report) return;
+        const r1 = data.initial_report;
+        const r2 = data.target_report;
+        const m  = data.maneuver || {};
+
+        if (m.final_mass_kg !== undefined && m.fuel_kg !== undefined) {
+            document.getElementById('inMass').value = Math.round(m.final_mass_kg + m.fuel_kg);
+        }
+        if (m.isp_s !== undefined) {
+            const sel = document.getElementById('inPropellant');
+            for (let i = 0; i < sel.options.length; i++) {
+                if (Math.abs(parseFloat(sel.options[i].value.split('|')[0]) - m.isp_s) < 1.0) {
+                    sel.selectedIndex = i;
+                    break;
+                }
+            }
+            onPropellantChange();
+        }
+        if (m.thrust_n !== undefined && m.is_low_thrust) {
+            document.getElementById('inThrustN').value = m.thrust_n;
+        }
+        document.getElementById('inMaxTime').value = 0;
+        lambertClickedFlag = false;
+
+        document.getElementById('modeInit').value = 'kep';
+        document.getElementById('fieldsInitKep').style.display = 'grid';
+        document.getElementById('fieldsInitCart').style.display = 'none';
+        document.getElementById('initAlt').value  = r1.alt_km;
+        document.getElementById('initEcc').value  = r1.ecc;
+        document.getElementById('initInc').value  = r1.inc_deg;
+        document.getElementById('initRaan').value = (r1.raan_deg !== undefined) ? r1.raan_deg : 30.0;
+
+        document.getElementById('modeTarg').value = 'kep';
+        document.getElementById('fieldsTargKep').style.display = 'grid';
+        document.getElementById('fieldsTargCart').style.display = 'none';
+        document.getElementById('targAlt').value  = r2.alt_km;
+        document.getElementById('targEcc').value  = r2.ecc;
+        document.getElementById('targInc').value  = r2.inc_deg;
+        document.getElementById('targRaan').value = (r2.raan_deg !== undefined) ? r2.raan_deg : 30.0;
+
+        validateModalOrbits(false);
     }
 
     document.getElementById('btnAutoClampAll').addEventListener('click', function() {
@@ -791,6 +884,7 @@
 
         document.getElementById('plotLambert').on('plotly_click', function(evtData) {
             if (!evtData || !evtData.points || !evtData.points.length) return;
+            lambertClickedFlag = true;
             document.getElementById('inMaxTime').value = evtData.points[0].x.toFixed(1);
             document.getElementById('btnRunCustomMission').click();
         });
@@ -1039,129 +1133,340 @@
         }, 60);
     }
 
-    // Generate Orbit Points with J2 Nodal Precession & Exact Continuous Earth GMST Clock
-    function generateOrbitPoints(a, e, incDeg, raanDeg, argpDeg, thetaStart, thetaEnd, steps, tStartSec) {
-        const pts = [];
-        const inc = incDeg * DEG2RAD;
-        const p = a * (1.0 - e * e);
-        const period = 2.0 * Math.PI * Math.sqrt(a*a*a / MU);
-        const totalDuration = period * ((thetaEnd - thetaStart) / (2.0 * Math.PI));
+    const EARTH_J2 = 0.00108262668;
 
-        // Secular J2 rate to match the RK4 C-Engine Ground Track
-        const nMean = 2.0 * Math.PI / period;
-        const j2Factor = -1.5 * nMean * 0.00108262668 * Math.pow(R_EQ / p, 2);
-        const raanDot = j2Factor * Math.cos(inc);
-        const argpDot = -0.5 * j2Factor * (5.0 * Math.pow(Math.sin(inc), 2) - 4.0);
-
-        for (let k = 0; k <= steps; k++) {
-            const frac = k / steps;
-            const dt = frac * totalDuration;
-            const tGlobal = tStartSec + dt;
-            const theta = thetaStart + frac * (thetaEnd - thetaStart);
-
-            const raan = (raanDeg * DEG2RAD) + raanDot * dt;
-            const w    = (argpDeg * DEG2RAD) + argpDot * dt;
-
-            const cO = Math.cos(raan), sO = Math.sin(raan);
-            const cw = Math.cos(w),    sw = Math.sin(w);
-            const ci = Math.cos(inc),  si = Math.sin(inc);
-
-            const R11 = cO*cw - sO*sw*ci, R12 = -cO*sw - sO*cw*ci;
-            const R21 = sO*cw + cO*sw*ci, R22 = -sO*sw + cO*cw*ci;
-            const R31 = sw*si,            R32 = cw*si;
-
-            const r = p / (1.0 + e * Math.cos(theta));
-            const rp = r * Math.cos(theta), rq = r * Math.sin(theta);
-            const x = R11 * rp + R12 * rq;
-            const y = R21 * rp + R22 * rq;
-            const z = R31 * rp + R32 * rq;
-            const vMag = Math.sqrt(MU * (2.0 / r - 1.0 / a));
-
-            const geo = eciToGeodetic(x, y, z, tGlobal);
-            const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
-            pts.push({ t: +tGlobal.toFixed(1), x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), v: +vMag.toFixed(3), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
-        }
-        return pts;
+    function vecAdd(a, b) { return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z }; }
+    function vecSub(a, b) { return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }; }
+    function vecScale(v, s) { return { x: v.x * s, y: v.y * s, z: v.z * s }; }
+    function vecDot(a, b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+    function vecCross(a, b) {
+        return {
+            x: a.y * b.z - a.z * b.y,
+            y: a.z * b.x - a.x * b.z,
+            z: a.x * b.y - a.y * b.x
+        };
+    }
+    function vecNorm(v) { return Math.sqrt(vecDot(v, v)); }
+    function vecNormalize(v) {
+        const n = vecNorm(v);
+        return n < 1e-12 ? { x: 0, y: 0, z: 0 } : vecScale(v, 1.0 / n);
     }
 
-    // Fixed 3D Transfer Arc: Interpolates Orbital Plane (Inclination & RAAN) cleanly from Orbit 1 to Orbit 2
-    // Never degenerates onto the Equator!
-    function generateExact3DTransferArc(orb1, orb2, steps, tofSec, tStartSec) {
-        const r1 = orb1.a * (1.0 - orb1.e);
-        const r2 = orb2.a * (1.0 + orb2.e);
-        const aTrans = 0.5 * (r1 + r2);
-        const eTrans = Math.abs(r2 - r1) / (r1 + r2);
-        const pTrans = aTrans * (1.0 - eTrans * eTrans);
-        const signE  = (r2 >= r1) ? 1.0 : -1.0;
+    function keplerianToCartesianC(kep, mu, mass, epoch) {
+        const p = kep.a * (1.0 - kep.e * kep.e);
+        const r = p / (1.0 + kep.e * Math.cos(kep.theta));
+        const rp = r * Math.cos(kep.theta);
+        const rq = r * Math.sin(kep.theta);
+        const sqrtMuP = Math.sqrt(mu / p);
+        const vp = -sqrtMuP * Math.sin(kep.theta);
+        const vq = sqrtMuP * (kep.e + Math.cos(kep.theta));
 
-        let dRaan = orb2.raan - orb1.raan;
-        if (dRaan >  180) dRaan -= 360;
-        if (dRaan < -180) dRaan += 360;
+        const cO = Math.cos(kep.RAAN), sO = Math.sin(kep.RAAN);
+        const cw = Math.cos(kep.omega), sw = Math.sin(kep.omega);
+        const ci = Math.cos(kep.i), si = Math.sin(kep.i);
 
-        const pts = [];
-        for (let k = 0; k <= steps; k++) {
-            const frac = k / steps;
-            const theta = frac * Math.PI; // From Perigee (0) to Apogee (PI)
-            const dt = frac * tofSec;
-            const tGlobal = tStartSec + dt;
+        const R11 = cO * cw - sO * sw * ci, R12 = -cO * sw - sO * cw * ci;
+        const R21 = sO * cw + cO * sw * ci, R22 = -sO * sw + cO * cw * ci;
+        const R31 = sw * si,                R32 = cw * si;
 
-            // Smoothly transition orbital plane from (i1, raan1) at Burn 1 to (i2, raan2) at Burn 2
-            const inc  = (orb1.i + frac * (orb2.i - orb1.i)) * DEG2RAD;
-            const raan = (orb1.raan + frac * dRaan) * DEG2RAD;
-
-            const cO = Math.cos(raan), sO = Math.sin(raan);
-            const ci = Math.cos(inc),  si = Math.sin(inc);
-
-            const r = pTrans / (1.0 + signE * eTrans * Math.cos(theta));
-            const rp = r * Math.cos(theta), rq = r * Math.sin(theta);
-
-            const x = cO * rp - sO * ci * rq;
-            const y = sO * rp + cO * ci * rq;
-            const z = si * rq;
-            const vMag = Math.sqrt(MU * (2.0 / r - 1.0 / aTrans));
-
-            const geo = eciToGeodetic(x, y, z, tGlobal);
-            const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
-            pts.push({ t: +tGlobal.toFixed(1), x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), v: +vMag.toFixed(3), lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl });
-        }
-        return pts;
+        return {
+            position: { x: R11 * rp + R12 * rq, y: R21 * rp + R22 * rq, z: R31 * rp + R32 * rq },
+            velocity: { x: R11 * vp + R12 * vq, y: R21 * vp + R22 * vq, z: R31 * vp + R32 * vq },
+            mass: mass,
+            epoch: epoch
+        };
     }
 
-    function generate3DSpiralTrajectory(orb1, orb2, visualRevs, steps, totalTofSec, tStartSec) {
+    function evaluateEnvironmentC(pos) {
+        const r = vecNorm(pos);
+        const altitude = r - R_EQ;
+        let airDensity = 0.0;
+        if (altitude < 0.0) {
+            airDensity = 1.225;
+        } else if (altitude < 1000.0) {
+            airDensity = 1.0e-11 * Math.exp(-(altitude - 400.0) / 60.0);
+        }
+        const inEclipse = (pos.x < 0.0) && (Math.sqrt(pos.y * pos.y + pos.z * pos.z) < R_EQ);
+        return { in_eclipse: inEclipse, air_density: airDensity };
+    }
+
+    function computeDerivativesC(state, sc) {
+        const pos = state.position, vel = state.velocity;
+        const r2 = vecDot(pos, pos);
+        const r  = Math.sqrt(r2);
+        const r3 = r2 * r;
+        const r5 = r2 * r3;
+
+        let ax = -MU * pos.x / r3;
+        let ay = -MU * pos.y / r3;
+        let az = -MU * pos.z / r3;
+
+        // J2
+        const z2r2 = (pos.z * pos.z) / r2;
+        const j2Factor = -1.5 * EARTH_J2 * MU * (R_EQ * R_EQ) / r5;
+        ax += j2Factor * pos.x * (1.0 - 5.0 * z2r2);
+        ay += j2Factor * pos.y * (1.0 - 5.0 * z2r2);
+        az += j2Factor * pos.z * (3.0 - 5.0 * z2r2);
+
+        // Drag
+        const env = evaluateEnvironmentC(pos);
+        if (env.air_density > 0.0 && state.mass > 0.0) {
+            const vMag = vecNorm(vel);
+            const coeff = -0.5 * env.air_density * 1000.0 * (sc.drag_coeff * sc.drag_area / state.mass) * vMag;
+            ax += vel.x * coeff;
+            ay += vel.y * coeff;
+            az += vel.z * coeff;
+        }
+
+        return {
+            d_position: { x: vel.x, y: vel.y, z: vel.z },
+            d_velocity: { x: ax, y: ay, z: az },
+            d_mass: 0.0
+        };
+    }
+
+    function addScaledDerivC(s, d, dt) {
+        return {
+            position: { x: s.position.x + d.d_position.x * dt, y: s.position.y + d.d_position.y * dt, z: s.position.z + d.d_position.z * dt },
+            velocity: { x: s.velocity.x + d.d_velocity.x * dt, y: s.velocity.y + d.d_velocity.y * dt, z: s.velocity.z + d.d_velocity.z * dt },
+            mass: s.mass + d.d_mass * dt,
+            epoch: s.epoch + dt
+        };
+    }
+
+    function propagateStepRK4C(state, dt, sc) {
+        const k1 = computeDerivativesC(state, sc);
+        const k2 = computeDerivativesC(addScaledDerivC(state, k1, 0.5 * dt), sc);
+        const k3 = computeDerivativesC(addScaledDerivC(state, k2, 0.5 * dt), sc);
+        const k4 = computeDerivativesC(addScaledDerivC(state, k3, dt), sc);
+        const dt6 = dt / 6.0;
+        return {
+            position: {
+                x: state.position.x + dt6 * (k1.d_position.x + 2*k2.d_position.x + 2*k3.d_position.x + k4.d_position.x),
+                y: state.position.y + dt6 * (k1.d_position.y + 2*k2.d_position.y + 2*k3.d_position.y + k4.d_position.y),
+                z: state.position.z + dt6 * (k1.d_position.z + 2*k2.d_position.z + 2*k3.d_position.z + k4.d_position.z)
+            },
+            velocity: {
+                x: state.velocity.x + dt6 * (k1.d_velocity.x + 2*k2.d_velocity.x + 2*k3.d_velocity.x + k4.d_velocity.x),
+                y: state.velocity.y + dt6 * (k1.d_velocity.y + 2*k2.d_velocity.y + 2*k3.d_velocity.y + k4.d_velocity.y),
+                z: state.velocity.z + dt6 * (k1.d_velocity.z + 2*k2.d_velocity.z + 2*k3.d_velocity.z + k4.d_velocity.z)
+            },
+            mass: state.mass,
+            epoch: state.epoch + dt
+        };
+    }
+
+    function stumpffC(z) {
+        if (z > 1e-6) { const sz = Math.sqrt(z); return (1.0 - Math.cos(sz)) / z; }
+        if (z < -1e-6) { const sz = Math.sqrt(-z); return (Math.cosh(sz) - 1.0) / (-z); }
+        return 0.5 - z / 24.0 + (z * z) / 720.0;
+    }
+
+    function stumpffS(z) {
+        if (z > 1e-6) { const sz = Math.sqrt(z); return (sz - Math.sin(sz)) / (sz * sz * sz); }
+        if (z < -1e-6) { const sz = Math.sqrt(-z); return (Math.sinh(sz) - sz) / (sz * sz * sz); }
+        return (1.0 / 6.0) - z / 120.0 + (z * z) / 5040.0;
+    }
+
+    function eciVecToRtnC(rSat, vSat, vecEci) {
+        const uR = vecNormalize(rSat);
+        const uN = vecNormalize(vecCross(rSat, vSat));
+        const uT = vecCross(uN, uR);
+        return { x: vecDot(vecEci, uR), y: vecDot(vecEci, uT), z: vecDot(vecEci, uN) };
+    }
+
+    function solveLambertUniversalC(r1Vec, v1Init, r2Vec, v2Targ, tofSec, mu, prograde) {
+        const sol = { converged: false, total_dv: 0, dv1_mag: 0, dv2_mag: 0, burn1_dir_rtn: {x:0,y:1,z:0}, burn2_dir_rtn: {x:0,y:1,z:0} };
+        if (tofSec <= 1.0) return sol;
+        const r1 = vecNorm(r1Vec), r2 = vecNorm(r2Vec);
+        if (r1 < 1e-6 || r2 < 1e-6) return sol;
+
+        const cosDnu = Math.max(-1.0, Math.min(1.0, vecDot(r1Vec, r2Vec) / (r1 * r2)));
+        const crossR1R2 = vecCross(r1Vec, r2Vec);
+        let dnu = Math.acos(cosDnu);
+        if (prograde) { if (crossR1R2.z < 0.0) dnu = 2.0 * Math.PI - dnu; }
+        else          { if (crossR1R2.z >= 0.0) dnu = 2.0 * Math.PI - dnu; }
+        if (Math.abs(dnu - Math.PI) < 1e-4) dnu = Math.PI - 1e-4;
+
+        const A = Math.sin(dnu) * Math.sqrt(r1 * r2 / (1.0 - Math.cos(dnu)));
+        if (Math.abs(A) < 1e-9) return sol;
+
+        let zLow = -4.0 * Math.PI;
+        let zHigh = 4.0 * Math.PI * Math.PI - 1e-3;
+        let z = 0.0;
+
+        for (let iter = 0; iter < 90; iter++) {
+            z = 0.5 * (zLow + zHigh);
+            const C = stumpffC(z), S = stumpffS(z);
+            const y = r1 + r2 + A * (z * S - 1.0) / Math.sqrt(C);
+            if (y <= 0.0) { zLow = z; continue; }
+            const x = Math.sqrt(y / C);
+            const tCalc = (x * x * x * S + A * Math.sqrt(y)) / Math.sqrt(mu);
+            if (Math.abs(tCalc - tofSec) < 1e-5) break;
+            if (tCalc <= tofSec) zLow = z; else zHigh = z;
+        }
+
+        const C = stumpffC(z), S = stumpffS(z);
+        const y = r1 + r2 + A * (z * S - 1.0) / Math.sqrt(C);
+        if (y <= 0.0) return sol;
+        const f = 1.0 - (y / r1);
+        const g = A * Math.sqrt(y / mu);
+        const gDot = 1.0 - (y / r2);
+        if (Math.abs(g) < 1e-9) return sol;
+
+        const v1Eci = vecScale(vecSub(r2Vec, vecScale(r1Vec, f)), 1.0 / g);
+        const v2Eci = vecScale(vecSub(vecScale(r2Vec, gDot), r1Vec), 1.0 / g);
+        const dv1Eci = vecSub(v1Eci, v1Init);
+        const dv2Eci = vecSub(v2Targ, v2Eci);
+
+        sol.dv1_mag = vecNorm(dv1Eci);
+        sol.dv2_mag = vecNorm(dv2Eci);
+        sol.total_dv = sol.dv1_mag + sol.dv2_mag;
+        sol.burn1_dir_rtn = vecNormalize(eciVecToRtnC(r1Vec, v1Init, dv1Eci));
+        sol.burn2_dir_rtn = vecNormalize(eciVecToRtnC(r2Vec, v2Targ, dv2Eci));
+        sol.converged = true;
+        return sol;
+    }
+
+    function evaluateOrbitRegimeC(kep, mass, sc, st) {
+        const periodSec = 2.0 * Math.PI * Math.sqrt(kep.a * kep.a * kep.a / MU);
+        const periodMin = periodSec / 60.0;
+        const rPerigee = kep.a * (1.0 - kep.e);
+        const envMean = evaluateEnvironmentC({ x: rPerigee, y: 0, z: 0 });
+        const vpMs = Math.sqrt(MU * (2.0 / rPerigee - 1.0 / kep.a)) * 1000.0;
+        const aDragMs2 = 0.5 * envMean.air_density * (vpMs * vpMs) * (sc.drag_coeff * sc.drag_area / mass);
+        const dvDayMs = aDragMs2 * 86400.0;
+        const skDvYr = dvDayMs * 365.25;
+        const decayMDay = (2.0 * (kep.a * 1000.0) * aDragMs2 / vpMs) * 86400.0;
+        const skFuelYr = sc.isp > 0 ? mass * (1.0 - Math.exp(-skDvYr / (sc.isp * G0))) : 0;
+
+        let state = keplerianToCartesianC(kep, MU, mass, 0.0);
+        const dt = 10.0, totalTime = 86400.0;
+        let eclipseSec = 0.0, contactSec = 0.0, passes = 0, maxElDeg = 0.0, inPass = false;
+        const minElDeg = st.min_el !== undefined ? st.min_el : 10.0;
+
+        while (state.epoch < totalTime) {
+            const env = evaluateEnvironmentC(state.position);
+            if (env.in_eclipse) eclipseSec += dt;
+
+            const gst = OMEGA_E * state.epoch;
+            const xe =  Math.cos(gst) * state.position.x + Math.sin(gst) * state.position.y;
+            const ye = -Math.sin(gst) * state.position.x + Math.cos(gst) * state.position.y;
+            const rad = computeGroundRadarJS(xe, ye, state.position.z, st.lat, st.lon);
+
+            if (rad.el >= minElDeg) {
+                contactSec += dt;
+                if (!inPass) { inPass = true; passes++; }
+                if (rad.el > maxElDeg) maxElDeg = rad.el;
+            } else {
+                inPass = false;
+            }
+            state = propagateStepRK4C(state, dt, sc);
+        }
+
+        return {
+            sma_km: +kep.a.toFixed(2),
+            alt_km: +(kep.a - R_EQ).toFixed(2),
+            inc_deg: +(kep.i * RAD2DEG).toFixed(2),
+            raan_deg: +(kep.RAAN * RAD2DEG).toFixed(2),
+            ecc: +kep.e.toFixed(4),
+            period_min: +periodMin.toFixed(2),
+            sun_min: +((totalTime - eclipseSec) / 60.0).toFixed(1),
+            ecl_min: +(eclipseSec / 60.0).toFixed(1),
+            ecl_pct: +((eclipseSec / totalTime) * 100.0).toFixed(1),
+            passes: passes,
+            contact_min: +(contactSec / 60.0).toFixed(1),
+            max_el: +maxElDeg.toFixed(1),
+            decay_m_day: +decayMDay.toFixed(2),
+            sk_dv_yr: +skDvYr.toFixed(2),
+            sk_fuel_yr: +skFuelYr.toFixed(3)
+        };
+    }
+
+    function writeTrajectoryArrayC(kep, durationSec, numSteps, sc, st, simClock) {
+        let s = keplerianToCartesianC(kep, MU, 500.0, 0.0);
+        const dt = durationSec / numSteps;
+        const P_SOLAR_MAX_W = 850.0;
+        const P_LOAD_NOM_W  = 320.0;
+        const BATT_CAP_WH   = 1200.0;
         const pts = [];
-        const visualDurationSec = visualRevs * 5600.0;
-        let dRaan = orb2.raan - orb1.raan;
-        if (dRaan >  180) dRaan -= 360;
-        if (dRaan < -180) dRaan += 360;
 
-        for (let k = 0; k <= steps; k++) {
-            const frac = k / steps;
-            const a    = orb1.a + frac * (orb2.a - orb1.a);
-            const e    = orb1.e + frac * (orb2.e - orb1.e);
-            const inc  = (orb1.i + frac * (orb2.i - orb1.i)) * DEG2RAD;
-            const raan = (orb1.raan + frac * dRaan) * DEG2RAD;
-            const theta = frac * (visualRevs * 2.0 * Math.PI + Math.PI);
+        for (let i = 0; i <= numSteps; i++) {
+            const tGlobal = simClock.t_cum + s.epoch;
+            const geo = eciToGeodetic(s.position.x, s.position.y, s.position.z, tGlobal);
+            const env = evaluateEnvironmentC(s.position);
+            const rad = computeGroundRadarJS(geo.xe, geo.ye, geo.ze, st.lat, st.lon);
+            const vMag = vecNorm(s.velocity);
+            const pGen = env.in_eclipse ? 0.0 : P_SOLAR_MAX_W;
 
-            const cO = Math.cos(raan), sO = Math.sin(raan);
-            const ci = Math.cos(inc),  si = Math.sin(inc);
-            const p = a * (1.0 - e * e);
-            const r = p / (1.0 + e * Math.cos(theta));
-            const rp = r * Math.cos(theta), rq = r * Math.sin(theta);
+            if (i > 0) {
+                const netP = (pGen >= P_LOAD_NOM_W) ? (pGen - P_LOAD_NOM_W) * 0.90 : (pGen - P_LOAD_NOM_W);
+                const dWh = netP * (dt / 3600.0);
+                simClock.soc_pct += (dWh / BATT_CAP_WH) * 100.0;
+                if (simClock.soc_pct > 100.0) simClock.soc_pct = 100.0;
+                if (simClock.soc_pct < 15.0)  simClock.soc_pct = 15.0;
+            }
 
-            const x = cO * rp - sO * ci * rq;
-            const y = sO * rp + cO * ci * rq;
-            const z = si * rq;
-            const vMag = Math.sqrt(MU * (2.0 / r - 1.0 / a));
-
-            const tGlobal = tStartSec + frac * visualDurationSec;
-            const geo = eciToGeodetic(x, y, z, tGlobal);
-            const ecl = (x < 0 && Math.sqrt(y*y + z*z) < R_EQ) ? 1 : 0;
             pts.push({
                 t: +tGlobal.toFixed(1),
-                x: +x.toFixed(2), y: +y.toFixed(2), z: +z.toFixed(2), v: +vMag.toFixed(3),
-                lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2), ecl: ecl
+                x: +s.position.x.toFixed(2), y: +s.position.y.toFixed(2), z: +s.position.z.toFixed(2),
+                v: +vMag.toFixed(3),
+                lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2),
+                ecl: env.in_eclipse ? 1 : 0,
+                el: +rad.el.toFixed(2), rng: +rad.rng.toFixed(1),
+                pwr: Math.round(pGen), soc: +simClock.soc_pct.toFixed(1)
+            });
+            s = propagateStepRK4C(s, dt, sc);
+        }
+        simClock.t_cum += durationSec;
+        return pts;
+    }
+
+    function writeSpiralTrajectoryArrayC(k1, k2, totalTofSec, visualRevs, numSteps, st, simClock) {
+        const visDurationSec = visualRevs * 5600.0;
+        const dtVis = visDurationSec / numSteps;
+        const P_SOLAR_MAX_W = 850.0;
+        const P_LOAD_SPIRAL_W = 480.0;
+        const BATT_CAP_WH = 1200.0;
+        const pts = [];
+
+        for (let i = 0; i <= numSteps; i++) {
+            const frac = i / numSteps;
+            const kt = {
+                a: k1.a + frac * (k2.a - k1.a),
+                e: k1.e + frac * (k2.e - k1.e),
+                i: k1.i + frac * (k2.i - k1.i),
+                RAAN: k1.RAAN + frac * (k2.RAAN - k1.RAAN),
+                omega: k1.omega + frac * (k2.omega - k1.omega),
+                theta: frac * (visualRevs * 2.0 * Math.PI + Math.PI)
+            };
+            const tGlobal = simClock.t_cum + frac * visDurationSec;
+            const s = keplerianToCartesianC(kt, MU, 500.0, tGlobal);
+            const geo = eciToGeodetic(s.position.x, s.position.y, s.position.z, tGlobal);
+            const env = evaluateEnvironmentC(s.position);
+            const rad = computeGroundRadarJS(geo.xe, geo.ye, geo.ze, st.lat, st.lon);
+            const vMag = vecNorm(s.velocity);
+            const pGen = env.in_eclipse ? 0.0 : P_SOLAR_MAX_W;
+
+            if (i > 0) {
+                const netP = (pGen >= P_LOAD_SPIRAL_W) ? (pGen - P_LOAD_SPIRAL_W) * 0.90 : (pGen - P_LOAD_SPIRAL_W);
+                const dWh = netP * (dtVis / 3600.0);
+                simClock.soc_pct += (dWh / BATT_CAP_WH) * 100.0;
+                if (simClock.soc_pct > 100.0) simClock.soc_pct = 100.0;
+                if (simClock.soc_pct < 15.0)  simClock.soc_pct = 15.0;
+            }
+
+            pts.push({
+                t: +tGlobal.toFixed(1),
+                x: +s.position.x.toFixed(2), y: +s.position.y.toFixed(2), z: +s.position.z.toFixed(2),
+                v: +vMag.toFixed(3),
+                lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2),
+                ecl: env.in_eclipse ? 1 : 0,
+                el: +rad.el.toFixed(2), rng: +rad.rng.toFixed(1),
+                pwr: Math.round(pGen), soc: +simClock.soc_pct.toFixed(1)
             });
         }
+        simClock.t_cum += visDurationSec;
         return pts;
     }
 
@@ -1171,46 +1476,66 @@
         const isp = parseFloat(propParts[0]);
         const propCat = propParts[1], propName = propParts[2];
         const isLowThrust = (propCat === 'Electric');
-        const thrustN = parseFloat(document.getElementById('inThrustN').value) || parseFloat(propParts[3]) || 0.5;
+        const thrustN = isLowThrust
+            ? (parseFloat(document.getElementById('inThrustN').value) || parseFloat(propParts[3]) || 0.5)
+            : (parseFloat(propParts[3]) || 490.0);
         const maxTimeMin = parseFloat(document.getElementById('inMaxTime').value) || 0;
+        const maxTimeSec = maxTimeMin * 60.0;
 
         const orb1 = readOrbitFromUI('Init');
         const orb2 = readOrbitFromUI('Targ');
         if (!checkOrbitSafety(orb1, 'Init') || !checkOrbitSafety(orb2, 'Targ')) return;
 
-        const r1 = orb1.a * (1.0 - orb1.e);
-        const r2 = orb2.a * (1.0 + orb2.e);
-        const v1 = Math.sqrt(MU * (2.0 / r1 - 1.0 / orb1.a));
-        const v2 = Math.sqrt(MU * (2.0 / r2 - 1.0 / orb2.a));
+        const kepInit = { a: orb1.a, e: orb1.e, i: orb1.i * DEG2RAD, RAAN: orb1.raan * DEG2RAD, omega: 0.0, theta: 0.0 };
+        const kepTarg = { a: orb2.a, e: orb2.e, i: orb2.i * DEG2RAD, RAAN: orb2.raan * DEG2RAD, omega: 0.0, theta: 0.0 };
 
-        const i1 = orb1.i * DEG2RAD, i2 = orb2.i * DEG2RAD;
-        const dRaan = (orb2.raan - orb1.raan) * DEG2RAD;
-        const cosPlane = Math.max(-1, Math.min(1, Math.cos(i1)*Math.cos(i2) + Math.sin(i1)*Math.sin(i2)*Math.cos(dRaan)));
+        const r1 = kepInit.a * (1.0 - kepInit.e);
+        const r2 = kepTarg.a * (1.0 + kepTarg.e);
+        const v1 = Math.sqrt(MU * (2.0 / r1 - 1.0 / kepInit.a));
+        const v2 = Math.sqrt(MU * (2.0 / r2 - 1.0 / kepTarg.a));
+
+        const cosPlane = Math.max(-1, Math.min(1,
+            Math.cos(kepInit.i) * Math.cos(kepTarg.i) +
+            Math.sin(kepInit.i) * Math.sin(kepTarg.i) * Math.cos(kepTarg.RAAN - kepInit.RAAN)
+        ));
         const totalPlaneAngle = Math.acos(cosPlane);
-        const signInc = (orb2.i >= orb1.i) ? 1 : -1;
+        const signInc = (kepTarg.i >= kepInit.i) ? 1.0 : -1.0;
 
         const aHoh = 0.5 * (r1 + r2);
-        const tofHohSec = Math.PI * Math.sqrt(aHoh*aHoh*aHoh / MU);
+        const tofHohSec = Math.PI * Math.sqrt(aHoh * aHoh * aHoh / MU);
 
         let dv1 = 0, dv2 = 0, dv3 = 0, totalDv = 0, tofSec = tofHohSec, spiralRevs = 0;
-        let b1 = [0, 1, 0], b2 = [0, 1, 0];
+        let numBurns = 2;
+        let transferApogeeKm = (r2 >= r1) ? r2 : r1;
+        let b1Dir = { x: 0, y: 1, z: 0 }, b2Dir = { x: 0, y: 1, z: 0 };
+        let burn1PosEci = null, burn1Geo = null, burn2PosEci = null, burn2Geo = null;
         let typeName = '';
 
         if (isLowThrust) {
-            const v1c = Math.sqrt(MU / orb1.a), v2c = Math.sqrt(MU / orb2.a);
+            const v1c = Math.sqrt(MU / kepInit.a), v2c = Math.sqrt(MU / kepTarg.a);
             const effAngle = Math.min(Math.PI, 0.5 * Math.PI * totalPlaneAngle);
             totalDv = Math.sqrt(v1c*v1c + v2c*v2c - 2*v1c*v2c*Math.cos(effAngle));
             dv1 = totalDv;
+            numBurns = 1;
             const yaw = Math.atan2(v2c * Math.sin(effAngle), Math.abs(v1c - v2c * Math.cos(effAngle)) + 1e-6);
-            b1 = [0, Math.cos(yaw) * (orb2.a >= orb1.a ? 1 : -1), Math.sin(yaw) * signInc];
-            b2 = b1;
+            b1Dir = { x: 0.0, y: Math.cos(yaw) * (kepTarg.a >= kepInit.a ? 1.0 : -1.0), z: Math.sin(yaw) * signInc };
+            b2Dir = b1Dir;
 
             const fuelSpiral = mass0 * (1.0 - Math.exp(-(totalDv * 1000.0) / (isp * G0)));
             const mdot = thrustN / (isp * G0);
             tofSec = fuelSpiral / mdot;
-            const meanPer = 2 * Math.PI * Math.sqrt(Math.pow(0.5*(orb1.a + orb2.a), 3) / MU);
+            const meanPer = 2.0 * Math.PI * Math.sqrt(Math.pow(0.5 * (kepInit.a + kepTarg.a), 3) / MU);
             spiralRevs = +(tofSec / meanPer).toFixed(1);
-            typeName = `Continuous Low-Thrust Edelbaum Spiral (${spiralRevs} Revolutions)`;
+            transferApogeeKm = kepTarg.a;
+            typeName = 'Continuous Low-Thrust Edelbaum Spiral Transfer';
+
+            const sStart = keplerianToCartesianC({ ...kepInit, theta: 0.0 }, MU, mass0, 0.0);
+            burn1PosEci = sStart.position;
+            burn1Geo = eciToGeodetic(sStart.position.x, sStart.position.y, sStart.position.z, 0.0);
+
+            const sEnd = keplerianToCartesianC({ ...kepTarg, theta: Math.PI }, MU, mass0 - fuelSpiral, tofSec);
+            burn2PosEci = sEnd.position;
+            burn2Geo = eciToGeodetic(sEnd.position.x, sEnd.position.y, sEnd.position.z, tofSec);
         } else {
             const vt1 = Math.sqrt(MU * (2.0 / r1 - 1.0 / aHoh));
             const vt2 = Math.sqrt(MU * (2.0 / r2 - 1.0 / aHoh));
@@ -1223,77 +1548,144 @@
             }
             const d1 = bestAlpha * totalPlaneAngle * signInc;
             const d2 = (1.0 - bestAlpha) * totalPlaneAngle * signInc;
-            b1 = [0, vt1*Math.cos(d1) - v1, vt1*Math.sin(d1)];
-            b2 = [0, v2*Math.cos(d2) - vt2, v2*Math.sin(d2)];
-            dv1 = Math.hypot(...b1); dv2 = Math.hypot(...b2);
+            const b1Hoh = { x: 0.0, y: vt1 * Math.cos(d1) - v1, z: vt1 * Math.sin(d1) };
+            const b2Hoh = { x: 0.0, y: v2 * Math.cos(d2) - vt2, z: v2 * Math.sin(d2) };
+            dv1 = vecNorm(b1Hoh);
+            dv2 = vecNorm(b2Hoh);
             totalDv = dv1 + dv2;
+            b1Dir = vecNormalize(b1Hoh);
+            b2Dir = vecNormalize(b2Hoh);
+            numBurns = 2;
             typeName = totalPlaneAngle > 1e-4 ? '3D Optimal Split-Plane Transfer (2-Burn)' : 'Coplanar Elliptical Hohmann Transfer (2-Burn)';
 
-            if (maxTimeMin > 0) {
-                const tReqSec = maxTimeMin * 60.0;
-                tofSec = tReqSec;
-                const ratio = (tReqSec - tofHohSec) / (0.5 * tofHohSec);
-                const penaltyKmS = ((tReqSec < tofHohSec)
-                    ? 240.0 * Math.pow(tofHohSec / tReqSec - 1.0, 1.55)
-                    : 115.0 * Math.pow(ratio, 2.0)) / 1000.0;
-                dv1 += 0.5 * penaltyKmS;
-                dv2 += 0.5 * penaltyKmS;
-                totalDv = dv1 + dv2;
-                typeName = `3D Universal Lambert Conic Transfer (TOF: ${maxTimeMin} min)`;
+            // Candidato Bi-Ellittica (identico a mission_analysis.c)
+            const rMax = Math.max(r1, r2);
+            for (let mult = 2; mult <= 6; mult++) {
+                const rb = rMax * mult;
+                const aT1 = 0.5 * (r1 + rb);
+                const aT2 = 0.5 * (r2 + rb);
+                const tofBi = Math.PI * (Math.sqrt(aT1*aT1*aT1 / MU) + Math.sqrt(aT2*aT2*aT2 / MU));
+                if (maxTimeSec > 0.0 && tofBi > maxTimeSec) continue;
+
+                const vt1P = Math.sqrt(MU * (2.0 / r1 - 1.0 / aT1));
+                const vt1A = Math.sqrt(MU * (2.0 / rb - 1.0 / aT1));
+                const vt2A = Math.sqrt(MU * (2.0 / rb - 1.0 / aT2));
+                const vt2P = Math.sqrt(MU * (2.0 / r2 - 1.0 / aT2));
+
+                const dv1Bi = Math.abs(vt1P - v1);
+                const dv2Bi = Math.sqrt(vt1A*vt1A + vt2A*vt2A - 2.0*vt1A*vt2A*Math.cos(totalPlaneAngle));
+                const dv3Bi = Math.abs(v2 - vt2P);
+                const totBi = dv1Bi + dv2Bi + dv3Bi;
+
+                if (totBi < totalDv) {
+                    typeName = 'Optimal 3-Burn Bi-Elliptic Transfer';
+                    numBurns = 3;
+                    dv1 = dv1Bi; dv2 = dv2Bi; dv3 = dv3Bi;
+                    totalDv = totBi;
+                    b1Dir = { x: 0.0, y: 1.0, z: 0.0 };
+                    b2Dir = vecNormalize({ x: 0.0, y: vt2A * Math.cos(totalPlaneAngle) - vt1A, z: vt2A * Math.sin(totalPlaneAngle * signInc) });
+                    transferApogeeKm = rb;
+                    tofSec = tofBi;
+                }
             }
+
+            // Candidato Lambert Veloce (identico a mission_analysis.c)
+            const sB1 = keplerianToCartesianC({ ...kepInit, theta: 0.0 }, MU, mass0, 0.0);
+            const sB2Lam = keplerianToCartesianC({ ...kepTarg, theta: 165.0 * DEG2RAD }, MU, mass0, 0.0);
+
+            if (maxTimeSec > 0.0 && (maxTimeSec < tofHohSec || lambertClickedFlag)) {
+                const lam = solveLambertUniversalC(sB1.position, sB1.velocity, sB2Lam.position, sB2Lam.velocity, maxTimeSec, MU, true);
+                if (lam.converged) {
+                    typeName = '3D Universal Lambert Conic Transfer (Time-Constrained)';
+                    numBurns = 2;
+                    dv1 = lam.dv1_mag;
+                    dv2 = lam.dv2_mag;
+                    dv3 = 0.0;
+                    totalDv = lam.total_dv;
+                    b1Dir = lam.burn1_dir_rtn;
+                    b2Dir = lam.burn2_dir_rtn;
+                    tofSec = maxTimeSec;
+                }
+            }
+
+            burn1PosEci = sB1.position;
+            burn1Geo = eciToGeodetic(sB1.position.x, sB1.position.y, sB1.position.z, 0.0);
+
+            const kB2Std = { ...kepTarg, theta: Math.PI };
+            if (numBurns === 3) kB2Std.a = transferApogeeKm;
+            const sB2 = keplerianToCartesianC(kB2Std, MU, mass0, tofSec);
+            burn2PosEci = sB2.position;
+            burn2Geo = eciToGeodetic(sB2.position.x, sB2.position.y, sB2.position.z, tofSec);
         }
 
-        const lambertCurve = buildLambertCurve(tofHohSec, totalDv * 1000.0, mass0, isp);
-        const normVec = v => { const n = Math.hypot(...v) || 1; return v.map(x => +(x/n).toFixed(3)); };
-        const fuelUsed = mass0 * (1.0 - Math.exp(-(totalDv * 1000.0) / (isp * G0)));
-        const finalMass = mass0 - fuelUsed;
+        const totalDvMs = totalDv * 1000.0;
+        const finalMass = mass0 * Math.exp(-totalDvMs / (isp * G0));
+        const fuelUsed = mass0 - finalMass;
 
-        const per1Sec = 2 * Math.PI * Math.sqrt(orb1.a*orb1.a*orb1.a / MU);
-        const per2Sec = 2 * Math.PI * Math.sqrt(orb2.a*orb2.a*orb2.a / MU);
+        const st = globalData ? globalData.station : { name: 'Milano-Bovisa', lat: 45.502, lon: 9.156, min_el: 10.0 };
+        const sc = { drag_coeff: 2.2, drag_area: 4.0, isp: isp };
 
-        // Continuous Earth Rotation Clock across Phase 1 -> Phase 2 -> Phase 3 (Matches C Engine!)
-        const tStartInit  = 0.0;
-        const trajInit    = generateOrbitPoints(orb1.a, orb1.e, orb1.i, orb1.raan, 0, 0, 4*Math.PI, 240, tStartInit);
+        const repInit   = evaluateOrbitRegimeC(kepInit, mass0, sc, st);
+        const repTarget = evaluateOrbitRegimeC(kepTarg, finalMass, sc, st);
 
-        const tStartTrans = 0.0; // Burn 1 occurs at the ascending node pass (t = 0 reference)
-        const trajTrans   = isLowThrust
-            ? generate3DSpiralTrajectory(orb1, orb2, 6, 360, tofSec, tStartTrans)
-            : generateExact3DTransferArc(orb1, orb2, 100, tofSec, tStartTrans);
+        // Curva di Lambert identica a telemetry.c
+        const aHohCurve = 0.5 * (kepInit.a + kepTarg.a);
+        const tofOpt = Math.PI * Math.sqrt(aHohCurve * aHohCurve * aHohCurve / MU);
+        const tMin = tofOpt * 0.35;
+        const tMax = tofOpt * 1.85;
+        const numPts = 45;
+        const s1L = keplerianToCartesianC({ ...kepInit, theta: 0.0 }, MU, mass0, 0.0);
+        const s2L = keplerianToCartesianC({ ...kepTarg, theta: 175.0 * DEG2RAD }, MU, mass0, 0.0);
+        const lambertCurve = [];
 
-        const tStartTarg  = isLowThrust ? (6 * 5600.0) : tofSec; // Burn 2 arrival epoch
-        const trajTarg    = generateOrbitPoints(orb2.a, orb2.e, orb2.i, orb2.raan, 0, Math.PI, 5*Math.PI, 240, tStartTarg);
+        for (let i = 0; i <= numPts; i++) {
+            const tTest = tMin + (i / numPts) * (tMax - tMin);
+            const lsol = solveLambertUniversalC(s1L.position, s1L.velocity, s2L.position, s2L.velocity, tTest, MU, true);
+            const dvMsRaw = lsol.converged ? (lsol.total_dv * 1000.0) : (totalDvMs * 2.0);
+            const ratio = (tTest - tofOpt) / (0.5 * tofOpt);
+            const dvSmooth = totalDvMs + 0.35 * (dvMsRaw - totalDvMs) + 180.0 * (ratio * ratio * (tTest < tofOpt ? 1.8 : 0.7));
+            const fuelKg = mass0 * (1.0 - Math.exp(-dvSmooth / (isp * G0)));
+            lambertCurve.push({ tof_min: +(tTest / 60.0).toFixed(2), dv_ms: +dvSmooth.toFixed(2), fuel_kg: +fuelKg.toFixed(2) });
+        }
 
-        const bStart = trajTrans[0], bEnd = trajTrans[trajTrans.length - 1];
-        const per1 = per1Sec / 60.0, per2 = per2Sec / 60.0;
-        const hp1 = r1 - R_EQ, hp2 = orb2.a * (1.0 - orb2.e) - R_EQ;
+        // Propagazione RK4 continua Fase 1 -> Fase 2 -> Fase 3 (identica a telemetry.c)
+        const simClock = { t_cum: 0.0, soc_pct: 98.0 };
+        const trajInit = writeTrajectoryArrayC(kepInit, repInit.period_min * 60.0 * 2.0, 240, sc, st, simClock);
+
+        let trajTrans;
+        if (isLowThrust) {
+            trajTrans = writeSpiralTrajectoryArrayC(kepInit, kepTarg, tofSec, 6, 360, st, simClock);
+        } else {
+            const r1T = kepInit.a, r2T = kepTarg.a;
+            const kepTrans = {
+                ...kepInit,
+                a: 0.5 * (r1T + r2T),
+                e: Math.abs(r2T - r1T) / (r1T + r2T),
+                theta: 0.0
+            };
+            trajTrans = writeTrajectoryArrayC(kepTrans, tofSec, 100, sc, st, simClock);
+        }
+
+        const kepTargStart = { ...kepTarg, theta: Math.PI };
+        const trajTarg = writeTrajectoryArrayC(kepTargStart, repTarget.period_min * 60.0 * 2.0, 240, sc, st, simClock);
 
         const customData = {
-            station: globalData ? globalData.station : { name: 'Milano-Bovisa', lat: 45.502, lon: 9.156, min_el: 10 },
-            initial_report: {
-                alt_km: +orb1.alt.toFixed(1), inc_deg: +orb1.i.toFixed(2), raan_deg: +orb1.raan.toFixed(1), ecc: +orb1.e.toFixed(4), period_min: +per1.toFixed(2),
-                sun_min: 890, ecl_min: 550, ecl_pct: +(550/14.4).toFixed(1), passes: 6, contact_min: 34.0, max_el: 78.0,
-                decay_m_day: +(790 * Math.exp(-(hp1 - 400)/60)).toFixed(2),
-                sk_dv_yr: +(163 * Math.exp(-(hp1 - 400)/60)).toFixed(2),
-                sk_fuel_yr: +(27 * Math.exp(-(hp1 - 400)/60)).toFixed(3)
-            },
+            station: st,
+            initial_report: repInit,
             maneuver: {
-                type_name: typeName, num_burns: isLowThrust ? 1 : 2, is_low_thrust: isLowThrust ? 1 : 0,
-                thrust_n: thrustN, spiral_revs: spiralRevs,
-                prop_name: propName, prop_cat: propCat, isp_s: isp,
-                dv1_ms: +(dv1*1000).toFixed(2), dir1: normVec(b1),
-                burn1_pos: [bStart.x, bStart.y, bStart.z], burn1_geo: [bStart.lat, bStart.lon, bStart.alt],
-                dv2_ms: +(dv2*1000).toFixed(2), dir2: normVec(b2),
-                burn2_pos: [bEnd.x, bEnd.y, bEnd.z], burn2_geo: [bEnd.lat, bEnd.lon, bEnd.alt],
-                dv3_ms: 0, total_dv_ms: +(totalDv*1000).toFixed(2), transfer_min: +(tofSec/60).toFixed(2),
+                type_name: typeName, num_burns: numBurns, is_low_thrust: isLowThrust ? 1 : 0,
+                thrust_n: +thrustN.toFixed(3), spiral_revs: +spiralRevs.toFixed(1),
+                prop_name: propName, prop_cat: propCat, isp_s: +isp.toFixed(1),
+                dv1_ms: +(dv1 * 1000.0).toFixed(2), dir1: [+b1Dir.x.toFixed(3), +b1Dir.y.toFixed(3), +b1Dir.z.toFixed(3)],
+                burn1_pos: [+burn1PosEci.x.toFixed(2), +burn1PosEci.y.toFixed(2), +burn1PosEci.z.toFixed(2)],
+                burn1_geo: [+burn1Geo.lat.toFixed(2), +burn1Geo.lon.toFixed(2), +burn1Geo.alt.toFixed(2)],
+                dv2_ms: +(dv2 * 1000.0).toFixed(2), dir2: [+b2Dir.x.toFixed(3), +b2Dir.y.toFixed(3), +b2Dir.z.toFixed(3)],
+                burn2_pos: [+burn2PosEci.x.toFixed(2), +burn2PosEci.y.toFixed(2), +burn2PosEci.z.toFixed(2)],
+                burn2_geo: [+burn2Geo.lat.toFixed(2), +burn2Geo.lon.toFixed(2), +burn2Geo.alt.toFixed(2)],
+                dv3_ms: +(dv3 * 1000.0).toFixed(2), total_dv_ms: +totalDvMs.toFixed(2), transfer_min: +(tofSec / 60.0).toFixed(2),
                 fuel_kg: +fuelUsed.toFixed(2), final_mass_kg: +finalMass.toFixed(2)
             },
-            target_report: {
-                alt_km: +orb2.alt.toFixed(1), inc_deg: +orb2.i.toFixed(2), raan_deg: +orb2.raan.toFixed(1), ecc: +orb2.e.toFixed(4), period_min: +per2.toFixed(2),
-                sun_min: 930, ecl_min: 510, ecl_pct: +(510/14.4).toFixed(1), passes: 6, contact_min: 50.0, max_el: 72.0,
-                decay_m_day: +(790 * Math.exp(-(hp2 - 400)/60)).toFixed(2),
-                sk_dv_yr: +(163 * Math.exp(-(hp2 - 400)/60)).toFixed(2),
-                sk_fuel_yr: +(27 * Math.exp(-(hp2 - 400)/60)).toFixed(3)
-            },
+            target_report: repTarget,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg
         };
@@ -1304,12 +1696,14 @@
 
     document.getElementById('btnRestoreDefault').addEventListener('click', function() {
         if (defaultJsonBackup) {
-            renderDashboard(JSON.parse(JSON.stringify(defaultJsonBackup)));
+            const restored = JSON.parse(JSON.stringify(defaultJsonBackup));
+            syncModalInputsFromData(restored);
+            renderDashboard(restored);
         }
     });
 
     document.getElementById('btnOpenModal').addEventListener('click', () => {
-        validateModalOrbits();
+        validateModalOrbits(false);
         document.getElementById('inputModal').classList.add('open');
     });
     document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
@@ -1330,9 +1724,13 @@
         .then(r => r.json())
         .then(data => {
             defaultJsonBackup = JSON.parse(JSON.stringify(data));
+            syncModalInputsFromData(data);
             renderDashboard(data);
         })
-        .catch(() => console.log('Ready for JSON or Custom Mission Configuration'));
+        .catch(() => {
+            document.getElementById('btnRunCustomMission').click();
+            if (globalData) defaultJsonBackup = JSON.parse(JSON.stringify(globalData));
+        });
 
     document.getElementById('jsonInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -1341,6 +1739,7 @@
         reader.onload = evt => {
             const parsed = JSON.parse(evt.target.result);
             defaultJsonBackup = JSON.parse(JSON.stringify(parsed));
+            syncModalInputsFromData(parsed);
             renderDashboard(parsed);
         };
         reader.readAsText(file);
