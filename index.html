@@ -216,7 +216,7 @@
     <div class="section-header">
         <div>
             <h2>1. 3D WGS84 Earth Ellipsoid &amp; Orbital Transfer Visualization</h2>
-            <span>WGS84 Oblate Ellipsoid: R_eq = 6378.137 km &bull; R_pol = 6356.752 km (f = 1/298.257) &bull; NASA Blue Marble Satellite Biomes &amp; Country Borders</span>
+            <span>Interactive 3D Inertial Space (ECI) &bull; Supports Impulsive Conics &amp; Multi-Revolution Electric Spirals</span>
         </div>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
             <div style="display:inline-flex; gap:4px; align-items:center; background:#0b0f19; padding:3px 6px; border-radius:6px; border:1px solid var(--border);" title="Use keyboard arrow keys (← ↑ ↓ →) or click these buttons to rotate without changing zoom">
@@ -446,10 +446,6 @@
     let globalData = null;
     let defaultJsonBackup = null;
     let continent3DCoords = { x: [], y: [], z: [] };
-    let countryBorders3DCoords = { x: [], y: [], z: [] };
-    let earthEllipsoidMesh = null;
-    let landMaskCanvas = null;
-    let landMaskData = null;
     let isInteracting3D = false;
     let interact3DTimer = null;
     let isRestyling3D = false;
@@ -759,207 +755,28 @@
         validateModalOrbits();
     });
 
-    // Gaussian helper for realistic satellite biome / mountain / desert distribution
-    function gauss2D(lat, lon, cLat, cLon, sLat, sLon) {
-        const dLat = (lat - cLat) / sLat;
-        let dLon = lon - cLon;
-        if (dLon >  180) dLon -= 360;
-        if (dLon < -180) dLon += 360;
-        dLon /= sLon;
-        return Math.exp(-0.5 * (dLat * dLat + dLon * dLon));
-    }
-
-    function isLandPixel(latDeg, lonDeg) {
-        if (!landMaskData) return false;
-        const w = 720, h = 360;
-        let x = Math.floor(((lonDeg + 180.0) / 360.0) * w);
-        let y = Math.floor(((90.0 - latDeg) / 180.0) * h);
-        x = Math.max(0, Math.min(w - 1, x));
-        y = Math.max(0, Math.min(h - 1, y));
-        return landMaskData[(y * w + x) * 4 + 3] > 90;
-    }
-
-    function isNearCoast(latDeg, lonDeg) {
-        if (!landMaskData) return false;
-        return isLandPixel(latDeg + 2.5, lonDeg) || isLandPixel(latDeg - 2.5, lonDeg) ||
-               isLandPixel(latDeg, lonDeg + 2.5) || isLandPixel(latDeg, lonDeg - 2.5) ||
-               isLandPixel(latDeg + 4.5, lonDeg + 4.5) || isLandPixel(latDeg - 4.5, lonDeg - 4.5);
-    }
-
-    // Compute Blue Marble satellite surface color index in [0.0, 1.0]
-    function computeSatelliteSurfaceColor(lat, lon) {
-        const absLat = Math.abs(lat);
-        const land = isLandPixel(lat, lon);
-
-        if (!land) {
-            // Polar sea ice fringe near extreme Antarctica
-            if (lat < -75.0) return 0.91;
-            const shelf = isNearCoast(lat, lon) ? 0.08 : 0.0;
-            // Realistic ocean bathymetry (deep trenches vs mid-ocean ridges & tropical waters)
-            const tropicalWarmth = 0.06 * Math.cos(lat * DEG2RAD);
-            const ridgeWave = 0.025 * Math.sin(lon * 3.0 * DEG2RAD) * Math.cos(lat * 2.0 * DEG2RAD);
-            return Math.max(0.02, Math.min(0.36, 0.14 + tropicalWarmth + ridgeWave + shelf));
-        }
-
-        // 1. Polar Ice Caps: Antarctica & Interior Greenland & High Arctic Glaciers
-        if (lat < -60.0) {
-            return 0.94 + 0.05 * Math.min(1.0, (-60.0 - lat) / 25.0);
-        }
-        const greenlandIce = (lat > 60.5 && lon > -72.0 && lon < -19.0)
-            ? gauss2D(lat, lon, 72.5, -41.0, 8.5, 13.0)
-            : 0.0;
-        if (greenlandIce > 0.28 || lat > 78.5) {
-            return Math.min(0.99, 0.90 + 0.09 * greenlandIce);
-        }
-
-        // 2. Major World Deserts (Sahara, Arabian, Syrian, Iranian/Thar, Gobi/Taklamakan, Australian Outback, Kalahari/Namib, Sonoran/Mojave, Atacama/Patagonia)
-        const sahara    = (lat > 13 && lat < 35 && lon > -18 && lon < 36) ? gauss2D(lat, lon, 23.5, 11.0, 6.5, 18.0) : 0;
-        const arabia    = (lat > 12 && lat < 34 && lon >= 35 && lon < 62) ? gauss2D(lat, lon, 23.0, 46.5, 6.0, 9.0) : 0;
-        const iranThar  = (lat > 20 && lat < 44 && lon > 50 && lon < 78) ? gauss2D(lat, lon, 31.0, 62.0, 6.5, 9.5) : 0;
-        const gobi      = (lat > 36 && lat < 49 && lon > 76 && lon < 118) ? gauss2D(lat, lon, 41.5, 96.0, 4.5, 14.0) : 0;
-        const outback   = (lat < -17 && lat > -33 && lon > 113 && lon < 143) ? gauss2D(lat, lon, -24.5, 128.0, 4.5, 10.0) : 0;
-        const kalahari  = (lat < -17 && lat > -32 && lon > 12 && lon < 27) ? gauss2D(lat, lon, -24.0, 19.0, 4.5, 4.5) : 0;
-        const swUsa     = (lat > 23 && lat < 41 && lon > -119 && lon < -101) ? gauss2D(lat, lon, 32.0, -111.0, 5.5, 5.5) : 0;
-        const atacama   = (lat < -15 && lat > -32 && lon > -72 && lon < -66) ? gauss2D(lat, lon, -23.5, -69.0, 5.0, 2.5) : 0;
-        const hornAfrica = (lat > 2 && lat < 13 && lon > 40 && lon < 52) ? gauss2D(lat, lon, 8.0, 46.5, 4.0, 4.0) : 0;
-
-        const desertScore = Math.min(1.0, Math.max(sahara * 1.15, arabia * 1.15, iranThar, gobi, outback * 1.1, kalahari, swUsa * 0.9, atacama, hornAfrica * 0.9));
-
-        // 3. Major Mountain Chains (Himalayas/Tibet, Andes, Rockies, European Alps, Caucasus/Zagros, Ethiopian Highlands)
-        const himalaya = gauss2D(lat, lon, 32.5, 86.0, 4.5, 11.5);
-        const andesN   = (lat < 8 && lat > -22 && lon > -81 && lon < -63) ? gauss2D(lat, lon, -10.0, -73.5, 9.0, 3.0) : 0;
-        const andesS   = (lat <= -20 && lat > -54 && lon > -76 && lon < -65) ? gauss2D(lat, lon, -35.0, -70.0, 12.0, 2.5) : 0;
-        const rockies  = (lat > 35 && lat < 62 && lon > -126 && lon < -105) ? gauss2D(lat, lon, 48.0, -114.0, 9.0, 5.0) : 0;
-        const alps     = gauss2D(lat, lon, 46.3, 10.5, 1.8, 4.2);
-        const caucasus = gauss2D(lat, lon, 41.0, 44.5, 2.5, 5.5);
-        const ethiopia = gauss2D(lat, lon, 9.5, 39.0, 3.5, 3.5);
-
-        const mountainScore = Math.min(1.0, Math.max(himalaya * 1.2, andesN, andesS, rockies * 0.85, alps * 0.85, caucasus * 0.8, ethiopia * 0.75));
-
-        if (mountainScore > 0.55) {
-            return Math.min(0.89, 0.77 + 0.12 * mountainScore);
-        }
-        if (desertScore > 0.32) {
-            return 0.60 + 0.14 * desertScore;
-        }
-
-        // 4. Vegetated Land: Rainforests (Amazon, Congo, SE Asia), Temperate Forests/Plains (Europe, US, China), Boreal Taiga & Tundra
-        const rainforest = Math.exp(-Math.pow(lat / 13.0, 2)); // Lush equatorial deep green
-        const tundra     = absLat > 62.0 ? Math.min(1.0, (absLat - 62.0) / 14.0) : 0.0;
-        if (tundra > 0.35) {
-            return 0.74 + 0.12 * tundra;
-        }
-        return 0.42 + 0.14 * (1.0 - rainforest * 0.65) + 0.04 * mountainScore + 0.06 * desertScore;
-    }
-
-    function buildWGS84EllipsoidSurfaceMesh() {
-        const latSteps = 90;  // 2 deg resolution
-        const lonSteps = 180; // 2 deg resolution
-        const sx = [], sy = [], sz = [], sc = [];
-
-        for (let i = 0; i <= latSteps; i++) {
-            const latDeg = (i / latSteps) * 180.0 - 90.0;
-            const rowX = [], rowY = [], rowZ = [], rowC = [];
-            for (let j = 0; j <= lonSteps; j++) {
-                const lonDeg = (j / lonSteps) * 360.0 - 180.0;
-                // Exact WGS84 Oblate Ellipsoid surface point (h = 0 km)
-                const pt = geodeticToWGS84(latDeg, lonDeg, 0.0);
-                rowX.push(+pt.x.toFixed(2));
-                rowY.push(+pt.y.toFixed(2));
-                rowZ.push(+pt.z.toFixed(2));
-                rowC.push(+computeSatelliteSurfaceColor(latDeg, lonDeg).toFixed(3));
-            }
-            sx.push(rowX); sy.push(rowY); sz.push(rowZ); sc.push(rowC);
-        }
-        earthEllipsoidMesh = { x: sx, y: sy, z: sz, surfacecolor: sc };
-    }
-
     async function load3DContinents() {
         try {
-            const [resLand, resCountries] = await Promise.all([
-                fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson'),
-                fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson').catch(() => null)
-            ]);
-            const geoLand = await resLand.json();
-            const geoCountries = resCountries && resCountries.ok ? await resCountries.json() : null;
-
-            // 1. Rasterize land polygons onto an offscreen canvas (720x360) for exact Land/Ocean mask
-            const canvas = document.createElement('canvas');
-            canvas.width = 720;
-            canvas.height = 360;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, 720, 360);
-            ctx.fillStyle = '#ffffff';
-
-            const drawGeoFeatures = (features) => {
-                features.forEach(feat => {
-                    const geom = feat.geometry;
-                    if (!geom) return;
-                    const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
-                    polys.forEach(poly => {
-                        poly.forEach((ring, ringIdx) => {
-                            if (ringIdx > 0) return;
-                            ctx.beginPath();
-                            ring.forEach((pt, idx) => {
-                                const px = ((pt[0] + 180.0) / 360.0) * 720.0;
-                                const py = ((90.0 - pt[1]) / 180.0) * 360.0;
-                                if (idx === 0) ctx.moveTo(px, py);
-                                else ctx.lineTo(px, py);
-                            });
-                            ctx.closePath();
-                            ctx.fill();
-                        });
-                    });
-                });
-            };
-
-            drawGeoFeatures(geoLand.features);
-            if (geoCountries) drawGeoFeatures(geoCountries.features);
-            landMaskData = ctx.getImageData(0, 0, 720, 360).data;
-
-            // 2. Build 3D Coastlines on the WGS84 Ellipsoid (alt = 4.5 km, flush with surface)
+            const res = await fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson');
+            const geo = await res.json();
             let cx = [], cy = [], cz = [];
-            geoLand.features.forEach(feat => {
+            geo.features.forEach(feat => {
                 const geom = feat.geometry;
                 const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
                 polys.forEach(poly => {
                     poly.forEach(ring => {
                         ring.forEach(pt => {
-                            const v = geodeticToWGS84(pt[1], pt[0], 4.5);
-                            cx.push(+v.x.toFixed(1)); cy.push(+v.y.toFixed(1)); cz.push(+v.z.toFixed(1));
+                            const v = geodeticToWGS84(pt[1], pt[0], 18.0);
+                            cx.push(v.x); cy.push(v.y); cz.push(v.z);
                         });
                         cx.push(null); cy.push(null); cz.push(null);
                     });
                 });
             });
             continent3DCoords = { x: cx, y: cy, z: cz };
-
-            // 3. Build 3D National Borders on the WGS84 Ellipsoid (alt = 5.0 km)
-            if (geoCountries) {
-                let bx = [], by = [], bz = [];
-                geoCountries.features.forEach(feat => {
-                    const geom = feat.geometry;
-                    if (!geom) return;
-                    const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
-                    polys.forEach(poly => {
-                        poly.forEach(ring => {
-                            ring.forEach(pt => {
-                                const v = geodeticToWGS84(pt[1], pt[0], 5.0);
-                                bx.push(+v.x.toFixed(1)); by.push(+v.y.toFixed(1)); bz.push(+v.z.toFixed(1));
-                            });
-                            bx.push(null); by.push(null); bz.push(null);
-                        });
-                    });
-                });
-                countryBorders3DCoords = { x: bx, y: by, z: bz };
-            }
-
-            // 4. Build the high-res 3D WGS84 Ellipsoid with satellite biome colors
-            buildWGS84EllipsoidSurfaceMesh();
             if (globalData) renderDashboard(globalData);
         } catch (e) {
             console.warn('3D continent outlines fallback:', e);
-            buildWGS84EllipsoidSurfaceMesh();
         }
     }
 
@@ -1112,72 +929,33 @@
         document.getElementById('timelineSlider').max = animFrames.length - 1;
         currentFrame = 0;
 
+
         // ---------------------------------------------------------------------
-        // PLOT 1: 3D WGS84 EARTH ELLIPSOID (NASA BLUE MARBLE SATELLITE BIOMES)
+        // PLOT 1: 3D WGS84 EARTH ELLIPSOID
         // ---------------------------------------------------------------------
-        if (!earthEllipsoidMesh) {
-            buildWGS84EllipsoidSurfaceMesh();
+        let sx = [], sy = [], sz = [];
+        for (let i = 0; i <= 36; i++) {
+            let latDeg = (i / 36) * 180.0 - 90.0;
+            let rowX = [], rowY = [], rowZ = [];
+            for (let j = 0; j <= 36; j++) {
+                let lonDeg = (j / 36) * 360.0 - 180.0;
+                let pt = geodeticToWGS84(latDeg, lonDeg, 0.0);
+                rowX.push(pt.x); rowY.push(pt.y); rowZ.push(pt.z);
+            }
+            sx.push(rowX); sy.push(rowY); sz.push(rowZ);
         }
 
-        const blueMarbleColorscale = [
-            [0.00, '#041022'], // Deep Ocean Trench
-            [0.12, '#071d3d'], // Abyssal Ocean
-            [0.24, '#0b3162'], // Open Ocean (Atlantic / Pacific / Indian)
-            [0.34, '#134e8a'], // Shallow Sea
-            [0.38, '#1d6ca8'], // Continental Shelf / Turquoise Coast
-            [0.40, '#1f542c'], // Tropical Rainforest (Amazon / Congo / Indonesia)
-            [0.46, '#2d6b37'], // Dense Temperate Forest
-            [0.52, '#427f42'], // Cultivated Plains & Grasslands (Europe / Americas / Asia)
-            [0.57, '#6b944e'], // Savannah & Steppe Transition
-            [0.62, '#b8a468'], // Semi-Arid Scrubland
-            [0.68, '#d4bc7c'], // Sahara / Arabian / Outback Sandy Desert
-            [0.74, '#c29b61'], // Dry Rocky Plateau & Badlands
-            [0.80, '#8a6d4b'], // Mountain Ranges (Alps / Rockies / Andes / Zagros)
-            [0.86, '#6e5a47'], // High Alpine / Tibetan Plateau
-            [0.91, '#cfd8dc'], // Glacial Ice & Snow Line
-            [0.96, '#eaf2f8'], // Antarctic & Greenland Ice Sheet
-            [1.00, '#ffffff']  // Polar Ice Cap Peak
-        ];
-
         const earthEllipsoid = {
-            type: 'surface',
-            x: earthEllipsoidMesh.x,
-            y: earthEllipsoidMesh.y,
-            z: earthEllipsoidMesh.z,
-            surfacecolor: earthEllipsoidMesh.surfacecolor,
-            cmin: 0.0,
-            cmax: 1.0,
-            colorscale: blueMarbleColorscale,
-            showscale: false,
-            opacity: 1.0,
-            lighting: { ambient: 0.72, diffuse: 0.85, specular: 0.22, roughness: 0.55, fresnel: 0.2 },
-            lightposition: { x: 10000, y: 4000, z: 4000 },
-            hoverinfo: 'skip',
-            name: 'WGS84 Earth Ellipsoid'
+            type: 'surface', x: sx, y: sy, z: sz,
+            colorscale: [[0, '#071c38'], [0.5, '#0c3666'], [1, '#154c8a']],
+            showscale: false, opacity: 0.94, hoverinfo: 'skip', name: 'WGS84 Earth'
         };
 
         const traceContinents3D = {
-            type: 'scatter3d', mode: 'lines', name: 'Coastlines (WGS84)',
+            type: 'scatter3d', mode: 'lines', name: 'Continents (WGS84)',
             x: continent3DCoords.x, y: continent3DCoords.y, z: continent3DCoords.z,
-            line: { color: 'rgba(226, 232, 240, 0.65)', width: 1.6 }, hoverinfo: 'skip'
+            line: { color: '#4ade80', width: 2.2 }, hoverinfo: 'skip'
         };
-
-        const traceBorders3D = {
-            type: 'scatter3d', mode: 'lines', name: 'Country Borders (WGS84)',
-            x: countryBorders3DCoords.x, y: countryBorders3DCoords.y, z: countryBorders3DCoords.z,
-            line: { color: 'rgba(203, 213, 225, 0.38)', width: 1.1 }, hoverinfo: 'skip'
-        };
-
-        const stPos3D = geodeticToWGS84(st.lat, st.lon, 12.0);
-        const traceStation3D = {
-            type: 'scatter3d', mode: 'markers+text', name: `Ground Station (${st.name})`,
-            x: [stPos3D.x], y: [stPos3D.y], z: [stPos3D.z],
-            text: [st.name], textposition: 'top right',
-            textfont: { color: '#ff1744', size: 10.5 },
-            marker: { size: 5, color: '#ff1744', symbol: 'diamond', line: { color: '#ffffff', width: 1.5 } },
-            hoverinfo: 'name+text'
-        };
-
         const traceInit3D = {
             type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (${r1.alt_km} km, i=${r1.inc_deg}°)`,
             x: initSlice.map(p => p.x), y: initSlice.map(p => p.y), z: initSlice.map(p => p.z),
@@ -1222,7 +1000,7 @@
             hoverinfo: 'name'
         };
 
-        const traces3D = [earthEllipsoid, traceContinents3D, traceBorders3D, traceStation3D, traceInit3D, traceTrans3D, traceTarg3D, traceBurns3D, traceSat3D];
+        const traces3D = [earthEllipsoid, traceContinents3D, traceInit3D, traceTrans3D, traceTarg3D, traceBurns3D, traceSat3D];
         satTraceIndex3D = traces3D.length - 1;
 
         const selectedDragMode3D = document.getElementById('dragMode3DSelect') ? document.getElementById('dragMode3DSelect').value : 'turntable';
