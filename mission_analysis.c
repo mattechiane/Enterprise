@@ -555,3 +555,132 @@ void print_orbit_report(const char *title, OrbitReport rep, const char *station_
     printf("  * Station-Keeping / Yr  : %.2f m/s/yr | Fuel = %.3f kg/yr\n\n",
            rep.station_keeping_dv_year, rep.station_keeping_fuel_yr);
 }
+
+// =========================================================================
+// SPRINT 12: CLOHESSY-WILTSHIRE (HILL) TERMINAL RENDEZVOUS & PROXIMITY OPS
+// Frame LVLH: x = Radiale (R-bar), y = In-Track (V-bar), z = Cross-Track (H-bar)
+// =========================================================================
+void propagate_cw_state(Vector3D r0_m, Vector3D v0_ms, double n_rad_s, double t_sec,
+                        Vector3D *r_out_m, Vector3D *v_out_ms) {
+    if (n_rad_s <= 1e-12) {
+        if (r_out_m) *r_out_m = vec_add(r0_m, vec_scale(v0_ms, t_sec));
+        if (v_out_ms) *v_out_ms = v0_ms;
+        return;
+    }
+
+    double nt = n_rad_s * t_sec;
+    double c = cos(nt);
+    double s = sin(nt);
+
+    // Matrice Phi_rr(t) e Phi_rv(t) per la posizione relativa dr(t)
+    if (r_out_m) {
+        r_out_m->x = (4.0 - 3.0 * c) * r0_m.x
+                   + (s / n_rad_s) * v0_ms.x
+                   + (2.0 * (1.0 - c) / n_rad_s) * v0_ms.y;
+
+        r_out_m->y = 6.0 * (s - nt) * r0_m.x
+                   + 1.0 * r0_m.y
+                   - (2.0 * (1.0 - c) / n_rad_s) * v0_ms.x
+                   + ((4.0 * s - 3.0 * nt) / n_rad_s) * v0_ms.y;
+
+        r_out_m->z = c * r0_m.z + (s / n_rad_s) * v0_ms.z;
+    }
+
+    // Matrice Phi_vr(t) e Phi_vv(t) per la velocità relativa dv(t)
+    if (v_out_ms) {
+        v_out_ms->x = (3.0 * n_rad_s * s) * r0_m.x
+                    + c * v0_ms.x
+                    + (2.0 * s) * v0_ms.y;
+
+        v_out_ms->y = (-6.0 * n_rad_s * (1.0 - c)) * r0_m.x
+                    - (2.0 * s) * v0_ms.x
+                    + (4.0 * c - 3.0) * v0_ms.y;
+
+        v_out_ms->z = (-n_rad_s * s) * r0_m.z + c * v0_ms.z;
+    }
+}
+
+RendezvousPlan compute_cw_rendezvous(double a_target_km,
+                                     Vector3D r0_lvlh_m,
+                                     Vector3D v0_lvlh_ms,
+                                     double t_rdv_sec,
+                                     double init_mass_kg,
+                                     double isp_s,
+                                     double mu) {
+    RendezvousPlan rdv = {0};
+    rdv.r0_lvlh_m = r0_lvlh_m;
+    rdv.v0_lvlh_ms = v0_lvlh_ms;
+    rdv.initial_range_m = vec_norm(r0_lvlh_m);
+
+    if (a_target_km < EARTH_RADIUS + MIN_SAFE_PERIGEE_ALT_KM) {
+        a_target_km = EARTH_RADIUS + MIN_SAFE_PERIGEE_ALT_KM;
+    }
+    if (t_rdv_sec < 60.0) {
+        t_rdv_sec = 60.0;
+    }
+
+    double n = sqrt(mu / (a_target_km * a_target_km * a_target_km));
+    rdv.mean_motion_rad_s = n;
+    rdv.transfer_time_sec = t_rdv_sec;
+
+    double nt = n * t_rdv_sec;
+    double c = cos(nt);
+    double s = sin(nt);
+
+    // Determinante normalizzato del blocco planare 2x2 di Phi_rv(t):
+    // det(Phi_rv_xy) = [ s*(4s - 3nt) + 4*(1 - c)^2 ] / n^2 = [ 8*(1 - c) - 3*nt*s ] / n^2
+    double det_xy_norm = s * (4.0 * s - 3.0 * nt) + 4.0 * (1.0 - c) * (1.0 - c);
+
+    // Gestione singolarità se det(Phi_rv) -> 0 o sin(nt) -> 0 (multipli del mezzo periodo orbitale)
+    if (fabs(det_xy_norm) < 1e-6 || fabs(s) < 1e-4) {
+        t_rdv_sec += 30.0; // Perturbazione di sicurezza anti-singolarità
+        rdv.transfer_time_sec = t_rdv_sec;
+        nt = n * t_rdv_sec;
+        c = cos(nt);
+        s = sin(nt);
+        det_xy_norm = s * (4.0 * s - 3.0 * nt) + 4.0 * (1.0 - c) * (1.0 - c);
+    }
+
+    if (fabs(det_xy_norm) < 1e-9) {
+        det_xy_norm = (det_xy_norm >= 0.0) ? 1e-9 : -1e-9;
+    }
+    double s_safe = (fabs(s) < 1e-5) ? ((s >= 0.0 ? 1.0 : -1.0) * 1e-5) : s;
+
+    // Vettore termine noto b = -Phi_rr(t_rdv) * dr0
+    double bx = -(4.0 - 3.0 * c) * r0_lvlh_m.x;
+    double by = -6.0 * (s - nt) * r0_lvlh_m.x - r0_lvlh_m.y;
+    double bz = -c * r0_lvlh_m.z;
+
+    // Inversione analitica v0_post = Phi_rv^-1(t_rdv) * b
+    Vector3D v0_post = {
+        (n / det_xy_norm) * ((4.0 * s - 3.0 * nt) * bx - 2.0 * (1.0 - c) * by),
+        (n / det_xy_norm) * (2.0 * (1.0 - c) * bx + s * by),
+        (n / s_safe) * bz
+    };
+    rdv.v0_post_lvlh_ms = v0_post;
+
+    // Impulso 1: Delta-V_inject = v0_post - v0_init
+    rdv.dv_inject_lvlh_ms = vec_sub(v0_post, v0_lvlh_ms);
+    rdv.dv_inject_ms = vec_norm(rdv.dv_inject_lvlh_ms);
+
+    // Velocità relativa d'arrivo a t = t_rdv^- prima della frenata di Soft-Docking
+    Vector3D r_arr_m = {0};
+    Vector3D v_arr_ms = {0};
+    propagate_cw_state(r0_lvlh_m, v0_post, n, t_rdv_sec, &r_arr_m, &v_arr_ms);
+
+    // Impulso 2: Delta-V_brake = -v(t_rdv^-) per annullare la velocità relativa a [0, 0, 0]
+    rdv.dv_brake_lvlh_ms = vec_scale(v_arr_ms, -1.0);
+    rdv.dv_brake_ms = vec_norm(rdv.dv_brake_lvlh_ms);
+
+    rdv.total_dv_ms = rdv.dv_inject_ms + rdv.dv_brake_ms;
+    if (isp_s > 0.0 && init_mass_kg > 0.0) {
+        rdv.final_mass_kg = init_mass_kg * exp(-rdv.total_dv_ms / (isp_s * G0));
+        rdv.propellant_used_kg = init_mass_kg - rdv.final_mass_kg;
+    } else {
+        rdv.final_mass_kg = init_mass_kg;
+        rdv.propellant_used_kg = 0.0;
+    }
+    rdv.converged = true;
+
+    return rdv;
+}

@@ -136,6 +136,25 @@ typedef struct {
     PropellantSpec prop_info;
 } OptimalTransferPlan;
 
+// Piano di Rendezvous Terminale e Proximity Operations (Clohessy-Wiltshire / Hill Frame LVLH)
+typedef struct {
+    Vector3D r0_lvlh_m;         // Posizione relativa iniziale LVLH [dx0 (R-bar), dy0 (V-bar), dz0 (H-bar)] (m)
+    Vector3D v0_lvlh_ms;        // Velocità relativa iniziale pre-manovra nel frame LVLH (m/s)
+    Vector3D v0_post_lvlh_ms;   // Velocità relativa iniziale post-impulso di iniezione CW (m/s)
+    double transfer_time_sec;   // Tempo di trasferimento relativo di approccio t_rdv (s)
+    double mean_motion_rad_s;   // Moto medio dell'orbita target n = sqrt(mu / a_target^3) (rad/s)
+    double initial_range_m;     // Distanza relativa iniziale ||dr0|| (m)
+
+    Vector3D dv_inject_lvlh_ms; // Impulso 1: Iniezione su traiettoria di intercetto CW (m/s)
+    Vector3D dv_brake_lvlh_ms;  // Impulso 2: Frenata all'arrivo per Soft-Docking a velocità zero (m/s)
+    double dv_inject_ms;        // Modulo del primo impulso (m/s)
+    double dv_brake_ms;         // Modulo del secondo impulso (m/s)
+    double total_dv_ms;         // Costo totale Delta-V di Rendezvous (m/s)
+    double propellant_used_kg;  // Propellente consumato per il Rendezvous (kg)
+    double final_mass_kg;       // Massa finale del Chaser dopo il Docking (kg)
+    bool converged;             // true se il sistema lineare CW è ben condizionato
+} RendezvousPlan;
+
 typedef struct {
     KeplerianElements initial_kep;
     double period_min;

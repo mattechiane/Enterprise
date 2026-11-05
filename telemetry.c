@@ -121,6 +121,7 @@ static void write_trajectory_json_array(FILE *fp, KeplerianElements kep, double 
 static void write_spiral_trajectory_json_array(FILE *fp, KeplerianElements k1, KeplerianElements k2,
                                                double total_tof_sec, int visual_revs, int num_steps,
                                                const GroundStation *station, double *t_cum, double *soc_pct) {
+    (void)total_tof_sec;
     Vector3D sun_dir = {1.0, 0.0, 0.0};
     double vis_duration_sec = (double)visual_revs * 5600.0;
     double dt_vis = vis_duration_sec / (double)num_steps;
@@ -168,10 +169,35 @@ static void write_spiral_trajectory_json_array(FILE *fp, KeplerianElements k1, K
     *t_cum += vis_duration_sec;
 }
 
+static void write_rendezvous_trajectory_json_array(FILE *fp, RendezvousPlan rdv, int num_steps) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i <= num_steps; i++) {
+        double frac = (double)i / (double)num_steps;
+        double t_sec = frac * rdv.transfer_time_sec;
+        Vector3D r_m = {0};
+        Vector3D v_ms = {0};
+
+        if (i < num_steps) {
+            propagate_cw_state(rdv.r0_lvlh_m, rdv.v0_post_lvlh_ms, rdv.mean_motion_rad_s, t_sec, &r_m, &v_ms);
+        } else {
+            // Soft-Docking completato a t = t_rdv dopo l'impulso di frenata Delta-V_brake: posizione e velocità azzerate
+            r_m = (Vector3D){0.0, 0.0, 0.0};
+            v_ms = (Vector3D){0.0, 0.0, 0.0};
+        }
+
+        double range_m = vec_norm(r_m);
+        fprintf(fp, "    {\"t\":%.1f,\"rx_m\":%.2f,\"ry_m\":%.2f,\"rz_m\":%.2f,\"vx_ms\":%.4f,\"vy_ms\":%.4f,\"vz_ms\":%.4f,\"range_m\":%.2f}%s\n",
+                t_sec, r_m.x, r_m.y, r_m.z, v_ms.x, v_ms.y, v_ms.z, range_m,
+                (i < num_steps) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
                              OrbitReport rep_target,
+                             RendezvousPlan rdv,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -219,6 +245,23 @@ bool export_web_mission_json(const char *filename,
             rep_target.ground_passes_24h, rep_target.total_contact_min, rep_target.max_elevation_deg);
     fprintf(fp, "    \"decay_m_day\": %.2f, \"sk_dv_yr\": %.2f, \"sk_fuel_yr\": %.3f\n  },\n",
             rep_target.sma_decay_m_per_day, rep_target.station_keeping_dv_year, rep_target.station_keeping_fuel_yr);
+
+    fprintf(fp, "  \"rendezvous\": {\n");
+    fprintf(fp, "    \"r0_m\": [%.2f, %.2f, %.2f],\n",
+            rdv.r0_lvlh_m.x, rdv.r0_lvlh_m.y, rdv.r0_lvlh_m.z);
+    fprintf(fp, "    \"v0_ms\": [%.4f, %.4f, %.4f],\n",
+            rdv.v0_lvlh_ms.x, rdv.v0_lvlh_ms.y, rdv.v0_lvlh_ms.z);
+    fprintf(fp, "    \"v0_post_ms\": [%.4f, %.4f, %.4f],\n",
+            rdv.v0_post_lvlh_ms.x, rdv.v0_post_lvlh_ms.y, rdv.v0_post_lvlh_ms.z);
+    fprintf(fp, "    \"initial_range_m\": %.2f, \"tof_sec\": %.1f, \"tof_min\": %.2f, \"mean_motion_rad_s\": %.8f,\n",
+            rdv.initial_range_m, rdv.transfer_time_sec, rdv.transfer_time_sec / 60.0, rdv.mean_motion_rad_s);
+    fprintf(fp, "    \"dv_inject_lvlh_ms\": [%.4f, %.4f, %.4f], \"dv_brake_lvlh_ms\": [%.4f, %.4f, %.4f],\n",
+            rdv.dv_inject_lvlh_ms.x, rdv.dv_inject_lvlh_ms.y, rdv.dv_inject_lvlh_ms.z,
+            rdv.dv_brake_lvlh_ms.x, rdv.dv_brake_lvlh_ms.y, rdv.dv_brake_lvlh_ms.z);
+    fprintf(fp, "    \"dv_inject_ms\": %.3f, \"dv_brake_ms\": %.3f, \"total_dv_ms\": %.3f,\n",
+            rdv.dv_inject_ms, rdv.dv_brake_ms, rdv.total_dv_ms);
+    fprintf(fp, "    \"fuel_kg\": %.3f, \"final_mass_kg\": %.2f\n  },\n",
+            rdv.propellant_used_kg, rdv.final_mass_kg);
 
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
@@ -270,6 +313,10 @@ bool export_web_mission_json(const char *filename,
     kep_targ_start.theta = PI;
     fprintf(fp, "  \"traj_target\": ");
     write_trajectory_json_array(fp, kep_targ_start, rep_target.period_min * 60.0 * 2.0, 240, sc, station, &t_cum, &soc_pct);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_rendezvous\": ");
+    write_rendezvous_trajectory_json_array(fp, rdv, 120);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

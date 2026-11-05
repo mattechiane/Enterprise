@@ -43,4 +43,17 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
 OrbitReport evaluate_orbit_regime(KeplerianElements kep, double mass, const SpacecraftConfig *sc, const GroundStation *station);
 void print_orbit_report(const char *title, OrbitReport rep, const char *station_name);
 
+// Propagazione analitica chiusa tramite Matrice di Transizione di Stato (STM) di Clohessy-Wiltshire (LVLH)
+void propagate_cw_state(Vector3D r0_m, Vector3D v0_ms, double n_rad_s, double t_sec,
+                        Vector3D *r_out_m, Vector3D *v_out_ms);
+
+// Risolutore Two-Impulse Clohessy-Wiltshire per Terminal Rendezvous & Soft-Docking a [0, 0, 0]
+RendezvousPlan compute_cw_rendezvous(double a_target_km,
+                                     Vector3D r0_lvlh_m,
+                                     Vector3D v0_lvlh_ms,
+                                     double t_rdv_sec,
+                                     double init_mass_kg,
+                                     double isp_s,
+                                     double mu);
+
 #endif // MISSION_ANALYSIS_H

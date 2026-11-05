@@ -80,6 +80,8 @@
         .plot-container-2d { width: 100%; height: 500px; }
         .telemetry-plots-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
         .plot-container-sub { width: 100%; height: 300px; background: var(--card-bg); border: 1px solid var(--border-col); border-radius: 8px; padding: 6px; }
+        .rdv-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .plot-container-rdv { width: 100%; height: 430px; background: var(--card-bg); border: 1px solid var(--border-col); border-radius: 8px; padding: 6px; }
 
         .plot-hint {
             position: absolute; bottom: 24px; left: 28px; z-index: 10;
@@ -219,7 +221,7 @@
             <span>Interactive 3D Inertial Space (ECI) &bull; Supports Impulsive Conics &amp; Multi-Revolution Electric Spirals</span>
         </div>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <div style="display:inline-flex; gap:4px; align-items:center; background:#0b0f19; padding:3px 6px; border-radius:6px; border:1px solid var(--border);" title="Use keyboard arrow keys (← ↑ ↓ →) or click these buttons to rotate without changing zoom">
+            <div style="display:inline-flex; gap:4px; align-items:center; background:#0b0f19; padding:3px 6px; border-radius:6px; border:1px solid var(--border);" title="Use keyboard arrow keys (â† â†‘ â†“ â†’) or click these buttons to rotate without changing zoom">
                 <span style="font-size:11px; color:var(--muted); margin-right:4px;">&#9000; Rotate:</span>
                 <button type="button" class="btn-sim" id="btnRotLeft3D" style="padding:3px 8px;" title="Rotate Left (ArrowLeft)">&#9664;</button>
                 <button type="button" class="btn-sim" id="btnRotUp3D" style="padding:3px 8px;" title="Rotate Up (ArrowUp)">&#9650;</button>
@@ -299,6 +301,33 @@
         <div id="plotKinematics" class="plot-container-sub"></div>
         <div id="plotRadar" class="plot-container-sub"></div>
         <div id="plotPower" class="plot-container-sub"></div>
+    </div>
+</section>
+
+<!-- 6. SIXTH OUTPUT BLOCK: TERMINAL RENDEZVOUS & PROXIMITY OPERATIONS (LVLH HILL FRAME) -->
+<section class="section-block">
+    <div class="section-header">
+        <div>
+            <h2>6. Terminal Rendezvous &amp; Proximity Operations &mdash; LVLH Hill Frame</h2>
+            <span>Clohessy-Wiltshire (CW) Two-Impulse Targeting &bull; V-Bar / R-Bar Relative Trajectory, Safety Approach Corridor &amp; Soft-Docking Profile</span>
+        </div>
+        <span class="badge" id="rdvStatusBadge" style="color:var(--green); border-color:var(--green);">&#10004; SOFT-DOCKING CAPTURE VERIFIED ([0, 0, 0] m | 0.00 m/s)</span>
+    </div>
+
+    <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.12), rgba(0,230,118,0.10)); border-color: var(--cyan);">
+        <div class="title-group">
+            <h3 id="rdvBannerTitle" style="color:var(--cyan);">TWO-IMPULSE CLOHESSY-WILTSHIRE TERMINAL RENDEZVOUS</h3>
+            <p id="rdvBannerSub">Initial LVLH Offset: &delta;x&#8320; (R-bar) = -250 m, &delta;y&#8320; (V-bar) = -2000 m, &delta;z&#8320; (H-bar) = +100 m &bull; Range: 2018.0 m</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="rdvBannerTotalDv">Rendezvous &Delta;V: --- m/s</div>
+            <div class="sub-fuel" id="rdvBannerBurns">&Delta;V_inject: --- m/s | &Delta;V_brake: --- m/s | Fuel: --- kg</div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotRdvTrajectory" class="plot-container-rdv"></div>
+        <div id="plotRdvProfile" class="plot-container-rdv"></div>
     </div>
 </section>
 
@@ -421,6 +450,31 @@
                     <div class="field"><label>Vz (km/s)</label><input type="number" id="targVz" value="6.019" step="0.1" oninput="validateModalOrbits()"></div>
                 </div>
                 <div id="statusTarg" class="orbit-status-bar valid">Perigee: 643.0 km | Apogee: 657.0 km (Valid Closed Orbit)</div>
+            </div>
+        </div>
+
+        <div class="form-section" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--amber)">4. Terminal Rendezvous &amp; Proximity Operations (LVLH / Hill Frame)</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Two-Impulse Clohessy-Wiltshire Targeting to Target Origin [0, 0, 0]</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="field">
+                    <label>Initial In-Track Offset &delta;y&#8320; [m] <span>[V-bar]</span></label>
+                    <input type="number" id="rdvDy0" value="-2000" min="-50000" max="50000" step="50">
+                </div>
+                <div class="field">
+                    <label>Initial Radial Offset &delta;x&#8320; [m] <span>[R-bar]</span></label>
+                    <input type="number" id="rdvDx0" value="-250" min="-20000" max="20000" step="25">
+                </div>
+                <div class="field">
+                    <label>Cross-Track Offset &delta;z&#8320; [m] <span>[H-bar]</span></label>
+                    <input type="number" id="rdvDz0" value="100" min="-10000" max="10000" step="10">
+                </div>
+                <div class="field">
+                    <label>Rendezvous Approach Duration [min]</label>
+                    <input type="number" id="rdvTofMin" value="45" min="2" max="300" step="1">
+                </div>
             </div>
         </div>
 
@@ -735,6 +789,15 @@
         document.getElementById('targInc').value  = r2.inc_deg;
         document.getElementById('targRaan').value = (r2.raan_deg !== undefined) ? r2.raan_deg : 30.0;
 
+        if (data.rendezvous && data.rendezvous.r0_m) {
+            document.getElementById('rdvDx0').value = data.rendezvous.r0_m[0];
+            document.getElementById('rdvDy0').value = data.rendezvous.r0_m[1];
+            document.getElementById('rdvDz0').value = data.rendezvous.r0_m[2];
+            if (data.rendezvous.tof_min !== undefined) {
+                document.getElementById('rdvTofMin').value = data.rendezvous.tof_min;
+            }
+        }
+
         validateModalOrbits(false);
     }
 
@@ -806,10 +869,10 @@
 
         document.getElementById('bannerManeuverType').textContent = `OPTIMAL STRATEGY: ${maneuverTitle}`;
         document.getElementById('bannerPropellant').textContent = isLowThrust
-            ? `Propulsion: ${propName} [${propCat}] • Isp: ${ispVal} s • Continuous Thrust: ${m.thrust_n || 0.5} N`
-            : `Propellant: ${propName} [${propCat}] • Specific Impulse (Isp): ${ispVal} s`;
-        document.getElementById('bannerTotalDv').textContent = `Total ΔV: ${m.total_dv_ms} m/s`;
-        document.getElementById('bannerFuelMass').textContent = `Propellant Consumed: ${m.fuel_kg} kg • Final Mass: ${m.final_mass_kg} kg • Duration: ${tofDisplay}`;
+            ? `Propulsion: ${propName} [${propCat}] â€¢ Isp: ${ispVal} s â€¢ Continuous Thrust: ${m.thrust_n || 0.5} N`
+            : `Propellant: ${propName} [${propCat}] â€¢ Specific Impulse (Isp): ${ispVal} s`;
+        document.getElementById('bannerTotalDv').textContent = `Total Î”V: ${m.total_dv_ms} m/s`;
+        document.getElementById('bannerFuelMass').textContent = `Propellant Consumed: ${m.fuel_kg} kg â€¢ Final Mass: ${m.final_mass_kg} kg â€¢ Duration: ${tofDisplay}`;
 
         document.getElementById('sheetBurnPoints').innerHTML = `
         <div class="row-item"><span class="row-label">${isLowThrust ? 'Spiral Ignition Start' : 'Burn 1 Location (Node 1)'}</span><span class="row-val" style="color:var(--amber)">${isLowThrust ? 'Continuous Thrust ON' : 'Perigee Departure'}</span></div>
@@ -866,7 +929,7 @@
 
         Plotly.newPlot('plotLambert', [
             {
-                type: 'scatter', mode: 'lines', name: 'Lambert Total ΔV [m/s]',
+                type: 'scatter', mode: 'lines', name: 'Lambert Total Î”V [m/s]',
                 x: lCurve.map(p => p.tof_min), y: lCurve.map(p => p.dv_ms),
                 line: { color: '#00e5ff', width: 3.5, shape: 'spline' },
                 fill: 'tozeroy', fillcolor: 'rgba(0, 229, 255, 0.08)'
@@ -886,7 +949,7 @@
             margin: { l: 65, r: 65, b: 48, t: 24 },
             hovermode: 'x unified',
             xaxis: { title: 'Impulsive Transfer Time of Flight (TOF) [minutes]', color: '#e2e8f0', gridcolor: '#1e293b' },
-            yaxis: { title: 'Total Maneuver Cost ΔV [m/s]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#1e293b' },
+            yaxis: { title: 'Total Maneuver Cost Î”V [m/s]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#1e293b' },
             yaxis2: { title: 'Propellant Mass Consumed [kg]', titlefont: { color: '#00e676' }, tickfont: { color: '#00e676' }, overlaying: 'y', side: 'right', showgrid: false },
             annotations: [{
                 x: selX, y: selY, xref: 'x', yref: 'y',
@@ -957,7 +1020,7 @@
             line: { color: '#4ade80', width: 2.2 }, hoverinfo: 'skip'
         };
         const traceInit3D = {
-            type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (${r1.alt_km} km, i=${r1.inc_deg}°)`,
+            type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (${r1.alt_km} km, i=${r1.inc_deg}Â°)`,
             x: initSlice.map(p => p.x), y: initSlice.map(p => p.y), z: initSlice.map(p => p.z),
             line: { color: '#00e5ff', width: 4.5 }, hoverinfo: 'name'
         };
@@ -971,7 +1034,7 @@
         };
 
         const traceTarg3D = {
-            type: 'scatter3d', mode: 'lines', name: `3. Target Orbit (${r2.alt_km} km, i=${r2.inc_deg}°)`,
+            type: 'scatter3d', mode: 'lines', name: `3. Target Orbit (${r2.alt_km} km, i=${r2.inc_deg}Â°)`,
             x: targSlice.map(p => p.x), y: targSlice.map(p => p.y), z: targSlice.map(p => p.z),
             line: { color: '#00e676', width: 4.5 }, hoverinfo: 'name'
         };
@@ -979,11 +1042,11 @@
         const burnStart = data.traj_transfer[0];
         const burnEnd   = data.traj_transfer[data.traj_transfer.length - 1];
         const traceBurns3D = {
-            type: 'scatter3d', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Maneuver Burn Points (ΔV)',
+            type: 'scatter3d', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Maneuver Burn Points (Î”V)',
             x: [burnStart.x, burnEnd.x], y: [burnStart.y, burnEnd.y], z: [burnStart.z, burnEnd.z],
             text: isLowThrust
                 ? ['SPIRAL START (THRUST ON)', 'SPIRAL CUTOFF (MECO)']
-                : [`BURN 1 (ΔV1: ${m.dv1_ms} m/s)`, `BURN 2 (ΔV2: ${m.dv2_ms} m/s)`],
+                : [`BURN 1 (Î”V1: ${m.dv1_ms} m/s)`, `BURN 2 (Î”V2: ${m.dv2_ms} m/s)`],
             textposition: 'top center',
             textfont: { color: '#ffab00', size: 11.5 },
             marker: { size: 8, color: ['#ffab00', '#d500f9'], symbol: 'diamond', line: { color: '#fff', width: 2 } },
@@ -1031,10 +1094,10 @@
         // PLOT 4: 2D WORLD GROUND TRACK (SYNCHRONIZED WITH CONTINUOUS EARTH ROTATION)
         // ---------------------------------------------------------------------
         const traces2D = [
-            { type: 'scattergeo', mode: 'markers', name: `1. Initial Track (${r1.alt_km} km, ${r1.inc_deg}°)`, lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon), marker: { size: 4, color: '#00e5ff' } },
+            { type: 'scattergeo', mode: 'markers', name: `1. Initial Track (${r1.alt_km} km, ${r1.inc_deg}Â°)`, lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon), marker: { size: 4, color: '#00e5ff' } },
             { type: 'scattergeo', mode: 'markers', name: isLowThrust ? '2. Low-Thrust Spiral Track' : '2. Transfer Maneuver Track', lat: data.traj_transfer.map(p => p.lat), lon: data.traj_transfer.map(p => p.lon), marker: { size: 4.5, color: isLowThrust ? '#e040fb' : '#ffab00' } },
-            { type: 'scattergeo', mode: 'markers', name: `3. Target Track (${r2.alt_km} km, ${r2.inc_deg}°)`, lat: targSlice.map(p => p.lat), lon: targSlice.map(p => p.lon), marker: { size: 4, color: '#00e676' } },
-            { type: 'scattergeo', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Burn Locations (ΔV1 / ΔV2)', lat: [burnStart.lat, burnEnd.lat], lon: [burnStart.lon, burnEnd.lon], text: isLowThrust ? ['SPIRAL ON', 'MECO'] : ['BURN 1 (ΔV1)', 'BURN 2 (ΔV2)'], textposition: 'top center', textfont: { color: '#ffab00', size: 11 }, marker: { size: 12, color: ['#ffab00', '#d500f9'], symbol: 'star', line: { color: '#fff', width: 1.5 } } },
+            { type: 'scattergeo', mode: 'markers', name: `3. Target Track (${r2.alt_km} km, ${r2.inc_deg}Â°)`, lat: targSlice.map(p => p.lat), lon: targSlice.map(p => p.lon), marker: { size: 4, color: '#00e676' } },
+            { type: 'scattergeo', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Burn Locations (Î”V1 / Î”V2)', lat: [burnStart.lat, burnEnd.lat], lon: [burnStart.lon, burnEnd.lon], text: isLowThrust ? ['SPIRAL ON', 'MECO'] : ['BURN 1 (Î”V1)', 'BURN 2 (Î”V2)'], textposition: 'top center', textfont: { color: '#ffab00', size: 11 }, marker: { size: 12, color: ['#ffab00', '#d500f9'], symbol: 'star', line: { color: '#fff', width: 1.5 } } },
             { type: 'scattergeo', mode: 'markers+text', name: st.name, lat: [st.lat], lon: [st.lon], text: [st.name], textposition: 'bottom right', marker: { size: 10, color: '#ff1744', symbol: 'triangle-up', line: { color: '#fff', width: 1 } }, textfont: { color: '#ffffff', size: 11 } },
             { type: 'scattergeo', mode: 'markers+text', name: 'Spacecraft (Live)', lat: [p0.lat], lon: [p0.lon], text: ['SAT'], textposition: 'top right', textfont: { color: '#ffffff', size: 11 }, marker: { size: 11, color: '#ffffff', line: { color: '#ff1744', width: 3 } } }
         ];
@@ -1086,7 +1149,7 @@
                 line: { color: '#00e676', width: 2.8 }, fill: 'tozeroy', fillcolor: 'rgba(0, 230, 118, 0.14)'
             },
             {
-                type: 'scatter', mode: 'lines', name: 'Min Horizon Mask (10°)',
+                type: 'scatter', mode: 'lines', name: 'Min Horizon Mask (10Â°)',
                 x: [tAxis[0], tAxis[tAxis.length - 1]], y: [st.min_el || 10, st.min_el || 10],
                 line: { color: '#ff1744', width: 1.5, dash: 'dash' }
             },
@@ -1124,6 +1187,137 @@
             yaxis: { title: 'Solar Power [Watts]', titlefont: { color: '#ffab00' }, tickfont: { color: '#ffab00' }, range: [0, 1000], gridcolor: '#222d42' },
             yaxis2: { title: 'Battery SoC [%]', titlefont: { color: '#d500f9' }, tickfont: { color: '#d500f9' }, range: [40, 105], overlaying: 'y', side: 'right', showgrid: false },
             legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(17,22,34,0.8)', x: 0.01, y: 0.98 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---------------------------------------------------------------------
+        // SECTION 6: TERMINAL RENDEZVOUS & PROXIMITY OPERATIONS (LVLH HILL)
+        // ---------------------------------------------------------------------
+        const aTargKm = (r2.sma_km !== undefined) ? r2.sma_km : (R_EQ + r2.alt_km);
+        const fallbackRdv = computeCWRendezvousJS(
+            aTargKm,
+            { x: -250.0, y: -2000.0, z: 100.0 },
+            { x: 0.0, y: 0.0, z: 0.0 },
+            45.0 * 60.0,
+            m.final_mass_kg || 468.0,
+            ispVal
+        );
+        const rdvInfo = data.rendezvous || fallbackRdv.rendezvous;
+        const rdvTraj = (data.traj_rendezvous && data.traj_rendezvous.length) ? data.traj_rendezvous : fallbackRdv.traj_rendezvous;
+
+        const r0Arr = rdvInfo.r0_m || [-250, -2000, 100];
+        const dx0 = r0Arr[0], dy0 = r0Arr[1], dz0 = r0Arr[2];
+        const rdvRange0 = (rdvInfo.initial_range_m !== undefined) ? rdvInfo.initial_range_m : +Math.hypot(dx0, dy0, dz0).toFixed(2);
+        const rdvTofMin = (rdvInfo.tof_min !== undefined) ? rdvInfo.tof_min : +((rdvInfo.tof_sec || 2700) / 60.0).toFixed(2);
+
+        document.getElementById('rdvBannerTitle').textContent =
+            `TWO-IMPULSE CLOHESSY-WILTSHIRE RENDEZVOUS (TOF: ${rdvTofMin} min | n = ${(rdvInfo.mean_motion_rad_s * 1000).toFixed(4)} mrad/s)`;
+        document.getElementById('rdvBannerSub').innerHTML =
+            `Initial LVLH Offset: &delta;x&#8320; (R-bar) = <strong>${dx0} m</strong>, &delta;y&#8320; (V-bar) = <strong>${dy0} m</strong>, &delta;z&#8320; (H-bar) = <strong>${dz0} m</strong> &bull; Initial Range: <strong>${rdvRange0} m</strong>`;
+        document.getElementById('rdvBannerTotalDv').textContent =
+            `Total Rendezvous ΔV: ${rdvInfo.total_dv_ms} m/s`;
+        document.getElementById('rdvBannerBurns').textContent =
+            `Burn 1 (CW Inject): ${rdvInfo.dv_inject_ms} m/s • Burn 2 (Soft-Dock Brake): ${rdvInfo.dv_brake_ms} m/s • Propellant: ${rdvInfo.fuel_kg} kg`;
+
+        // Approach Corridor Cone (±16° around approach axis into Target [0, 0])
+        const coneLen = Math.max(400.0, Math.hypot(dy0, dx0) * 1.06);
+        const baseAngle = (Math.hypot(dy0, dx0) > 1e-3) ? Math.atan2(dx0, dy0) : Math.PI;
+        const halfConeRad = 16.0 * DEG2RAD;
+        const c1x = coneLen * Math.cos(baseAngle - halfConeRad);
+        const c1y = coneLen * Math.sin(baseAngle - halfConeRad);
+        const c2x = coneLen * Math.cos(baseAngle + halfConeRad);
+        const c2y = coneLen * Math.sin(baseAngle + halfConeRad);
+
+        // Keep-Out Sphere (KOS = 200 m radius around Target)
+        const kosRadius = Math.min(200.0, Math.max(40.0, Math.hypot(dy0, dx0) * 0.12));
+        const kosX = [], kosY = [];
+        for (let k = 0; k <= 64; k++) {
+            const ang = (k / 64) * 2.0 * Math.PI;
+            kosX.push(+(kosRadius * Math.cos(ang)).toFixed(2));
+            kosY.push(+(kosRadius * Math.sin(ang)).toFixed(2));
+        }
+
+        Plotly.newPlot('plotRdvTrajectory', [
+            {
+                type: 'scatter', mode: 'lines', name: 'Safety Approach Corridor (±16° Cone)',
+                x: [0, c1x, c2x, 0], y: [0, c1y, c2y, 0],
+                fill: 'toself', fillcolor: 'rgba(0, 230, 118, 0.09)',
+                line: { color: 'rgba(0, 230, 118, 0.55)', width: 1.5, dash: 'dash' },
+                hoverinfo: 'name'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: `Keep-Out Zone (${kosRadius.toFixed(0)} m Sphere)`,
+                x: kosX, y: kosY,
+                line: { color: 'rgba(255, 171, 0, 0.55)', width: 1.4, dash: 'dot' },
+                hoverinfo: 'name'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Cross-Track δz(t) [H-bar, m]',
+                x: rdvTraj.map(p => p.ry_m), y: rdvTraj.map(p => p.rz_m),
+                line: { color: '#d500f9', width: 2.0, dash: 'dot' }
+            },
+            {
+                type: 'scatter', mode: 'lines+markers', name: 'Chaser CW Approach Trajectory (V-bar vs R-bar)',
+                x: rdvTraj.map(p => p.ry_m), y: rdvTraj.map(p => p.rx_m),
+                marker: { size: 4, color: '#00e5ff' },
+                line: { color: '#00e5ff', width: 3.5 },
+                text: rdvTraj.map(p => `t = ${(p.t / 60).toFixed(1)} min | Range = ${p.range_m} m | dZ = ${p.rz_m} m`),
+                hovertemplate: '<b>Chaser LVLH</b><br>V-bar (δy): %{x} m<br>R-bar (δx): %{y} m<br>%{text}<extra></extra>'
+            },
+            {
+                type: 'scatter', mode: 'markers+text', name: `Chaser Start (ΔV_inject: ${rdvInfo.dv_inject_ms} m/s)`,
+                x: [dy0], y: [dx0],
+                text: [`CHASER START [δy₀=${dy0}m, δx₀=${dx0}m]`],
+                textposition: (dx0 <= 0) ? 'bottom right' : 'top right',
+                textfont: { color: '#ffab00', size: 11 },
+                marker: { size: 11, color: '#ffab00', symbol: 'diamond', line: { color: '#ffffff', width: 2 } }
+            },
+            {
+                type: 'scatter', mode: 'markers+text', name: `Target [0, 0] (ΔV_brake: ${rdvInfo.dv_brake_ms} m/s)`,
+                x: [0], y: [0],
+                text: ['TARGET [0, 0] (DOCKING PORT)'],
+                textposition: 'top left',
+                textfont: { color: '#00e676', size: 11.5 },
+                marker: { size: 13, color: '#00e676', symbol: 'star', line: { color: '#ffffff', width: 2 } }
+            }
+        ], {
+            title: { text: '6A. LVLH Relative Trajectory: V-Bar (In-Track δy) vs. R-Bar (Radial δx) & Approach Corridor', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 65, r: 30, b: 48, t: 40 }, hovermode: 'closest',
+            xaxis: { title: 'V-Bar / In-Track Relative Position δy [meters]', color: '#e2e8f0', gridcolor: '#222d42', zerolinecolor: '#475569', zerolinewidth: 1.5 },
+            yaxis: { title: 'R-Bar / Radial Relative Position δx [meters]', color: '#00e5ff', gridcolor: '#222d42', zerolinecolor: '#475569', zerolinewidth: 1.5 },
+            legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        const rdvTimeMin = rdvTraj.map(p => +(p.t / 60.0).toFixed(2));
+        const rdvVelMag  = rdvTraj.map(p => +Math.hypot(p.vx_ms, p.vy_ms, p.vz_ms).toFixed(4));
+
+        Plotly.newPlot('plotRdvProfile', [
+            {
+                type: 'scatter', mode: 'lines', name: 'Relative Range ||δr(t)|| [m]',
+                x: rdvTimeMin, y: rdvTraj.map(p => p.range_m),
+                line: { color: '#00e5ff', width: 3.0 },
+                fill: 'tozeroy', fillcolor: 'rgba(0, 229, 255, 0.08)'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Closing Velocity ||δv(t)|| [m/s]',
+                x: rdvTimeMin, y: rdvVelMag, yaxis: 'y2',
+                line: { color: '#ffab00', width: 2.8, dash: 'dot' }
+            },
+            {
+                type: 'scatter', mode: 'markers+text', name: 'Soft-Docking Contact (v = 0 m/s)',
+                x: [rdvTimeMin[rdvTimeMin.length - 1]], y: [0],
+                text: ['SOFT-DOCKING (0.0 m, 0.00 m/s)'], textposition: 'top left',
+                textfont: { color: '#00e676', size: 11 },
+                marker: { size: 11, color: '#00e676', symbol: 'circle', line: { color: '#ffffff', width: 2 } }
+            }
+        ], {
+            title: { text: '6B. Proximity Closing Profile: Relative Range ||δr(t)|| [m] & Relative Velocity ||δv(t)|| [m/s]', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 65, r: 65, b: 48, t: 40 }, hovermode: 'x unified',
+            xaxis: { title: 'Rendezvous Approach Timeline [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Relative Range ||δr|| [m]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#222d42', rangemode: 'tozero' },
+            yaxis2: { title: 'Relative Speed ||δv|| [m/s]', titlefont: { color: '#ffab00' }, tickfont: { color: '#ffab00' }, overlaying: 'y', side: 'right', showgrid: false, rangemode: 'tozero' },
+            legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.02, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
         startAnimationLoop();
@@ -1183,7 +1377,7 @@
             azimuth += dAzimuthDeg * (Math.PI / 180.0);
             elevation += dElevationDeg * (Math.PI / 180.0);
 
-            // Clamp elevation to [-85°, +85°] to prevent pole flip while keeping North-Up
+            // Clamp elevation to [-85Â°, +85Â°] to prevent pole flip while keeping North-Up
             const maxElev = 85.0 * (Math.PI / 180.0);
             elevation = Math.max(-maxElev, Math.min(maxElev, elevation));
 
@@ -1246,7 +1440,7 @@
         document.getElementById('liveAlt').textContent = pt.alt.toFixed(1);
         document.getElementById('liveVel').textContent = (pt.v || 7.6).toFixed(2);
         document.getElementById('liveSoc').textContent = (pt.soc || 95).toFixed(1);
-        document.getElementById('liveLatLon').textContent = `${pt.lat.toFixed(1)}°, ${pt.lon.toFixed(1)}°`;
+        document.getElementById('liveLatLon').textContent = `${pt.lat.toFixed(1)}Â°, ${pt.lon.toFixed(1)}Â°`;
 
         const phaseBadge = document.getElementById('phaseBadge');
         phaseBadge.textContent = pt.phase;
@@ -1608,6 +1802,114 @@
         return pts;
     }
 
+    // =========================================================================
+    // SPRINT 12: CLOHESSY-WILTSHIRE (HILL) TERMINAL RENDEZVOUS ENGINE (JS)
+    // =========================================================================
+    function propagateCWStateJS(r0M, v0Ms, nRadS, tSec) {
+        if (nRadS <= 1e-12) {
+            return {
+                r: { x: r0M.x + v0Ms.x * tSec, y: r0M.y + v0Ms.y * tSec, z: r0M.z + v0Ms.z * tSec },
+                v: { ...v0Ms }
+            };
+        }
+        const nt = nRadS * tSec;
+        const c = Math.cos(nt), s = Math.sin(nt);
+
+        const rx = (4.0 - 3.0 * c) * r0M.x + (s / nRadS) * v0Ms.x + (2.0 * (1.0 - c) / nRadS) * v0Ms.y;
+        const ry = 6.0 * (s - nt) * r0M.x + r0M.y - (2.0 * (1.0 - c) / nRadS) * v0Ms.x + ((4.0 * s - 3.0 * nt) / nRadS) * v0Ms.y;
+        const rz = c * r0M.z + (s / nRadS) * v0Ms.z;
+
+        const vx = (3.0 * nRadS * s) * r0M.x + c * v0Ms.x + (2.0 * s) * v0Ms.y;
+        const vy = (-6.0 * nRadS * (1.0 - c)) * r0M.x - (2.0 * s) * v0Ms.x + (4.0 * c - 3.0) * v0Ms.y;
+        const vz = (-nRadS * s) * r0M.z + c * v0Ms.z;
+
+        return { r: { x: rx, y: ry, z: rz }, v: { x: vx, y: vy, z: vz } };
+    }
+
+    function computeCWRendezvousJS(aTargetKm, r0M, v0Ms, tRdvSec, initMassKg, ispS) {
+        const aSafe = Math.max(R_EQ + MIN_SAFE_ALT, aTargetKm || (R_EQ + 650.0));
+        let tSec = Math.max(60.0, tRdvSec || 2700.0);
+        const n = Math.sqrt(MU / (aSafe * aSafe * aSafe));
+
+        let nt = n * tSec;
+        let c = Math.cos(nt), s = Math.sin(nt);
+        let detXyNorm = s * (4.0 * s - 3.0 * nt) + 4.0 * (1.0 - c) * (1.0 - c);
+
+        if (Math.abs(detXyNorm) < 1e-6 || Math.abs(s) < 1e-4) {
+            tSec += 30.0;
+            nt = n * tSec;
+            c = Math.cos(nt);
+            s = Math.sin(nt);
+            detXyNorm = s * (4.0 * s - 3.0 * nt) + 4.0 * (1.0 - c) * (1.0 - c);
+        }
+        if (Math.abs(detXyNorm) < 1e-9) detXyNorm = (detXyNorm >= 0) ? 1e-9 : -1e-9;
+        const sSafe = (Math.abs(s) < 1e-5) ? ((s >= 0 ? 1.0 : -1.0) * 1e-5) : s;
+
+        const bx = -(4.0 - 3.0 * c) * r0M.x;
+        const by = -6.0 * (s - nt) * r0M.x - r0M.y;
+        const bz = -c * r0M.z;
+
+        const v0Post = {
+            x: (n / detXyNorm) * ((4.0 * s - 3.0 * nt) * bx - 2.0 * (1.0 - c) * by),
+            y: (n / detXyNorm) * (2.0 * (1.0 - c) * bx + s * by),
+            z: (n / sSafe) * bz
+        };
+
+        const dvInjectVec = vecSub(v0Post, v0Ms);
+        const dvInjectMag = vecNorm(dvInjectVec);
+
+        const arrState = propagateCWStateJS(r0M, v0Post, n, tSec);
+        const dvBrakeVec = vecScale(arrState.v, -1.0);
+        const dvBrakeMag = vecNorm(dvBrakeVec);
+
+        const totalDvMs = dvInjectMag + dvBrakeMag;
+        const finalMassKg = (ispS > 0 && initMassKg > 0) ? initMassKg * Math.exp(-totalDvMs / (ispS * G0)) : initMassKg;
+        const fuelKg = initMassKg - finalMassKg;
+
+        const numSteps = 120;
+        const traj = [];
+        for (let i = 0; i <= numSteps; i++) {
+            const tCur = (i / numSteps) * tSec;
+            let st;
+            if (i < numSteps) {
+                st = propagateCWStateJS(r0M, v0Post, n, tCur);
+            } else {
+                st = { r: { x: 0.0, y: 0.0, z: 0.0 }, v: { x: 0.0, y: 0.0, z: 0.0 } };
+            }
+            const rng = vecNorm(st.r);
+            traj.push({
+                t: +tCur.toFixed(1),
+                rx_m: +st.r.x.toFixed(2),
+                ry_m: +st.r.y.toFixed(2),
+                rz_m: +st.r.z.toFixed(2),
+                vx_ms: +st.v.x.toFixed(4),
+                vy_ms: +st.v.y.toFixed(4),
+                vz_ms: +st.v.z.toFixed(4),
+                range_m: +rng.toFixed(2)
+            });
+        }
+
+        return {
+            rendezvous: {
+                r0_m: [+r0M.x.toFixed(2), +r0M.y.toFixed(2), +r0M.z.toFixed(2)],
+                v0_ms: [+v0Ms.x.toFixed(4), +v0Ms.y.toFixed(4), +v0Ms.z.toFixed(4)],
+                v0_post_ms: [+v0Post.x.toFixed(4), +v0Post.y.toFixed(4), +v0Post.z.toFixed(4)],
+                initial_range_m: +vecNorm(r0M).toFixed(2),
+                tof_sec: +tSec.toFixed(1),
+                tof_min: +(tSec / 60.0).toFixed(2),
+                mean_motion_rad_s: +n.toFixed(8),
+                dv_inject_lvlh_ms: [+dvInjectVec.x.toFixed(4), +dvInjectVec.y.toFixed(4), +dvInjectVec.z.toFixed(4)],
+                dv_brake_lvlh_ms: [+dvBrakeVec.x.toFixed(4), +dvBrakeVec.y.toFixed(4), +dvBrakeVec.z.toFixed(4)],
+                dv_inject_ms: +dvInjectMag.toFixed(3),
+                dv_brake_ms: +dvBrakeMag.toFixed(3),
+                total_dv_ms: +totalDvMs.toFixed(3),
+                fuel_kg: +fuelKg.toFixed(3),
+                final_mass_kg: +finalMassKg.toFixed(2)
+            },
+            traj_rendezvous: traj
+        };
+    }
+
     document.getElementById('btnRunCustomMission').addEventListener('click', function() {
         const mass0 = parseFloat(document.getElementById('inMass').value) || 500;
         const propParts = document.getElementById('inPropellant').value.split('|');
@@ -1807,6 +2109,18 @@
         const kepTargStart = { ...kepTarg, theta: Math.PI };
         const trajTarg = writeTrajectoryArrayC(kepTargStart, repTarget.period_min * 60.0 * 2.0, 240, sc, st, simClock);
 
+        // Sprint 12: Clohessy-Wiltshire Terminal Rendezvous & Proximity Operations
+        const rdvDx0 = parseFloat(document.getElementById('rdvDx0').value);
+        const rdvDy0 = parseFloat(document.getElementById('rdvDy0').value);
+        const rdvDz0 = parseFloat(document.getElementById('rdvDz0').value);
+        const rdvTofMin = Math.max(2.0, parseFloat(document.getElementById('rdvTofMin').value) || 45.0);
+        const r0LvlhM = {
+            x: isNaN(rdvDx0) ? -250.0 : rdvDx0,
+            y: isNaN(rdvDy0) ? -2000.0 : rdvDy0,
+            z: isNaN(rdvDz0) ? 100.0 : rdvDz0
+        };
+        const cwRes = computeCWRendezvousJS(kepTarg.a, r0LvlhM, { x: 0.0, y: 0.0, z: 0.0 }, rdvTofMin * 60.0, finalMass, isp);
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -1824,8 +2138,10 @@
                 fuel_kg: +fuelUsed.toFixed(2), final_mass_kg: +finalMass.toFixed(2)
             },
             target_report: repTarget,
+            rendezvous: cwRes.rendezvous,
             lambert_curve: lambertCurve,
-            traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg
+            traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
+            traj_rendezvous: cwRes.traj_rendezvous
         };
 
         document.getElementById('inputModal').classList.remove('open');

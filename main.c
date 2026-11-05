@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 7: MULTI-MANEUVER & PROPELLANT ENGINE  \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 12: TERMINAL RENDEZVOUS & PROXIMITY OPS\n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -48,6 +48,15 @@ int main(void) {
     OptimalTransferPlan plan = optimize_orbital_transfer(orb_initial, orb_target, initial_mass, selected_prop, max_time_limit_sec, EARTH_MU);
     OrbitReport rep_target = evaluate_orbit_regime(orb_target, plan.final_mass, &sc, &milano);
 
+    // 4. SPRINT 12: TERMINAL RENDEZVOUS & DOCKING (CLOHESSY-WILTSHIRE / HILL LVLH)
+    // Stato iniziale relativo Chaser vs Target: dx0 = -250 m (R-bar), dy0 = -2000 m (V-bar), dz0 = +100 m (H-bar)
+    Vector3D r0_lvlh_m  = {-250.0, -2000.0, 100.0};
+    Vector3D v0_lvlh_ms = {0.0, 0.0, 0.0};
+    double t_rdv_sec    = 45.0 * 60.0; // 45 minuti di approccio finale
+
+    RendezvousPlan rdv = compute_cw_rendezvous(orb_target.a, r0_lvlh_m, v0_lvlh_ms, t_rdv_sec,
+                                               plan.final_mass, plan.prop_info.isp, EARTH_MU);
+
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -63,9 +72,22 @@ int main(void) {
     printf("  * Total Delta-V / Fuel  : %7.2f m/s | Fuel = %.2f kg | TOF = %.2f min\n\n",
            plan.total_dv * 1000.0, plan.propellant_used, plan.transfer_time_sec / 60.0);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Burn Points & Propellant Data!\n");
+    printf("[TERMINAL RENDEZVOUS & PROXIMITY OPS - CLOHESSY-WILTSHIRE LVLH]\n");
+    printf("  * Initial LVLH Offset   : dX(R-bar) = %+.1f m, dY(V-bar) = %+.1f m, dZ(H-bar) = %+.1f m (Range = %.1f m)\n",
+           rdv.r0_lvlh_m.x, rdv.r0_lvlh_m.y, rdv.r0_lvlh_m.z, rdv.initial_range_m);
+    printf("  * CW Targeting Burn 1   : %6.3f m/s | LVLH: [ %+6.3f, %+6.3f, %+6.3f ] m/s\n",
+           rdv.dv_inject_ms, rdv.dv_inject_lvlh_ms.x, rdv.dv_inject_lvlh_ms.y, rdv.dv_inject_lvlh_ms.z);
+    printf("  * Soft-Docking Burn 2   : %6.3f m/s | LVLH: [ %+6.3f, %+6.3f, %+6.3f ] m/s\n",
+           rdv.dv_brake_ms, rdv.dv_brake_lvlh_ms.x, rdv.dv_brake_lvlh_ms.y, rdv.dv_brake_lvlh_ms.z);
+    printf("  * Total Rendezvous Cost : %6.3f m/s | Fuel = %.3f kg | Approach TOF = %.1f min\n\n",
+           rdv.total_dv_ms, rdv.propellant_used_kg, rdv.transfer_time_sec / 60.0);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Burn Points, Propellant & CW Rendezvous Data!\n");
     }
+    // Esporta copia anche nella cartella corrente nel caso l'eseguibile venga lanciato dalla root
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, &milano, &sc);
+
     printf("======================================================================\n");
     return 0;
 }

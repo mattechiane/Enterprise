@@ -8,7 +8,6 @@ add_executable(Enterprise
         orbit_types.h
         astrodynamics.h
         astrodynamics.c
-        astrodynamics.c
         propagator.h
         propagator.c
         telemetry.h
