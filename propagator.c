@@ -39,6 +39,10 @@ SpaceEnvironment evaluate_environment(Vector3D pos, Vector3D sun_dir) {
 
 Vector3D accel_j2(Vector3D pos) {
     double r2 = vec_dot(pos, pos);
+    if (r2 < 1e-6) {
+        Vector3D zero = {0.0, 0.0, 0.0};
+        return zero;
+    }
     double r  = sqrt(r2);
     double r5 = r2 * r2 * r;
 
@@ -67,10 +71,11 @@ Vector3D accel_drag(CartesianState state, const SpacecraftConfig *sc, double den
 }
 
 StateDerivative compute_derivatives(CartesianState state, const SpacecraftConfig *sc, const ForceModelConfig *forces) {
-    StateDerivative deriv;
+    StateDerivative deriv = {0};
     deriv.d_position = state.velocity;
 
     double r = vec_norm(state.position);
+    if (r < 1e-6) return deriv;
     double r3 = r * r * r;
 
     // 1. Gravità kepleriana centrale (Due Corpi)

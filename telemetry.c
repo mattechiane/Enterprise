@@ -326,7 +326,8 @@ bool export_web_mission_json(const char *filename,
         KeplerianElements kep_trans = rep_init.initial_kep;
         kep_trans.a = 0.5 * (r1 + r2);
         kep_trans.e = fabs(r2 - r1) / (r1 + r2);
-        kep_trans.theta = 0.0;
+        kep_trans.omega = (r2 >= r1) ? rep_init.initial_kep.omega : (rep_init.initial_kep.omega + PI);
+        kep_trans.theta = (r2 >= r1) ? 0.0 : PI;
         write_trajectory_json_array(fp, kep_trans, plan.transfer_time_sec, 100, sc, station, &t_cum, &soc_pct);
     }
     fprintf(fp, ",\n");

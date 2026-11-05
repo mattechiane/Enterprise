@@ -79,6 +79,10 @@ LambertSolution solve_lambert_universal(Vector3D r1_vec, Vector3D v1_init,
         z = 0.5 * (z_low + z_high);
         double C = stumpff_C(z);
         double S = stumpff_S(z);
+        if (C <= 1e-12) {
+            z_high = z;
+            continue;
+        }
         double y = r1 + r2 + A * (z * S - 1.0) / sqrt(C);
 
         if (y <= 0.0) {
@@ -97,6 +101,7 @@ LambertSolution solve_lambert_universal(Vector3D r1_vec, Vector3D v1_init,
 
     double C = stumpff_C(z);
     double S = stumpff_S(z);
+    if (C <= 1e-12) return sol;
     double y = r1 + r2 + A * (z * S - 1.0) / sqrt(C);
     if (y <= 0.0) return sol;
 
@@ -172,17 +177,29 @@ bool validate_and_clamp_closed_orbit(KeplerianElements *kep, char *warning_msg) 
     if (warning_msg) warning_msg[0] = '\0';
 
     double r_min_safe = EARTH_RADIUS + MIN_SAFE_PERIGEE_ALT_KM;
+    double r_max_hill = EARTH_RADIUS + MAX_HILL_APOGEE_ALT_KM;
 
-    if (kep->a < r_min_safe) {
+    if (isnan(kep->a) || isinf(kep->a) || kep->a < r_min_safe) {
         kep->a = r_min_safe;
         valid = false;
         if (warning_msg) strcpy(warning_msg, "Semi-major axis raised to minimum safe LEO altitude (150 km).");
     }
-
-    if (kep->e < 0.0) kep->e = 0.0;
-    if (kep->e > 0.95) {
-        kep->e = 0.95;
+    if (kep->a > r_max_hill) {
+        kep->a = r_max_hill;
         valid = false;
+        if (warning_msg) strcpy(warning_msg, "Semi-major axis clamped to Earth Hill sphere limit (900,000 km).");
+    }
+
+    if (isnan(kep->e) || kep->e < 0.0) {
+        kep->e = 0.0;
+        valid = false;
+    }
+    if (kep->e >= 0.95) {
+        kep->e = 0.9499;
+        valid = false;
+        if (warning_msg && warning_msg[0] == '\0') {
+            strcpy(warning_msg, "Eccentricity clamped below 0.95 (closed-orbit safety guardrail).");
+        }
     }
 
     double e_max_perigee = 1.0 - (r_min_safe / kep->a);
@@ -194,6 +211,13 @@ bool validate_and_clamp_closed_orbit(KeplerianElements *kep, char *warning_msg) 
         if (warning_msg) {
             snprintf(warning_msg, 128, "Eccentricity clamped to %.4f to prevent Earth impact (Perigee >= 150 km).", e_max_perigee);
         }
+    }
+
+    if (kep->a * (1.0 + kep->e) > r_max_hill) {
+        double e_max_apogee = (r_max_hill / kep->a) - 1.0;
+        if (e_max_apogee < 0.0) e_max_apogee = 0.0;
+        if (kep->e > e_max_apogee) kep->e = e_max_apogee;
+        valid = false;
     }
 
     return valid;
@@ -308,12 +332,13 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
     if (cos_theta >  1.0) cos_theta =  1.0;
     if (cos_theta < -1.0) cos_theta = -1.0;
     double total_plane_angle = acos(cos_theta);
-    double sign_inc = (orb_target.i >= orb_init.i) ? 1.0 : -1.0;
+    double sign_inc = (orb_target.i > orb_init.i || (fabs(orb_target.i - orb_init.i) < 1e-9 && orb_target.RAAN >= orb_init.RAAN)) ? 1.0 : -1.0;
 
     // ==================================================================
     // CASO A: PROPULSIONE ELETTRICA CONTINUA A SPIRALE (EDELBAUM THEORY)
     // ==================================================================
     if (best.is_low_thrust) {
+        if (best.continuous_thrust_n <= 1e-6) best.continuous_thrust_n = 0.50;
         double v1_c = sqrt(mu / orb_init.a);
         double v2_c = sqrt(mu / orb_target.a);
         // Formula di Edelbaum per il Delta-V di una spirale continua 3D

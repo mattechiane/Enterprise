@@ -57,16 +57,26 @@ Vector3D vec_normalize(Vector3D v) {
 // ==========================================
 KeplerianElements cartesian_to_keplerian(CartesianState state, double mu) {
     KeplerianElements kep = {0};
+    if (mu <= 0.0) return kep;
+
     Vector3D r_vec = state.position;
     Vector3D v_vec = state.velocity;
 
     double r = vec_norm(r_vec);
     double v = vec_norm(v_vec);
+    if (r < 1e-12) {
+        kep.a = EARTH_RADIUS + 400.0;
+        return kep;
+    }
     double v_radial = vec_dot(r_vec, v_vec) / r;
 
     // 1. Momento angolare specifico: h = r x v
     Vector3D h_vec = vec_cross(r_vec, v_vec);
     double h = vec_norm(h_vec);
+    if (h < 1e-12) {
+        kep.a = r;
+        return kep;
+    }
 
     // 2. Inclinazione (i)
     kep.i = acos(clamp(h_vec.z / h, -1.0, 1.0));
@@ -96,40 +106,69 @@ KeplerianElements cartesian_to_keplerian(CartesianState state, double mu) {
     if (fabs(energy) > 1e-12) {
         kep.a = -mu / (2.0 * energy);
     } else {
-        kep.a = INFINITY; // Traiettoria parabolica
+        kep.a = r / (1.0 - clamp(kep.e, 0.0, 0.99));
     }
 
-    // 7. Argomento del pericentro (omega)
-    if (n > 1e-10 && kep.e > 1e-10) {
-        kep.omega = acos(clamp(vec_dot(n_vec, e_vec) / (n * kep.e), -1.0, 1.0));
-        if (e_vec.z < 0.0) {
-            kep.omega = (2.0 * PI) - kep.omega;
+    // 7. Argomento del pericentro (omega) - gestisce anche orbite equatoriali (i -> 0)
+    if (kep.e > 1e-10) {
+        if (n > 1e-10) {
+            kep.omega = acos(clamp(vec_dot(n_vec, e_vec) / (n * kep.e), -1.0, 1.0));
+            if (e_vec.z < 0.0) {
+                kep.omega = (2.0 * PI) - kep.omega;
+            }
+        } else {
+            // Orbita equatoriale eccentrica: longitudine del pericentro
+            kep.omega = acos(clamp(e_vec.x / kep.e, -1.0, 1.0));
+            if (e_vec.y < 0.0) {
+                kep.omega = (2.0 * PI) - kep.omega;
+            }
+            if (h_vec.z < 0.0) {
+                kep.omega = fmod((2.0 * PI) - kep.omega, 2.0 * PI);
+            }
         }
     } else {
         kep.omega = 0.0;
     }
 
-    // 8. Anomalia Vera (theta)
+    // 8. Anomalia Vera (theta) - gestisce anche orbite circolari (e -> 0) ed equatoriali (i -> 0)
     if (kep.e > 1e-10) {
         kep.theta = acos(clamp(vec_dot(e_vec, r_vec) / (kep.e * r), -1.0, 1.0));
         if (v_radial < 0.0) {
             kep.theta = (2.0 * PI) - kep.theta;
         }
+    } else if (n > 1e-10) {
+        // Orbita circolare inclinata: argomento di latitudine u
+        kep.theta = acos(clamp(vec_dot(n_vec, r_vec) / (n * r), -1.0, 1.0));
+        if (r_vec.z < 0.0) {
+            kep.theta = (2.0 * PI) - kep.theta;
+        }
     } else {
-        kep.theta = 0.0;
+        // Orbita circolare equatoriale: longitudine vera l
+        kep.theta = acos(clamp(r_vec.x / r, -1.0, 1.0));
+        if (r_vec.y < 0.0) {
+            kep.theta = (2.0 * PI) - kep.theta;
+        }
+        if (h_vec.z < 0.0) {
+            kep.theta = fmod((2.0 * PI) - kep.theta, 2.0 * PI);
+        }
     }
 
     return kep;
 }
 
 CartesianState keplerian_to_cartesian(KeplerianElements kep, double mu, double mass, double epoch) {
-    CartesianState state;
+    CartesianState state = {0};
     state.mass = mass;
     state.epoch = epoch;
+    if (mu <= 0.0 || kep.a <= 0.0) return state;
 
+    double e_safe = clamp(kep.e, 0.0, 0.9999);
     // Semilato retto: p = a * (1 - e^2)
-    double p = kep.a * (1.0 - (kep.e * kep.e));
-    double r = p / (1.0 + kep.e * cos(kep.theta));
+    double p = kep.a * (1.0 - (e_safe * e_safe));
+    if (p < 1e-9) p = 1e-9;
+    double denom = 1.0 + e_safe * cos(kep.theta);
+    if (fabs(denom) < 1e-9) denom = 1e-9;
+    double r = p / denom;
 
     // Posizione e velocità nel sistema perifocale (PQW)
     double r_p = r * cos(kep.theta);
@@ -137,7 +176,7 @@ CartesianState keplerian_to_cartesian(KeplerianElements kep, double mu, double m
 
     double sqrt_mu_p = sqrt(mu / p);
     double v_p = -sqrt_mu_p * sin(kep.theta);
-    double v_q = sqrt_mu_p * (kep.e + cos(kep.theta));
+    double v_q = sqrt_mu_p * (e_safe + cos(kep.theta));
 
     // Pre-calcolo funzioni trigonometriche per la matrice di rotazione PQW -> ECI
     double cos_O = cos(kep.RAAN);

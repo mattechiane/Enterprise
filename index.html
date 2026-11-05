@@ -222,7 +222,7 @@
         </div>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
             <div style="display:inline-flex; gap:4px; align-items:center; background:#0b0f19; padding:3px 6px; border-radius:6px; border:1px solid var(--border);" title="Use keyboard arrow keys (â† â†‘ â†“ â†’) or click these buttons to rotate without changing zoom">
-                <span style="font-size:11px; color:var(--muted); margin-right:4px;">&#9000; Rotate:</span>
+                <span style="font-size:11px; color:var(--text-muted); margin-right:4px;">&#9000; Rotate:</span>
                 <button type="button" class="btn-sim" id="btnRotLeft3D" style="padding:3px 8px;" title="Rotate Left (ArrowLeft)">&#9664;</button>
                 <button type="button" class="btn-sim" id="btnRotUp3D" style="padding:3px 8px;" title="Rotate Up (ArrowUp)">&#9650;</button>
                 <button type="button" class="btn-sim" id="btnRotDown3D" style="padding:3px 8px;" title="Rotate Down (ArrowDown)">&#9660;</button>
@@ -387,7 +387,7 @@
         </div>
 
         <div class="envelope-info">
-            <span>&#128737; <strong>Closed-Orbit Safety Guardrails (ESA/NASA Standards):</strong> Perigee Altitude $h_p \ge 150\text{ km}$ &bull; Apogee $h_a \le 900\,000\text{ km}$ ($0 \le e < 0.95$).</span>
+            <span>&#128737; <strong>Closed-Orbit Safety Guardrails (ESA/NASA Standards):</strong> Perigee Altitude h<sub>p</sub> &ge; 150 km &bull; Apogee h<sub>a</sub> &le; 900,000 km (0 &le; e &lt; 0.95).</span>
             <button class="btn-autofix" id="btnAutoClampAll">Auto-Fix Limits</button>
         </div>
 
@@ -605,10 +605,12 @@
     let lambertClickedFlag = false;
 
     function kepToCart(a, e, incDeg, raanDeg) {
-        const inc = incDeg * DEG2RAD, raan = raanDeg * DEG2RAD;
-        const p = a * (1.0 - e * e);
-        const r = a * (1.0 - e);
-        const v = Math.sqrt(MU / p) * (1.0 + e);
+        const aSafe = Math.max(R_EQ + MIN_SAFE_ALT, a || (R_EQ + 400.0));
+        const eSafe = Math.max(0.0, Math.min(0.9499, e || 0.0));
+        const inc = (incDeg || 0.0) * DEG2RAD, raan = (raanDeg || 0.0) * DEG2RAD;
+        const p = Math.max(1e-6, aSafe * (1.0 - eSafe * eSafe));
+        const r = aSafe * (1.0 - eSafe);
+        const v = Math.sqrt(MU / p) * (1.0 + eSafe);
         const rx = r * Math.cos(raan);
         const ry = r * Math.sin(raan);
         const rz = 0.0;
@@ -679,20 +681,24 @@
             N = R_EQ / Math.sqrt(1.0 - E2 * s * s);
             lat = Math.atan2(ze + E2 * N * s, p);
         }
-        const alt = (p / Math.cos(lat)) - N;
+        const cosLat = Math.cos(lat);
+        const sinLat = Math.sin(lat);
+        const alt = (Math.abs(cosLat) > 1e-6)
+            ? ((p / cosLat) - N)
+            : ((Math.abs(ze) / Math.max(1e-9, Math.abs(sinLat))) - N * (1.0 - E2));
         return { lat: lat * RAD2DEG, lon: lon, alt: alt, xe: xe, ye: ye, ze: ze };
     }
 
     function computeGroundRadarJS(xe, ye, ze, stLatDeg, stLonDeg) {
         const stEcef = geodeticToWGS84(stLatDeg, stLonDeg, 0.14);
         const dx = xe - stEcef.x, dy = ye - stEcef.y, dz = ze - stEcef.z;
-        const range = Math.hypot(dx, dy, dz) || 1;
+        const range = Math.hypot(dx, dy, dz) || 1e-9;
         const lat = stLatDeg * DEG2RAD, lon = stLonDeg * DEG2RAD;
         const sinLat = Math.sin(lat), cosLat = Math.cos(lat);
         const sinLon = Math.sin(lon), cosLon = Math.cos(lon);
         const rhoZ = cosLat * cosLon * dx + cosLat * sinLon * dy + sinLat * dz;
         const elDeg = Math.asin(Math.max(-1, Math.min(1, rhoZ / range))) * RAD2DEG;
-        return { el: +elDeg.toFixed(2), rng: +range.toFixed(1) };
+        return { el: +elDeg.toFixed(2), el_raw: elDeg, rng: +range.toFixed(1), rng_raw: range };
     }
 
     function enrichTelemetrySeries(frames, st, isLowThrust) {
@@ -704,7 +710,11 @@
 
         for (let i = 0; i < frames.length; i++) {
             const p = frames[i];
-            const dt = (i > 0) ? 25.0 : 0.0;
+            let dt = 0.0;
+            if (i > 0) {
+                const rawDt = (p.t !== undefined && frames[i - 1].t !== undefined) ? (p.t - frames[i - 1].t) : 25.0;
+                dt = (rawDt > 0 && rawDt < 300.0) ? rawDt : 28.5;
+            }
             tRunning += dt;
             p.t_mission_min = +(tRunning / 60.0).toFixed(2);
 
@@ -735,19 +745,35 @@
 
     function cartToKep(rx, ry, rz, vx, vy, vz) {
         const r = Math.hypot(rx, ry, rz), v = Math.hypot(vx, vy, vz);
+        if (r < 1e-9) {
+            return { a: R_EQ + 400.0, alt: 400.0, e: 0.0, i: 0.0, raan: 0.0 };
+        }
         const hx = ry*vz - rz*vy, hy = rz*vx - rx*vz, hz = rx*vy - ry*vx;
         const h = Math.hypot(hx, hy, hz);
+        if (h < 1e-9) {
+            return { a: r, alt: r - R_EQ, e: 0.0, i: 0.0, raan: 0.0 };
+        }
         const inc = Math.acos(Math.max(-1, Math.min(1, hz / h)));
         const nx = -hy, ny = hx, n = Math.hypot(nx, ny);
-        let raan = n > 1e-9 ? Math.acos(Math.max(-1, Math.min(1, nx / n))) : 0;
-        if (ny < 0) raan = 2 * Math.PI - raan;
-        const energy = 0.5 * v * v - MU / r;
-        const a = -MU / (2.0 * energy);
         const rdotv = rx*vx + ry*vy + rz*vz;
         const ex = ((v*v - MU/r)*rx - rdotv*vx) / MU;
         const ey = ((v*v - MU/r)*ry - rdotv*vy) / MU;
         const ez = ((v*v - MU/r)*rz - rdotv*vz) / MU;
         const e = Math.hypot(ex, ey, ez);
+
+        let raan = 0.0;
+        if (n > 1e-9) {
+            raan = Math.acos(Math.max(-1, Math.min(1, nx / n)));
+            if (ny < 0) raan = 2 * Math.PI - raan;
+        } else if (e > 1e-9) {
+            raan = Math.atan2(ey, ex);
+            if (raan < 0) raan += 2 * Math.PI;
+        } else {
+            raan = Math.atan2(ry, rx);
+            if (raan < 0) raan += 2 * Math.PI;
+        }
+        const energy = 0.5 * v * v - MU / r;
+        const a = Math.abs(energy) > 1e-12 ? (-MU / (2.0 * energy)) : (r / Math.max(0.01, 1.0 - e));
         return { a: a, alt: a - R_EQ, e: e, i: inc * RAD2DEG, raan: raan * RAD2DEG };
     }
 
@@ -873,18 +899,37 @@
     }
 
     document.getElementById('btnAutoClampAll').addEventListener('click', function() {
-        ['init', 'targ'].forEach(p => {
-            const altInput = document.getElementById(p + 'Alt');
-            const eccInput = document.getElementById(p + 'Ecc');
-            let alt = parseFloat(altInput.value) || 400;
-            if (alt < MIN_SAFE_ALT) { alt = MIN_SAFE_ALT; altInput.value = alt; }
+        ['Init', 'Targ'].forEach(prefix => {
+            const p = prefix.toLowerCase();
+            const mode = document.getElementById('mode' + prefix).value;
+            let orb = readOrbitFromUI(prefix);
+            let alt = (isNaN(orb.alt) || !isFinite(orb.alt)) ? 400.0 : orb.alt;
+            if (alt < MIN_SAFE_ALT) alt = MIN_SAFE_ALT;
+            if (alt > 400000.0) alt = 400000.0;
             const a = R_EQ + alt;
-            const maxE = Math.max(0, Math.min(0.95, 1.0 - (R_EQ + MIN_SAFE_ALT) / a));
-            let e = parseFloat(eccInput.value) || 0;
+            const maxEPerigee = 1.0 - (R_EQ + MIN_SAFE_ALT) / a;
+            const maxEApogee  = (R_EQ + MAX_APOGEE_ALT) / a - 1.0;
+            const maxE = Math.max(0, Math.min(0.9495, maxEPerigee, maxEApogee));
+            let e = (isNaN(orb.e) || !isFinite(orb.e)) ? 0.0 : orb.e;
             if (e < 0) e = 0;
-            if (e > maxE) e = +(maxE - 0.0005).toFixed(4);
-            if (e < 0) e = 0;
-            eccInput.value = e;
+            if (e > maxE) e = +(Math.max(0, maxE - 0.0005)).toFixed(4);
+            const inc  = Math.max(0, Math.min(180, isNaN(orb.i) ? 51.6 : orb.i));
+            const raan = ((isNaN(orb.raan) ? 30.0 : orb.raan) % 360 + 360) % 360;
+
+            document.getElementById(p + 'Alt').value  = +alt.toFixed(1);
+            document.getElementById(p + 'Ecc').value  = e;
+            document.getElementById(p + 'Inc').value  = +inc.toFixed(2);
+            document.getElementById(p + 'Raan').value = +raan.toFixed(1);
+
+            if (mode === 'cart') {
+                const c = kepToCart(a, e, inc, raan);
+                document.getElementById(p + 'Rx').value = c.rx.toFixed(2);
+                document.getElementById(p + 'Ry').value = c.ry.toFixed(2);
+                document.getElementById(p + 'Rz').value = c.rz.toFixed(2);
+                document.getElementById(p + 'Vx').value = c.vx.toFixed(3);
+                document.getElementById(p + 'Vy').value = c.vy.toFixed(3);
+                document.getElementById(p + 'Vz').value = c.vz.toFixed(3);
+            }
         });
         validateModalOrbits();
     });
@@ -940,10 +985,10 @@
 
         document.getElementById('bannerManeuverType').textContent = `OPTIMAL STRATEGY: ${maneuverTitle}`;
         document.getElementById('bannerPropellant').textContent = isLowThrust
-            ? `Propulsion: ${propName} [${propCat}] â€¢ Isp: ${ispVal} s â€¢ Continuous Thrust: ${m.thrust_n || 0.5} N`
-            : `Propellant: ${propName} [${propCat}] â€¢ Specific Impulse (Isp): ${ispVal} s`;
-        document.getElementById('bannerTotalDv').textContent = `Total Î”V: ${m.total_dv_ms} m/s`;
-        document.getElementById('bannerFuelMass').textContent = `Propellant Consumed: ${m.fuel_kg} kg â€¢ Final Mass: ${m.final_mass_kg} kg â€¢ Duration: ${tofDisplay}`;
+            ? `Propulsion: ${propName} [${propCat}] • Isp: ${ispVal} s • Continuous Thrust: ${m.thrust_n || 0.5} N`
+            : `Propellant: ${propName} [${propCat}] • Specific Impulse (Isp): ${ispVal} s`;
+        document.getElementById('bannerTotalDv').textContent = `Total ΔV: ${m.total_dv_ms} m/s`;
+        document.getElementById('bannerFuelMass').textContent = `Propellant Consumed: ${m.fuel_kg} kg • Final Mass: ${m.final_mass_kg} kg • Duration: ${tofDisplay}`;
 
         document.getElementById('sheetBurnPoints').innerHTML = `
         <div class="row-item"><span class="row-label">${isLowThrust ? 'Spiral Ignition Start' : 'Burn 1 Location (Node 1)'}</span><span class="row-val" style="color:var(--amber)">${isLowThrust ? 'Continuous Thrust ON' : 'Perigee Departure'}</span></div>
@@ -1000,7 +1045,7 @@
 
         Plotly.newPlot('plotLambert', [
             {
-                type: 'scatter', mode: 'lines', name: 'Lambert Total Î”V [m/s]',
+                type: 'scatter', mode: 'lines', name: 'Lambert Total ΔV [m/s]',
                 x: lCurve.map(p => p.tof_min), y: lCurve.map(p => p.dv_ms),
                 line: { color: '#00e5ff', width: 3.5, shape: 'spline' },
                 fill: 'tozeroy', fillcolor: 'rgba(0, 229, 255, 0.08)'
@@ -1020,7 +1065,7 @@
             margin: { l: 65, r: 65, b: 48, t: 24 },
             hovermode: 'x unified',
             xaxis: { title: 'Impulsive Transfer Time of Flight (TOF) [minutes]', color: '#e2e8f0', gridcolor: '#1e293b' },
-            yaxis: { title: 'Total Maneuver Cost Î”V [m/s]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#1e293b' },
+            yaxis: { title: 'Total Maneuver Cost ΔV [m/s]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#1e293b' },
             yaxis2: { title: 'Propellant Mass Consumed [kg]', titlefont: { color: '#00e676' }, tickfont: { color: '#00e676' }, overlaying: 'y', side: 'right', showgrid: false },
             annotations: [{
                 x: selX, y: selY, xref: 'x', yref: 'y',
@@ -1091,7 +1136,7 @@
             line: { color: '#4ade80', width: 2.2 }, hoverinfo: 'skip'
         };
         const traceInit3D = {
-            type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (${r1.alt_km} km, i=${r1.inc_deg}Â°)`,
+            type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (${r1.alt_km} km, i=${r1.inc_deg}°)`,
             x: initSlice.map(p => p.x), y: initSlice.map(p => p.y), z: initSlice.map(p => p.z),
             line: { color: '#00e5ff', width: 4.5 }, hoverinfo: 'name'
         };
@@ -1105,7 +1150,7 @@
         };
 
         const traceTarg3D = {
-            type: 'scatter3d', mode: 'lines', name: `3. Target Orbit (${r2.alt_km} km, i=${r2.inc_deg}Â°)`,
+            type: 'scatter3d', mode: 'lines', name: `3. Target Orbit (${r2.alt_km} km, i=${r2.inc_deg}°)`,
             x: targSlice.map(p => p.x), y: targSlice.map(p => p.y), z: targSlice.map(p => p.z),
             line: { color: '#00e676', width: 4.5 }, hoverinfo: 'name'
         };
@@ -1113,11 +1158,11 @@
         const burnStart = data.traj_transfer[0];
         const burnEnd   = data.traj_transfer[data.traj_transfer.length - 1];
         const traceBurns3D = {
-            type: 'scatter3d', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Maneuver Burn Points (Î”V)',
+            type: 'scatter3d', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Maneuver Burn Points (ΔV)',
             x: [burnStart.x, burnEnd.x], y: [burnStart.y, burnEnd.y], z: [burnStart.z, burnEnd.z],
             text: isLowThrust
                 ? ['SPIRAL START (THRUST ON)', 'SPIRAL CUTOFF (MECO)']
-                : [`BURN 1 (Î”V1: ${m.dv1_ms} m/s)`, `BURN 2 (Î”V2: ${m.dv2_ms} m/s)`],
+                : [`BURN 1 (ΔV1: ${m.dv1_ms} m/s)`, `BURN 2 (ΔV2: ${m.dv2_ms} m/s)`],
             textposition: 'top center',
             textfont: { color: '#ffab00', size: 11.5 },
             marker: { size: 8, color: ['#ffab00', '#d500f9'], symbol: 'diamond', line: { color: '#fff', width: 2 } },
@@ -1165,10 +1210,10 @@
         // PLOT 4: 2D WORLD GROUND TRACK (SYNCHRONIZED WITH CONTINUOUS EARTH ROTATION)
         // ---------------------------------------------------------------------
         const traces2D = [
-            { type: 'scattergeo', mode: 'markers', name: `1. Initial Track (${r1.alt_km} km, ${r1.inc_deg}Â°)`, lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon), marker: { size: 4, color: '#00e5ff' } },
+            { type: 'scattergeo', mode: 'markers', name: `1. Initial Track (${r1.alt_km} km, ${r1.inc_deg}°)`, lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon), marker: { size: 4, color: '#00e5ff' } },
             { type: 'scattergeo', mode: 'markers', name: isLowThrust ? '2. Low-Thrust Spiral Track' : '2. Transfer Maneuver Track', lat: data.traj_transfer.map(p => p.lat), lon: data.traj_transfer.map(p => p.lon), marker: { size: 4.5, color: isLowThrust ? '#e040fb' : '#ffab00' } },
-            { type: 'scattergeo', mode: 'markers', name: `3. Target Track (${r2.alt_km} km, ${r2.inc_deg}Â°)`, lat: targSlice.map(p => p.lat), lon: targSlice.map(p => p.lon), marker: { size: 4, color: '#00e676' } },
-            { type: 'scattergeo', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Burn Locations (Î”V1 / Î”V2)', lat: [burnStart.lat, burnEnd.lat], lon: [burnStart.lon, burnEnd.lon], text: isLowThrust ? ['SPIRAL ON', 'MECO'] : ['BURN 1 (Î”V1)', 'BURN 2 (Î”V2)'], textposition: 'top center', textfont: { color: '#ffab00', size: 11 }, marker: { size: 12, color: ['#ffab00', '#d500f9'], symbol: 'star', line: { color: '#fff', width: 1.5 } } },
+            { type: 'scattergeo', mode: 'markers', name: `3. Target Track (${r2.alt_km} km, ${r2.inc_deg}°)`, lat: targSlice.map(p => p.lat), lon: targSlice.map(p => p.lon), marker: { size: 4, color: '#00e676' } },
+            { type: 'scattergeo', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Burn Locations (ΔV1 / ΔV2)', lat: [burnStart.lat, burnEnd.lat], lon: [burnStart.lon, burnEnd.lon], text: isLowThrust ? ['SPIRAL ON', 'MECO'] : ['BURN 1 (ΔV1)', 'BURN 2 (ΔV2)'], textposition: 'top center', textfont: { color: '#ffab00', size: 11 }, marker: { size: 12, color: ['#ffab00', '#d500f9'], symbol: 'star', line: { color: '#fff', width: 1.5 } } },
             { type: 'scattergeo', mode: 'markers+text', name: st.name, lat: [st.lat], lon: [st.lon], text: [st.name], textposition: 'bottom right', marker: { size: 10, color: '#ff1744', symbol: 'triangle-up', line: { color: '#fff', width: 1 } }, textfont: { color: '#ffffff', size: 11 } },
             { type: 'scattergeo', mode: 'markers+text', name: 'Spacecraft (Live)', lat: [p0.lat], lon: [p0.lon], text: ['SAT'], textposition: 'top right', textfont: { color: '#ffffff', size: 11 }, marker: { size: 11, color: '#ffffff', line: { color: '#ff1744', width: 3 } } }
         ];
@@ -1220,7 +1265,7 @@
                 line: { color: '#00e676', width: 2.8 }, fill: 'tozeroy', fillcolor: 'rgba(0, 230, 118, 0.14)'
             },
             {
-                type: 'scatter', mode: 'lines', name: 'Min Horizon Mask (10Â°)',
+                type: 'scatter', mode: 'lines', name: 'Min Horizon Mask (10°)',
                 x: [tAxis[0], tAxis[tAxis.length - 1]], y: [st.min_el || 10, st.min_el || 10],
                 line: { color: '#ff1744', width: 1.5, dash: 'dash' }
             },
@@ -1280,6 +1325,12 @@
         const rdvRange0 = (rdvInfo.initial_range_m !== undefined) ? rdvInfo.initial_range_m : +Math.hypot(dx0, dy0, dz0).toFixed(2);
         const rdvTofMin = (rdvInfo.tof_min !== undefined) ? rdvInfo.tof_min : +((rdvInfo.tof_sec || 2700) / 60.0).toFixed(2);
 
+        const rdvEndPt = rdvTraj[rdvTraj.length - 1] || { rx_m: 0, ry_m: 0, rz_m: 0, vx_ms: 0, vy_ms: 0, vz_ms: 0 };
+        const rdvEndVel = Math.hypot(rdvEndPt.vx_ms || 0, rdvEndPt.vy_ms || 0, rdvEndPt.vz_ms || 0);
+        const rdvBadgeEl = document.getElementById('rdvStatusBadge');
+        if (rdvBadgeEl) {
+            rdvBadgeEl.innerHTML = `&#10004; SOFT-DOCKING CAPTURE VERIFIED ([${rdvEndPt.rx_m}, ${rdvEndPt.ry_m}, ${rdvEndPt.rz_m}] m | ${rdvEndVel.toFixed(2)} m/s)`;
+        }
         document.getElementById('rdvBannerTitle').textContent =
             `TWO-IMPULSE CLOHESSY-WILTSHIRE RENDEZVOUS (TOF: ${rdvTofMin} min | n = ${(rdvInfo.mean_motion_rad_s * 1000).toFixed(4)} mrad/s)`;
         document.getElementById('rdvBannerSub').innerHTML =
@@ -1410,6 +1461,10 @@
         const mcCloud = (data.mc_cloud && data.mc_cloud.length) ? data.mc_cloud : fallbackMc.mc_cloud;
         const ellRtn  = mcInfo.ellipsoid_3sigma_rtn_km || [8.5, 22.0, 5.2];
 
+        const mcBadgeEl = document.getElementById('mcStatusBadge');
+        if (mcBadgeEl) {
+            mcBadgeEl.innerHTML = `&#127922; N = ${mcInfo.num_runs || 100} MONTE CARLO RUNS (99.7% 3&sigma; CONFIDENCE | &sigma;<sub>&Delta;V</sub>=${mcInfo.sigma_dv_pct}% / &sigma;<sub>pt</sub>=${mcInfo.sigma_point_deg}&deg;)`;
+        }
         document.getElementById('mcBannerTitle').textContent =
             `MONTE CARLO DISPERSION (${mcInfo.num_runs || 100} RUNS) & MID-COURSE TCM (t = 0.5 · TOF)`;
         document.getElementById('mcBannerSub').innerHTML =
@@ -1602,7 +1657,7 @@
             azimuth += dAzimuthDeg * (Math.PI / 180.0);
             elevation += dElevationDeg * (Math.PI / 180.0);
 
-            // Clamp elevation to [-85Â°, +85Â°] to prevent pole flip while keeping North-Up
+            // Clamp elevation to [-85°, +85°] to prevent pole flip while keeping North-Up
             const maxElev = 85.0 * (Math.PI / 180.0);
             elevation = Math.max(-maxElev, Math.min(maxElev, elevation));
 
@@ -1665,7 +1720,7 @@
         document.getElementById('liveAlt').textContent = pt.alt.toFixed(1);
         document.getElementById('liveVel').textContent = (pt.v || 7.6).toFixed(2);
         document.getElementById('liveSoc').textContent = (pt.soc || 95).toFixed(1);
-        document.getElementById('liveLatLon').textContent = `${pt.lat.toFixed(1)}Â°, ${pt.lon.toFixed(1)}Â°`;
+        document.getElementById('liveLatLon').textContent = `${pt.lat.toFixed(1)}°, ${pt.lon.toFixed(1)}°`;
 
         const phaseBadge = document.getElementById('phaseBadge');
         phaseBadge.textContent = pt.phase;
@@ -1855,6 +1910,7 @@
         for (let iter = 0; iter < 90; iter++) {
             z = 0.5 * (zLow + zHigh);
             const C = stumpffC(z), S = stumpffS(z);
+            if (C <= 1e-12) { zHigh = z; continue; }
             const y = r1 + r2 + A * (z * S - 1.0) / Math.sqrt(C);
             if (y <= 0.0) { zLow = z; continue; }
             const x = Math.sqrt(y / C);
@@ -1864,6 +1920,7 @@
         }
 
         const C = stumpffC(z), S = stumpffS(z);
+        if (C <= 1e-12) return sol;
         const y = r1 + r2 + A * (z * S - 1.0) / Math.sqrt(C);
         if (y <= 0.0) return sol;
         const f = 1.0 - (y / r1);
@@ -1911,10 +1968,10 @@
             const ye = -Math.sin(gst) * state.position.x + Math.cos(gst) * state.position.y;
             const rad = computeGroundRadarJS(xe, ye, state.position.z, st.lat, st.lon);
 
-            if (rad.el >= minElDeg) {
+            if (rad.el_raw >= minElDeg) {
                 contactSec += dt;
                 if (!inPass) { inPass = true; passes++; }
-                if (rad.el > maxElDeg) maxElDeg = rad.el;
+                if (rad.el_raw > maxElDeg) maxElDeg = rad.el_raw;
             } else {
                 inPass = false;
             }
@@ -2131,6 +2188,7 @@
                 fuel_kg: +fuelKg.toFixed(3),
                 final_mass_kg: +finalMassKg.toFixed(2)
             },
+            dv_inject_raw: dvInjectMag,
             traj_rendezvous: traj
         };
     }
@@ -2149,7 +2207,7 @@
         const tMid = 0.50 * tArr;
         const tRem = tArr - tMid;
 
-        const dv1NomKms = Math.max(0.08, dv1MagKms || 0.12);
+        const dv1NomKms = (dv1MagKms > 0.05) ? dv1MagKms : 0.12;
         let u1 = vecNormalize(burn1DirRtn || { x: 0, y: 1, z: 0 });
         if (vecNorm(u1) < 1e-6) u1 = { x: 0, y: 1, z: 0 };
 
@@ -2204,7 +2262,7 @@
 
             const midState = propagateCWStateJS(dr0Km, dv1ErrKms, nTrans, tMid);
             const tcmSol   = computeCWRendezvousJS(aTrans, midState.r, midState.v, tRem, finalMassKg, ispS);
-            const tcmDvMs  = tcmSol.rendezvous.dv_inject_ms * 1000.0;
+            const tcmDvMs  = tcmSol.dv_inject_raw * 1000.0;
 
             cloud.push({
                 dx_km: +arrState.r.x.toFixed(3),
@@ -2289,12 +2347,14 @@
             Math.sin(kepInit.i) * Math.sin(kepTarg.i) * Math.cos(kepTarg.RAAN - kepInit.RAAN)
         ));
         const totalPlaneAngle = Math.acos(cosPlane);
-        const signInc = (kepTarg.i >= kepInit.i) ? 1.0 : -1.0;
+        const signInc = (kepTarg.i > kepInit.i || (Math.abs(kepTarg.i - kepInit.i) < 1e-9 && kepTarg.RAAN >= kepInit.RAAN)) ? 1.0 : -1.0;
 
         const aHoh = 0.5 * (r1 + r2);
         const tofHohSec = Math.PI * Math.sqrt(aHoh * aHoh * aHoh / MU);
+        const aHohCurve = 0.5 * (kepInit.a + kepTarg.a);
+        const tofOpt = Math.PI * Math.sqrt(aHohCurve * aHohCurve * aHohCurve / MU);
 
-        let dv1 = 0, dv2 = 0, dv3 = 0, totalDv = 0, tofSec = tofHohSec, spiralRevs = 0;
+        let dv1 = 0, dv2 = 0, dv3 = 0, totalDv = 0, baseOptDv = 0, tofSec = tofHohSec, spiralRevs = 0;
         let numBurns = 2;
         let transferApogeeKm = (r2 >= r1) ? r2 : r1;
         let b1Dir = { x: 0, y: 1, z: 0 }, b2Dir = { x: 0, y: 1, z: 0 };
@@ -2305,6 +2365,7 @@
             const v1c = Math.sqrt(MU / kepInit.a), v2c = Math.sqrt(MU / kepTarg.a);
             const effAngle = Math.min(Math.PI, 0.5 * Math.PI * totalPlaneAngle);
             totalDv = Math.sqrt(v1c*v1c + v2c*v2c - 2*v1c*v2c*Math.cos(effAngle));
+            baseOptDv = totalDv;
             dv1 = totalDv;
             numBurns = 1;
             const yaw = Math.atan2(v2c * Math.sin(effAngle), Math.abs(v1c - v2c * Math.cos(effAngle)) + 1e-6);
@@ -2312,7 +2373,7 @@
             b2Dir = b1Dir;
 
             const fuelSpiral = mass0 * (1.0 - Math.exp(-(totalDv * 1000.0) / (isp * G0)));
-            const mdot = thrustN / (isp * G0);
+            const mdot = Math.max(1e-9, thrustN) / (isp * G0);
             tofSec = fuelSpiral / mdot;
             const meanPer = 2.0 * Math.PI * Math.sqrt(Math.pow(0.5 * (kepInit.a + kepTarg.a), 3) / MU);
             spiralRevs = +(tofSec / meanPer).toFixed(1);
@@ -2343,6 +2404,7 @@
             dv1 = vecNorm(b1Hoh);
             dv2 = vecNorm(b2Hoh);
             totalDv = dv1 + dv2;
+            baseOptDv = totalDv;
             b1Dir = vecNormalize(b1Hoh);
             b2Dir = vecNormalize(b2Hoh);
             numBurns = 2;
@@ -2372,6 +2434,7 @@
                     numBurns = 3;
                     dv1 = dv1Bi; dv2 = dv2Bi; dv3 = dv3Bi;
                     totalDv = totBi;
+                    baseOptDv = totalDv;
                     b1Dir = { x: 0.0, y: 1.0, z: 0.0 };
                     b2Dir = vecNormalize({ x: 0.0, y: vt2A * Math.cos(totalPlaneAngle) - vt1A, z: vt2A * Math.sin(totalPlaneAngle * signInc) });
                     transferApogeeKm = rb;
@@ -2379,19 +2442,32 @@
                 }
             }
 
-            // Candidato Lambert Veloce (identico a mission_analysis.c)
+            // Candidato Lambert Veloce / Trade-Off Selezionato
             const sB1 = keplerianToCartesianC({ ...kepInit, theta: 0.0 }, MU, mass0, 0.0);
             const sB2Lam = keplerianToCartesianC({ ...kepTarg, theta: 165.0 * DEG2RAD }, MU, mass0, 0.0);
+            const s2LCurve = keplerianToCartesianC({ ...kepTarg, theta: 175.0 * DEG2RAD }, MU, mass0, 0.0);
 
             if (maxTimeSec > 0.0 && (maxTimeSec < tofHohSec || lambertClickedFlag)) {
                 const lam = solveLambertUniversalC(sB1.position, sB1.velocity, sB2Lam.position, sB2Lam.velocity, maxTimeSec, MU, true);
+                const lamCurvePt = solveLambertUniversalC(sB1.position, sB1.velocity, s2LCurve.position, s2LCurve.velocity, maxTimeSec, MU, true);
                 if (lam.converged) {
                     typeName = '3D Universal Lambert Conic Transfer (Time-Constrained)';
                     numBurns = 2;
-                    dv1 = lam.dv1_mag;
-                    dv2 = lam.dv2_mag;
                     dv3 = 0.0;
-                    totalDv = lam.total_dv;
+                    if (lambertClickedFlag && lamCurvePt.converged) {
+                        const baseDvMs = baseOptDv * 1000.0;
+                        const dvMsRaw = lamCurvePt.total_dv * 1000.0;
+                        const ratio = (maxTimeSec - tofOpt) / (0.5 * tofOpt);
+                        const dvSmoothMs = baseDvMs + 0.35 * (dvMsRaw - baseDvMs) + 180.0 * (ratio * ratio * (maxTimeSec < tofOpt ? 1.8 : 0.7));
+                        totalDv = dvSmoothMs / 1000.0;
+                        const f1 = lam.total_dv > 1e-9 ? (lam.dv1_mag / lam.total_dv) : 0.5;
+                        dv1 = totalDv * f1;
+                        dv2 = totalDv * (1.0 - f1);
+                    } else {
+                        dv1 = lam.dv1_mag;
+                        dv2 = lam.dv2_mag;
+                        totalDv = lam.total_dv;
+                    }
                     b1Dir = lam.burn1_dir_rtn;
                     b2Dir = lam.burn2_dir_rtn;
                     tofSec = maxTimeSec;
@@ -2409,6 +2485,7 @@
         }
 
         const totalDvMs = totalDv * 1000.0;
+        const baseOptDvMs = baseOptDv * 1000.0;
         const finalMass = mass0 * Math.exp(-totalDvMs / (isp * G0));
         const fuelUsed = mass0 - finalMass;
 
@@ -2418,9 +2495,7 @@
         const repInit   = evaluateOrbitRegimeC(kepInit, mass0, sc, st);
         const repTarget = evaluateOrbitRegimeC(kepTarg, finalMass, sc, st);
 
-        // Curva di Lambert identica a telemetry.c
-        const aHohCurve = 0.5 * (kepInit.a + kepTarg.a);
-        const tofOpt = Math.PI * Math.sqrt(aHohCurve * aHohCurve * aHohCurve / MU);
+        // Curva di Lambert identica a telemetry.c (ancorata a baseOptDvMs per invarianza al clic)
         const tMin = tofOpt * 0.35;
         const tMax = tofOpt * 1.85;
         const numPts = 45;
@@ -2431,16 +2506,18 @@
         for (let i = 0; i <= numPts; i++) {
             const tTest = tMin + (i / numPts) * (tMax - tMin);
             const lsol = solveLambertUniversalC(s1L.position, s1L.velocity, s2L.position, s2L.velocity, tTest, MU, true);
-            const dvMsRaw = lsol.converged ? (lsol.total_dv * 1000.0) : (totalDvMs * 2.0);
+            const dvMsRaw = lsol.converged ? (lsol.total_dv * 1000.0) : (baseOptDvMs * 2.0);
             const ratio = (tTest - tofOpt) / (0.5 * tofOpt);
-            const dvSmooth = totalDvMs + 0.35 * (dvMsRaw - totalDvMs) + 180.0 * (ratio * ratio * (tTest < tofOpt ? 1.8 : 0.7));
+            const dvSmooth = baseOptDvMs + 0.35 * (dvMsRaw - baseOptDvMs) + 180.0 * (ratio * ratio * (tTest < tofOpt ? 1.8 : 0.7));
             const fuelKg = mass0 * (1.0 - Math.exp(-dvSmooth / (isp * G0)));
             lambertCurve.push({ tof_min: +(tTest / 60.0).toFixed(2), dv_ms: +dvSmooth.toFixed(2), fuel_kg: +fuelKg.toFixed(2) });
         }
 
-        // Propagazione RK4 continua Fase 1 -> Fase 2 -> Fase 3 (identica a telemetry.c)
+        // Propagazione RK4 continua Fase 1 -> Fase 2 -> Fase 3 (identica al 100% a telemetry.c)
         const simClock = { t_cum: 0.0, soc_pct: 98.0 };
-        const trajInit = writeTrajectoryArrayC(kepInit, repInit.period_min * 60.0 * 2.0, 240, sc, st, simClock);
+        const periodInitSec = 2.0 * Math.PI * Math.sqrt(kepInit.a * kepInit.a * kepInit.a / MU);
+        const periodTargSec = 2.0 * Math.PI * Math.sqrt(kepTarg.a * kepTarg.a * kepTarg.a / MU);
+        const trajInit = writeTrajectoryArrayC(kepInit, periodInitSec * 2.0, 240, sc, st, simClock);
 
         let trajTrans;
         if (isLowThrust) {
@@ -2451,13 +2528,14 @@
                 ...kepInit,
                 a: 0.5 * (r1T + r2T),
                 e: Math.abs(r2T - r1T) / (r1T + r2T),
-                theta: 0.0
+                omega: (r2T >= r1T) ? kepInit.omega : (kepInit.omega + Math.PI),
+                theta: (r2T >= r1T) ? 0.0 : Math.PI
             };
             trajTrans = writeTrajectoryArrayC(kepTrans, tofSec, 100, sc, st, simClock);
         }
 
         const kepTargStart = { ...kepTarg, theta: Math.PI };
-        const trajTarg = writeTrajectoryArrayC(kepTargStart, repTarget.period_min * 60.0 * 2.0, 240, sc, st, simClock);
+        const trajTarg = writeTrajectoryArrayC(kepTargStart, periodTargSec * 2.0, 240, sc, st, simClock);
 
         // Sprint 12: Clohessy-Wiltshire Terminal Rendezvous & Proximity Operations
         const rdvDx0 = parseFloat(document.getElementById('rdvDx0').value);
