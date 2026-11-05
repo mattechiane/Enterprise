@@ -3,6 +3,7 @@
 #include "propagator.h"
 #include "telemetry.h"
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <math.h>
 
@@ -683,4 +684,165 @@ RendezvousPlan compute_cw_rendezvous(double a_target_km,
     rdv.converged = true;
 
     return rdv;
+}
+
+// =========================================================================
+// SPRINT 13: MONTE CARLO DISPERSION, 3-SIGMA ELLIPSOID & MID-COURSE TCM
+// Generatore Gaussiano deterministico (LCG 32-bit + Trasformata di Box-Muller)
+// =========================================================================
+static double mc_uniform01(uint32_t *state) {
+    *state = (*state * 1664525u + 1013904223u);
+    return ((double)(*state & 0x00FFFFFFu) + 0.5) / 16777216.0;
+}
+
+static double mc_randn_box_muller(uint32_t *state) {
+    double u1 = mc_uniform01(state);
+    double u2 = mc_uniform01(state);
+    return sqrt(-2.0 * log(u1)) * cos(2.0 * PI * u2);
+}
+
+MonteCarloReport run_monte_carlo_dispersion(KeplerianElements orb_init,
+                                            KeplerianElements orb_target,
+                                            OptimalTransferPlan plan,
+                                            double sigma_dv_pct,
+                                            double sigma_point_deg,
+                                            int num_runs,
+                                            double mu) {
+    MonteCarloReport mc = {0};
+    if (num_runs <= 0 || num_runs > MAX_MC_RUNS) {
+        num_runs = MAX_MC_RUNS;
+    }
+    if (sigma_dv_pct < 0.01) sigma_dv_pct = 0.01;
+    if (sigma_point_deg < 0.01) sigma_point_deg = 0.01;
+
+    mc.sigma_dv_pct    = sigma_dv_pct;
+    mc.sigma_point_deg = sigma_point_deg;
+    mc.num_runs        = num_runs;
+
+    double a_trans = 0.5 * (orb_init.a + orb_target.a);
+    if (a_trans < EARTH_RADIUS + MIN_SAFE_PERIGEE_ALT_KM) {
+        a_trans = EARTH_RADIUS + MIN_SAFE_PERIGEE_ALT_KM;
+    }
+    double n_trans = sqrt(mu / (a_trans * a_trans * a_trans));
+    double tof_hoh = PI / n_trans;
+
+    // Tempo effettivo di propagazione della sensitività (165.6 deg di anomalia di trasferimento)
+    double t_arr = 0.92 * tof_hoh;
+    double t_mid = 0.50 * t_arr;
+    double t_rem = t_arr - t_mid;
+
+    double dv1_nom_kms = (plan.dv1_mag > 0.05) ? plan.dv1_mag : 0.12;
+    Vector3D u1 = vec_normalize(plan.burn1_dir_rtn);
+    if (vec_norm(u1) < 1e-6) {
+        u1 = (Vector3D){0.0, 1.0, 0.0};
+    }
+
+    // Base ortonormale locale attorno al vettore di spinta nominale u1 nel frame RTN
+    Vector3D p_in = {1.0, 0.0, 0.0};
+    if (fabs(u1.x) > 0.9) {
+        p_in = (Vector3D){0.0, 1.0, 0.0};
+    }
+    p_in = vec_normalize(vec_sub(p_in, vec_scale(u1, vec_dot(p_in, u1))));
+    Vector3D p_out = vec_normalize(vec_cross(u1, p_in));
+
+    double sigma_mag_rel = sigma_dv_pct / 100.0;
+    double sigma_pt_rad  = sigma_point_deg * DEG2RAD;
+    double sigma_r0_km   = 0.18;   // Incertezza 1-sigma navigazione GPS/OD su posizione iniziale (km)
+    double sigma_v0_kms  = 0.0003; // Incertezza 1-sigma navigazione su velocità iniziale (km/s)
+
+    uint32_t rng_state = 20261301u;
+
+    double sum_miss = 0.0, sum_miss2 = 0.0;
+    double sum_r2 = 0.0, sum_t2 = 0.0, sum_n2 = 0.0;
+    double sum_tcm = 0.0, sum_tcm2 = 0.0;
+
+    for (int i = 0; i < num_runs; i++) {
+        double z1 = mc_randn_box_muller(&rng_state);
+        double z2 = mc_randn_box_muller(&rng_state);
+        double z3 = mc_randn_box_muller(&rng_state);
+        double z4 = mc_randn_box_muller(&rng_state);
+        double z5 = mc_randn_box_muller(&rng_state);
+        double z6 = mc_randn_box_muller(&rng_state);
+
+        // Errore di stato iniziale di navigazione alla partenza (Burn 1) in km
+        Vector3D dr0_km = {
+            sigma_r0_km * z1,
+            sigma_r0_km * 1.35 * z2,
+            sigma_r0_km * 0.85 * z3
+        };
+
+        // Perturbazione impulsiva su Burn 1: modulo (z4) + puntamento pitch/yaw (z5, z6) + errore OD velocità
+        double d_mag   = sigma_mag_rel * z4;
+        double d_pitch = sigma_pt_rad  * z5;
+        double d_yaw   = sigma_pt_rad  * z6;
+
+        Vector3D dv1_err_kms = vec_add(
+            vec_scale(u1,    dv1_nom_kms * d_mag),
+            vec_add(
+                vec_scale(p_in,  dv1_nom_kms * d_pitch),
+                vec_scale(p_out, dv1_nom_kms * d_yaw)
+            )
+        );
+        dv1_err_kms.x += sigma_v0_kms * z1;
+        dv1_err_kms.y += sigma_v0_kms * z2;
+        dv1_err_kms.z += sigma_v0_kms * z3;
+
+        // 1. Propagazione fino all'arrivo (Burn 2) in assenza di correzione (Uncorrected Dispersion)
+        Vector3D dr_arr_km  = {0};
+        Vector3D dv_arr_kms = {0};
+        propagate_cw_state(dr0_km, dv1_err_kms, n_trans, t_arr, &dr_arr_km, &dv_arr_kms);
+        dr_arr_km.z += (dv1_err_kms.z / n_trans) * 0.60;
+
+        double miss_km = vec_norm(dr_arr_km);
+
+        // 2. Stato perturbato a metà trasferimento (Mid-Course t = 0.5 * TOF) e calcolo TCM
+        Vector3D dr_mid_km  = {0};
+        Vector3D dv_mid_kms = {0};
+        propagate_cw_state(dr0_km, dv1_err_kms, n_trans, t_mid, &dr_mid_km, &dv_mid_kms);
+
+        RendezvousPlan tcm_sol = compute_cw_rendezvous(a_trans, dr_mid_km, dv_mid_kms, t_rem,
+                                                       plan.final_mass, plan.prop_info.isp, mu);
+        // Poiché dr_mid_km è in km e dv_mid_kms in km/s, per linearità CW dv_inject_ms è in km/s -> *1000 per m/s
+        double tcm_dv_ms = tcm_sol.dv_inject_ms * 1000.0;
+
+        mc.samples[i].dr_rtn_km        = dr_arr_km;
+        mc.samples[i].arrival_pos_eci  = vec_add(plan.burn2_pos_eci, dr_arr_km);
+        mc.samples[i].miss_distance_km = miss_km;
+        mc.samples[i].tcm_dv_ms        = tcm_dv_ms;
+
+        sum_miss  += miss_km;
+        sum_miss2 += miss_km * miss_km;
+        if (miss_km > mc.max_miss_km) mc.max_miss_km = miss_km;
+
+        sum_r2 += dr_arr_km.x * dr_arr_km.x;
+        sum_t2 += dr_arr_km.y * dr_arr_km.y;
+        sum_n2 += dr_arr_km.z * dr_arr_km.z;
+
+        sum_tcm  += tcm_dv_ms;
+        sum_tcm2 += tcm_dv_ms * tcm_dv_ms;
+    }
+
+    double inv_n = 1.0 / (double)num_runs;
+    mc.mean_miss_km = sum_miss * inv_n;
+    double var_miss = (sum_miss2 * inv_n) - (mc.mean_miss_km * mc.mean_miss_km);
+    mc.std_miss_km  = (var_miss > 0.0) ? sqrt(var_miss) : 0.0;
+    mc.cep_3sigma_km = mc.mean_miss_km + 3.0 * mc.std_miss_km;
+
+    // Semiassi dell'ellissoide di covarianza 3-sigma nel frame RTN [3*sigma_R, 3*sigma_T, 3*sigma_N]
+    mc.ellipsoid_3sigma_rtn.x = 3.0 * sqrt(sum_r2 * inv_n);
+    mc.ellipsoid_3sigma_rtn.y = 3.0 * sqrt(sum_t2 * inv_n);
+    mc.ellipsoid_3sigma_rtn.z = 3.0 * sqrt(sum_n2 * inv_n);
+
+    mc.tcm_dv_mean_ms = sum_tcm * inv_n;
+    double var_tcm = (sum_tcm2 * inv_n) - (mc.tcm_dv_mean_ms * mc.tcm_dv_mean_ms);
+    double std_tcm = (var_tcm > 0.0) ? sqrt(var_tcm) : 0.0;
+    mc.tcm_dv_99_ms = mc.tcm_dv_mean_ms + 3.0 * std_tcm;
+
+    if (plan.prop_info.isp > 0.0 && plan.final_mass > 0.0) {
+        mc.tcm_fuel_99_kg = plan.final_mass * (1.0 - exp(-mc.tcm_dv_99_ms / (plan.prop_info.isp * G0)));
+    } else {
+        mc.tcm_fuel_99_kg = 0.0;
+    }
+
+    return mc;
 }

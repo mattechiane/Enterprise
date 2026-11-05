@@ -56,4 +56,13 @@ RendezvousPlan compute_cw_rendezvous(double a_target_km,
                                      double isp_s,
                                      double mu);
 
+// Sprint 13: Analisi di Dispersione Monte Carlo (Box-Muller), Ellissoide 3-Sigma e Calcolo Mid-Course TCM
+MonteCarloReport run_monte_carlo_dispersion(KeplerianElements orb_init,
+                                            KeplerianElements orb_target,
+                                            OptimalTransferPlan plan,
+                                            double sigma_dv_pct,
+                                            double sigma_point_deg,
+                                            int num_runs,
+                                            double mu);
+
 #endif // MISSION_ANALYSIS_H

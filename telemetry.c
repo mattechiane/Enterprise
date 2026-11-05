@@ -193,11 +193,23 @@ static void write_rendezvous_trajectory_json_array(FILE *fp, RendezvousPlan rdv,
     fprintf(fp, "  ]");
 }
 
+static void write_monte_carlo_cloud_json_array(FILE *fp, MonteCarloReport mc) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < mc.num_runs; i++) {
+        DispersionSample s = mc.samples[i];
+        fprintf(fp, "    {\"dx_km\":%.3f,\"dy_km\":%.3f,\"dz_km\":%.3f,\"miss_km\":%.3f,\"tcm_dv_ms\":%.3f}%s\n",
+                s.dr_rtn_km.x, s.dr_rtn_km.y, s.dr_rtn_km.z, s.miss_distance_km, s.tcm_dv_ms,
+                (i < mc.num_runs - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
                              OrbitReport rep_target,
                              RendezvousPlan rdv,
+                             MonteCarloReport mc,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -263,6 +275,16 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"fuel_kg\": %.3f, \"final_mass_kg\": %.2f\n  },\n",
             rdv.propellant_used_kg, rdv.final_mass_kg);
 
+    fprintf(fp, "  \"monte_carlo\": {\n");
+    fprintf(fp, "    \"num_runs\": %d, \"sigma_dv_pct\": %.2f, \"sigma_point_deg\": %.2f,\n",
+            mc.num_runs, mc.sigma_dv_pct, mc.sigma_point_deg);
+    fprintf(fp, "    \"mean_miss_km\": %.2f, \"std_miss_km\": %.2f, \"cep_3sigma_km\": %.2f, \"max_miss_km\": %.2f,\n",
+            mc.mean_miss_km, mc.std_miss_km, mc.cep_3sigma_km, mc.max_miss_km);
+    fprintf(fp, "    \"ellipsoid_3sigma_rtn_km\": [%.2f, %.2f, %.2f],\n",
+            mc.ellipsoid_3sigma_rtn.x, mc.ellipsoid_3sigma_rtn.y, mc.ellipsoid_3sigma_rtn.z);
+    fprintf(fp, "    \"tcm_dv_mean_ms\": %.2f, \"tcm_dv_99_ms\": %.2f, \"tcm_fuel_99_kg\": %.3f\n  },\n",
+            mc.tcm_dv_mean_ms, mc.tcm_dv_99_ms, mc.tcm_fuel_99_kg);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -317,6 +339,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_rendezvous\": ");
     write_rendezvous_trajectory_json_array(fp, rdv, 120);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"mc_cloud\": ");
+    write_monte_carlo_cloud_json_array(fp, mc);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

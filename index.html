@@ -331,6 +331,52 @@
     </div>
 </section>
 
+<!-- 7. SEVENTH OUTPUT BLOCK: MONTE CARLO NAVIGATION UNCERTAINTY, 3-SIGMA ELLIPSOID & TCM BUDGET -->
+<section class="section-block">
+    <div class="section-header">
+        <div>
+            <h2>7. Monte Carlo Navigation Uncertainty, 3&sigma; Dispersion Ellipsoid &amp; TCM Budget</h2>
+            <span>100-Run Box-Muller Stochastic Simulation &bull; 3D Arrival Covariance Ellipsoid (99.7% CEP) &amp; Mid-Course Trajectory Correction Maneuver</span>
+        </div>
+        <span class="badge" id="mcStatusBadge" style="color:var(--amber); border-color:var(--amber);">&#127922; N = 100 MONTE CARLO RUNS (99.7% 3&sigma; CONFIDENCE)</span>
+    </div>
+
+    <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(213,0,249,0.13), rgba(255,23,68,0.10)); border-color: var(--purple);">
+        <div class="title-group">
+            <h3 id="mcBannerTitle" style="color:var(--purple);">STOCHASTIC GNC DISPERSION &amp; MID-COURSE TCM ANALYSIS</h3>
+            <p id="mcBannerSub">Execution 1&sigma; Uncertainty: Thrust &sigma;_&Delta;V = 1.00% &bull; Nozzle Pointing &sigma;_point = 0.50&deg; &bull; 3&sigma; Ellipsoid RTN: [---, ---, ---] km</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="mcBannerTcm99" style="color:var(--red);">99% TCM Budget: --- m/s</div>
+            <div class="sub-fuel" id="mcBannerReserve">Uncorrected 3&sigma; Miss: --- km | Stochastic Fuel Reserve: --- kg</div>
+        </div>
+    </div>
+
+    <div class="datasheet-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+        <div class="data-card">
+            <h4 style="color:var(--amber)">&#127919; Uncorrected 3&sigma; Miss Distance</h4>
+            <div id="mcCardMiss"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--purple)">&#127760; 3&sigma; Ellipsoid Semi-Axes (RTN)</h4>
+            <div id="mcCardEllipsoid"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--red)">&#128640; Mid-Course TCM 99% &Delta;V Margin</h4>
+            <div id="mcCardTcm"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--green)">&#9981; Stochastic Propellant Reserve</h4>
+            <div id="mcCardFuel"></div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotMcEllipsoid" class="plot-container-rdv"></div>
+        <div id="plotMcHistogram" class="plot-container-rdv"></div>
+    </div>
+</section>
+
 
 <!-- POPUP MODAL: MISSION INPUT CONFIGURATOR -->
 <div class="modal-overlay" id="inputModal">
@@ -474,6 +520,23 @@
                 <div class="field">
                     <label>Rendezvous Approach Duration [min]</label>
                     <input type="number" id="rdvTofMin" value="45" min="2" max="300" step="1">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--purple)">5. Monte Carlo GNC Uncertainty &amp; Mid-Course TCM Parameters (100 Runs)</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Box-Muller Stochastic Dispersion on Burn 1 Execution &amp; Navigation State</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="field">
+                    <label>Thrust Magnitude Error 1&sigma; [%] <span>[ Propulsive Impulse Uncertainty ]</span></label>
+                    <input type="number" id="mcSigmaDv" value="1.0" min="0.05" max="15.0" step="0.1">
+                </div>
+                <div class="field">
+                    <label>Attitude Pointing Error 1&sigma; [deg] <span>[ Gimbal / ADCS Pointing Jitter ]</span></label>
+                    <input type="number" id="mcSigmaPoint" value="0.5" min="0.02" max="10.0" step="0.05">
                 </div>
             </div>
         </div>
@@ -795,6 +858,14 @@
             document.getElementById('rdvDz0').value = data.rendezvous.r0_m[2];
             if (data.rendezvous.tof_min !== undefined) {
                 document.getElementById('rdvTofMin').value = data.rendezvous.tof_min;
+            }
+        }
+        if (data.monte_carlo) {
+            if (data.monte_carlo.sigma_dv_pct !== undefined) {
+                document.getElementById('mcSigmaDv').value = data.monte_carlo.sigma_dv_pct;
+            }
+            if (data.monte_carlo.sigma_point_deg !== undefined) {
+                document.getElementById('mcSigmaPoint').value = data.monte_carlo.sigma_point_deg;
             }
         }
 
@@ -1317,6 +1388,160 @@
             xaxis: { title: 'Rendezvous Approach Timeline [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
             yaxis: { title: 'Relative Range ||δr|| [m]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#222d42', rangemode: 'tozero' },
             yaxis2: { title: 'Relative Speed ||δv|| [m/s]', titlefont: { color: '#ffab00' }, tickfont: { color: '#ffab00' }, overlaying: 'y', side: 'right', showgrid: false, rangemode: 'tozero' },
+            legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.02, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---------------------------------------------------------------------
+        // SECTION 7: MONTE CARLO DISPERSION, 3-SIGMA ELLIPSOID & TCM BUDGET
+        // ---------------------------------------------------------------------
+        const aInitKm = (r1.sma_km !== undefined) ? r1.sma_km : (R_EQ + r1.alt_km);
+        const fallbackMc = runMonteCarloDispersionJS(
+            aInitKm,
+            aTargKm,
+            (m.dv1_ms || 112.9) / 1000.0,
+            m.dir1 ? { x: m.dir1[0], y: m.dir1[1], z: m.dir1[2] } : { x: 0, y: 1, z: 0 },
+            m.final_mass_kg || 464.0,
+            ispVal,
+            1.0,
+            0.5,
+            100
+        );
+        const mcInfo  = data.monte_carlo || fallbackMc.monte_carlo;
+        const mcCloud = (data.mc_cloud && data.mc_cloud.length) ? data.mc_cloud : fallbackMc.mc_cloud;
+        const ellRtn  = mcInfo.ellipsoid_3sigma_rtn_km || [8.5, 22.0, 5.2];
+
+        document.getElementById('mcBannerTitle').textContent =
+            `MONTE CARLO DISPERSION (${mcInfo.num_runs || 100} RUNS) & MID-COURSE TCM (t = 0.5 · TOF)`;
+        document.getElementById('mcBannerSub').innerHTML =
+            `Execution 1&sigma; Uncertainty: Thrust &sigma;<sub>&Delta;V</sub> = <strong>${mcInfo.sigma_dv_pct}%</strong> &bull; Attitude Pointing &sigma;<sub>point</sub> = <strong>${mcInfo.sigma_point_deg}&deg;</strong> &bull; 3&sigma; Ellipsoid RTN: <strong>[${ellRtn[0]}, ${ellRtn[1]}, ${ellRtn[2]}] km</strong>`;
+        document.getElementById('mcBannerTcm99').textContent =
+            `99% (3σ) TCM Margin: ${mcInfo.tcm_dv_99_ms} m/s`;
+        document.getElementById('mcBannerReserve').textContent =
+            `Uncorrected 3σ Miss: ${mcInfo.cep_3sigma_km} km • Mean TCM: ${mcInfo.tcm_dv_mean_ms} m/s • Propellant Reserve: ${mcInfo.tcm_fuel_99_kg} kg`;
+
+        document.getElementById('mcCardMiss').innerHTML = `
+            <div class="row-item"><span class="row-label">Uncorrected 3&sigma; Miss (99.7%)</span><span class="row-val" style="color:var(--amber)">${mcInfo.cep_3sigma_km} km</span></div>
+            <div class="row-item"><span class="row-label">Mean Miss Distance</span><span class="row-val">${mcInfo.mean_miss_km} km</span></div>
+            <div class="row-item"><span class="row-label">Max Observed Miss</span><span class="row-val">${mcInfo.max_miss_km} km</span></div>
+        `;
+        document.getElementById('mcCardEllipsoid').innerHTML = `
+            <div class="row-item"><span class="row-label">Radial Semi-Axis (3&sigma;_R)</span><span class="row-val" style="color:var(--cyan)">&plusmn;${ellRtn[0]} km</span></div>
+            <div class="row-item"><span class="row-label">In-Track Semi-Axis (3&sigma;_T)</span><span class="row-val" style="color:var(--purple)">&plusmn;${ellRtn[1]} km</span></div>
+            <div class="row-item"><span class="row-label">Cross-Track Semi-Axis (3&sigma;_N)</span><span class="row-val" style="color:var(--green)">&plusmn;${ellRtn[2]} km</span></div>
+        `;
+        document.getElementById('mcCardTcm').innerHTML = `
+            <div class="row-item"><span class="row-label">99% (3&sigma;) TCM Design Budget</span><span class="row-val" style="color:var(--red)">${mcInfo.tcm_dv_99_ms} m/s</span></div>
+            <div class="row-item"><span class="row-label">Mean Mid-Course TCM &Delta;V</span><span class="row-val">${mcInfo.tcm_dv_mean_ms} m/s</span></div>
+            <div class="row-item"><span class="row-label">Correction Epoch</span><span class="row-val">t = 0.5 &middot; TOF</span></div>
+        `;
+        document.getElementById('mcCardFuel').innerHTML = `
+            <div class="row-item"><span class="row-label">Stochastic Fuel Reserve (99%)</span><span class="row-val" style="color:var(--green)">${mcInfo.tcm_fuel_99_kg} kg</span></div>
+            <div class="row-item"><span class="row-label">Thrust / Pointing 1&sigma;</span><span class="row-val">${mcInfo.sigma_dv_pct}% / ${mcInfo.sigma_point_deg}&deg;</span></div>
+            <div class="row-item"><span class="row-label">Sampled Trajectories</span><span class="row-val">N = ${mcInfo.num_runs || 100}</span></div>
+        `;
+
+        // Build 3D 3-Sigma Covariance Ellipsoid surface mesh centered at [0, 0, 0] in RTN (X = dT In-Track, Y = dR Radial, Z = dN Cross-Track)
+        const ex = [], ey = [], ez = [];
+        const aR = Math.max(0.5, ellRtn[0]);
+        const aT = Math.max(0.5, ellRtn[1]);
+        const aN = Math.max(0.5, ellRtn[2]);
+        for (let i = 0; i <= 20; i++) {
+            const u = (i / 20) * Math.PI;
+            const rowX = [], rowY = [], rowZ = [];
+            for (let j = 0; j <= 24; j++) {
+                const v = (j / 24) * 2.0 * Math.PI;
+                rowX.push(+(aT * Math.sin(u) * Math.cos(v)).toFixed(2)); // In-Track (T)
+                rowY.push(+(aR * Math.sin(u) * Math.sin(v)).toFixed(2)); // Radial (R)
+                rowZ.push(+(aN * Math.cos(u)).toFixed(2));               // Cross-Track (N)
+            }
+            ex.push(rowX); ey.push(rowY); ez.push(rowZ);
+        }
+
+        Plotly.newPlot('plotMcEllipsoid', [
+            {
+                type: 'surface', name: '3σ Covariance Ellipsoid (99.7%)',
+                x: ex, y: ey, z: ez,
+                opacity: 0.22, showscale: false,
+                colorscale: [[0, '#d500f9'], [0.5, '#00e5ff'], [1, '#00e676']],
+                hoverinfo: 'name'
+            },
+            {
+                type: 'scatter3d', mode: 'markers', name: 'Uncorrected Arrival Dispersion (N=100)',
+                x: mcCloud.map(p => p.dy_km),
+                y: mcCloud.map(p => p.dx_km),
+                z: mcCloud.map(p => p.dz_km),
+                text: mcCloud.map((p, idx) => `Run #${idx + 1} | Miss: ${p.miss_km} km | TCM ΔV: ${p.tcm_dv_ms} m/s`),
+                hovertemplate: '<b>%{text}</b><br>In-Track dT: %{x} km<br>Radial dR: %{y} km<br>Cross-Track dN: %{z} km<extra></extra>',
+                marker: {
+                    size: 4.5,
+                    color: mcCloud.map(p => p.miss_km),
+                    colorscale: 'Turbo',
+                    opacity: 0.92,
+                    colorbar: { title: 'Miss [km]', thickness: 12, len: 0.72, tickfont: { color: '#cbd5e1', size: 10 }, titlefont: { color: '#cbd5e1', size: 10 } }
+                }
+            },
+            {
+                type: 'scatter3d', mode: 'markers+text', name: 'Nominal Burn 2 Target [0, 0, 0]',
+                x: [0], y: [0], z: [0],
+                text: ['NOMINAL TARGET [0,0,0]'],
+                textposition: 'top center',
+                textfont: { color: '#00e676', size: 11 },
+                marker: { size: 9, color: '#00e676', symbol: 'diamond', line: { color: '#ffffff', width: 2 } }
+            }
+        ], {
+            title: { text: '7A. 3D Arrival Dispersion Cloud & 3σ Covariance Ellipsoid (RTN Frame)', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 0, r: 0, b: 0, t: 38 },
+            scene: {
+                bgcolor: '#111622',
+                xaxis: { title: 'In-Track Error dT [km]', color: '#cbd5e1', gridcolor: '#222d42' },
+                yaxis: { title: 'Radial Error dR [km]', color: '#00e5ff', gridcolor: '#222d42' },
+                zaxis: { title: 'Cross-Track Error dN [km]', color: '#d500f9', gridcolor: '#222d42' },
+                camera: { eye: { x: 1.45, y: 1.35, z: 0.95 } }
+            },
+            legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.98 }
+        }, { responsive: true, displaylogo: false });
+
+        // 7B: TCM Delta-V Probability Distribution Histogram + Empirical CDF + 99% (3-Sigma) Vertical Line
+        const tcmVals = mcCloud.map(p => p.tcm_dv_ms);
+        const sortedTcm = [...tcmVals].sort((a, b) => a - b);
+        const cdfPct = sortedTcm.map((_, idx) => +(((idx + 1) / sortedTcm.length) * 100.0).toFixed(1));
+
+        Plotly.newPlot('plotMcHistogram', [
+            {
+                type: 'histogram', name: 'Monte Carlo TCM ΔV Count',
+                x: tcmVals, nbinsx: 16,
+                marker: { color: 'rgba(0, 229, 255, 0.55)', line: { color: '#00e5ff', width: 1.5 } }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Cumulative Probability (CDF %)',
+                x: sortedTcm, y: cdfPct, yaxis: 'y2',
+                line: { color: '#d500f9', width: 2.8, shape: 'spline' }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: `Mean TCM (${mcInfo.tcm_dv_mean_ms} m/s)`,
+                x: [mcInfo.tcm_dv_mean_ms, mcInfo.tcm_dv_mean_ms], y: [0, 100], yaxis: 'y2',
+                line: { color: '#ffab00', width: 2.0, dash: 'dot' }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: `99% (3σ) Design Budget (${mcInfo.tcm_dv_99_ms} m/s)`,
+                x: [mcInfo.tcm_dv_99_ms, mcInfo.tcm_dv_99_ms], y: [0, 100], yaxis: 'y2',
+                line: { color: '#ff1744', width: 3.0, dash: 'dash' }
+            }
+        ], {
+            title: { text: '7B. Mid-Course TCM ΔV Probability Distribution & 99% (3σ) Propellant Design Budget', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 60, r: 65, b: 48, t: 40 }, hovermode: 'x unified',
+            xaxis: { title: 'Required Mid-Course Correction ΔV_TCM [m/s]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Number of Runs (out of 100)', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#222d42' },
+            yaxis2: { title: 'Cumulative Probability CDF [%]', titlefont: { color: '#d500f9' }, tickfont: { color: '#d500f9' }, range: [0, 105], overlaying: 'y', side: 'right', showgrid: false },
+            annotations: [{
+                x: mcInfo.tcm_dv_99_ms, y: 92, xref: 'x', yref: 'y2',
+                text: `<b>99% (3σ) BUDGET</b><br>${mcInfo.tcm_dv_99_ms} m/s (${mcInfo.tcm_fuel_99_kg} kg)`,
+                showarrow: true, arrowhead: 2, arrowcolor: '#ff1744', ax: -65, ay: -22,
+                bgcolor: 'rgba(11, 15, 25, 0.92)', bordercolor: '#ff1744', borderwidth: 1.5, borderpad: 5,
+                font: { color: '#fecaca', size: 11 }
+            }],
             legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.02, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
@@ -1910,6 +2135,131 @@
         };
     }
 
+    // =========================================================================
+    // SPRINT 13: MONTE CARLO DISPERSION & MID-COURSE TCM ENGINE (JS BOX-MULLER)
+    // =========================================================================
+    function runMonteCarloDispersionJS(aInitKm, aTargetKm, dv1MagKms, burn1DirRtn, finalMassKg, ispS, sigmaDvPct, sigmaPointDeg, numRuns = 100) {
+        const sDvPct = Math.max(0.01, sigmaDvPct || 1.0);
+        const sPtDeg = Math.max(0.01, sigmaPointDeg || 0.5);
+        const aTrans = Math.max(R_EQ + MIN_SAFE_ALT, 0.5 * (aInitKm + aTargetKm));
+        const nTrans = Math.sqrt(MU / (aTrans * aTrans * aTrans));
+        const tofHoh = Math.PI / nTrans;
+
+        const tArr = 0.92 * tofHoh;
+        const tMid = 0.50 * tArr;
+        const tRem = tArr - tMid;
+
+        const dv1NomKms = Math.max(0.08, dv1MagKms || 0.12);
+        let u1 = vecNormalize(burn1DirRtn || { x: 0, y: 1, z: 0 });
+        if (vecNorm(u1) < 1e-6) u1 = { x: 0, y: 1, z: 0 };
+
+        let pIn = (Math.abs(u1.x) > 0.9) ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 };
+        pIn = vecNormalize(vecSub(pIn, vecScale(u1, vecDot(pIn, u1))));
+        const pOut = vecNormalize(vecCross(u1, pIn));
+
+        const sigmaMagRel = sDvPct / 100.0;
+        const sigmaPtRad  = sPtDeg * DEG2RAD;
+        const sigmaR0Km   = 0.18;
+        const sigmaV0Kms  = 0.0003;
+
+        let rngState = 20261301 >>> 0;
+        const mcUniform01 = () => {
+            rngState = (Math.imul(rngState, 1664525) + 1013904223) >>> 0;
+            return ((rngState & 0x00FFFFFF) + 0.5) / 16777216.0;
+        };
+        const mcRandn = () => {
+            const u1r = mcUniform01();
+            const u2r = mcUniform01();
+            return Math.sqrt(-2.0 * Math.log(u1r)) * Math.cos(2.0 * Math.PI * u2r);
+        };
+
+        let sumMiss = 0, sumMiss2 = 0, maxMiss = 0;
+        let sumR2 = 0, sumT2 = 0, sumN2 = 0;
+        let sumTcm = 0, sumTcm2 = 0;
+        const cloud = [];
+
+        for (let i = 0; i < numRuns; i++) {
+            const z1 = mcRandn(), z2 = mcRandn(), z3 = mcRandn();
+            const z4 = mcRandn(), z5 = mcRandn(), z6 = mcRandn();
+
+            const dr0Km = {
+                x: sigmaR0Km * z1,
+                y: sigmaR0Km * 1.35 * z2,
+                z: sigmaR0Km * 0.85 * z3
+            };
+
+            const dMag   = sigmaMagRel * z4;
+            const dPitch = sigmaPtRad  * z5;
+            const dYaw   = sigmaPtRad  * z6;
+
+            const dv1ErrKms = {
+                x: dv1NomKms * (u1.x * dMag + pIn.x * dPitch + pOut.x * dYaw) + sigmaV0Kms * z1,
+                y: dv1NomKms * (u1.y * dMag + pIn.y * dPitch + pOut.y * dYaw) + sigmaV0Kms * z2,
+                z: dv1NomKms * (u1.z * dMag + pIn.z * dPitch + pOut.z * dYaw) + sigmaV0Kms * z3
+            };
+
+            const arrState = propagateCWStateJS(dr0Km, dv1ErrKms, nTrans, tArr);
+            arrState.r.z += (dv1ErrKms.z / nTrans) * 0.60;
+            const missKm   = vecNorm(arrState.r);
+
+            const midState = propagateCWStateJS(dr0Km, dv1ErrKms, nTrans, tMid);
+            const tcmSol   = computeCWRendezvousJS(aTrans, midState.r, midState.v, tRem, finalMassKg, ispS);
+            const tcmDvMs  = tcmSol.rendezvous.dv_inject_ms * 1000.0;
+
+            cloud.push({
+                dx_km: +arrState.r.x.toFixed(3),
+                dy_km: +arrState.r.y.toFixed(3),
+                dz_km: +arrState.r.z.toFixed(3),
+                miss_km: +missKm.toFixed(3),
+                tcm_dv_ms: +tcmDvMs.toFixed(3)
+            });
+
+            sumMiss  += missKm;
+            sumMiss2 += missKm * missKm;
+            if (missKm > maxMiss) maxMiss = missKm;
+
+            sumR2 += arrState.r.x * arrState.r.x;
+            sumT2 += arrState.r.y * arrState.r.y;
+            sumN2 += arrState.r.z * arrState.r.z;
+
+            sumTcm  += tcmDvMs;
+            sumTcm2 += tcmDvMs * tcmDvMs;
+        }
+
+        const invN = 1.0 / numRuns;
+        const meanMiss = sumMiss * invN;
+        const stdMiss  = Math.sqrt(Math.max(0, sumMiss2 * invN - meanMiss * meanMiss));
+        const cep3s    = meanMiss + 3.0 * stdMiss;
+
+        const ell3s = [
+            +(3.0 * Math.sqrt(sumR2 * invN)).toFixed(2),
+            +(3.0 * Math.sqrt(sumT2 * invN)).toFixed(2),
+            +(3.0 * Math.sqrt(sumN2 * invN)).toFixed(2)
+        ];
+
+        const tcmMean = sumTcm * invN;
+        const tcmStd  = Math.sqrt(Math.max(0, sumTcm2 * invN - tcmMean * tcmMean));
+        const tcm99   = tcmMean + 3.0 * tcmStd;
+        const tcmFuel = (ispS > 0 && finalMassKg > 0) ? finalMassKg * (1.0 - Math.exp(-tcm99 / (ispS * G0))) : 0;
+
+        return {
+            monte_carlo: {
+                num_runs: numRuns,
+                sigma_dv_pct: +sDvPct.toFixed(2),
+                sigma_point_deg: +sPtDeg.toFixed(2),
+                mean_miss_km: +meanMiss.toFixed(2),
+                std_miss_km: +stdMiss.toFixed(2),
+                cep_3sigma_km: +cep3s.toFixed(2),
+                max_miss_km: +maxMiss.toFixed(2),
+                ellipsoid_3sigma_rtn_km: ell3s,
+                tcm_dv_mean_ms: +tcmMean.toFixed(2),
+                tcm_dv_99_ms: +tcm99.toFixed(2),
+                tcm_fuel_99_kg: +tcmFuel.toFixed(3)
+            },
+            mc_cloud: cloud
+        };
+    }
+
     document.getElementById('btnRunCustomMission').addEventListener('click', function() {
         const mass0 = parseFloat(document.getElementById('inMass').value) || 500;
         const propParts = document.getElementById('inPropellant').value.split('|');
@@ -2121,6 +2471,11 @@
         };
         const cwRes = computeCWRendezvousJS(kepTarg.a, r0LvlhM, { x: 0.0, y: 0.0, z: 0.0 }, rdvTofMin * 60.0, finalMass, isp);
 
+        // Sprint 13: Monte Carlo Navigation Dispersion & Mid-Course TCM Budget
+        const mcSigmaDv    = Math.max(0.05, parseFloat(document.getElementById('mcSigmaDv').value) || 1.0);
+        const mcSigmaPoint = Math.max(0.02, parseFloat(document.getElementById('mcSigmaPoint').value) || 0.5);
+        const mcRes = runMonteCarloDispersionJS(kepInit.a, kepTarg.a, dv1, b1Dir, finalMass, isp, mcSigmaDv, mcSigmaPoint, 100);
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -2139,9 +2494,11 @@
             },
             target_report: repTarget,
             rendezvous: cwRes.rendezvous,
+            monte_carlo: mcRes.monte_carlo,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
-            traj_rendezvous: cwRes.traj_rendezvous
+            traj_rendezvous: cwRes.traj_rendezvous,
+            mc_cloud: mcRes.mc_cloud
         };
 
         document.getElementById('inputModal').classList.remove('open');
@@ -2201,3 +2558,4 @@
 </script>
 </body>
 </html>
+

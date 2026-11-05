@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 12: TERMINAL RENDEZVOUS & PROXIMITY OPS\n");
+    printf("   PROJECT ENTERPRISE - SPRINT 13: MONTE CARLO DISPERSION & TCM ENGINE\n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -49,13 +49,18 @@ int main(void) {
     OrbitReport rep_target = evaluate_orbit_regime(orb_target, plan.final_mass, &sc, &milano);
 
     // 4. SPRINT 12: TERMINAL RENDEZVOUS & DOCKING (CLOHESSY-WILTSHIRE / HILL LVLH)
-    // Stato iniziale relativo Chaser vs Target: dx0 = -250 m (R-bar), dy0 = -2000 m (V-bar), dz0 = +100 m (H-bar)
     Vector3D r0_lvlh_m  = {-250.0, -2000.0, 100.0};
     Vector3D v0_lvlh_ms = {0.0, 0.0, 0.0};
     double t_rdv_sec    = 45.0 * 60.0; // 45 minuti di approccio finale
 
     RendezvousPlan rdv = compute_cw_rendezvous(orb_target.a, r0_lvlh_m, v0_lvlh_ms, t_rdv_sec,
                                                plan.final_mass, plan.prop_info.isp, EARTH_MU);
+
+    // 5. SPRINT 13: ANALISI DI DISPERSIONE MONTE CARLO (N=100) E CALCOLO MID-COURSE TCM
+    double sigma_dv_pct    = 1.0; // 1.0% (1-sigma) Thrust Magnitude Error
+    double sigma_point_deg = 0.5; // 0.5 deg (1-sigma) Nozzle Attitude Pointing Error
+    MonteCarloReport mc = run_monte_carlo_dispersion(orb_initial, orb_target, plan,
+                                                     sigma_dv_pct, sigma_point_deg, MAX_MC_RUNS, EARTH_MU);
 
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
@@ -82,11 +87,20 @@ int main(void) {
     printf("  * Total Rendezvous Cost : %6.3f m/s | Fuel = %.3f kg | Approach TOF = %.1f min\n\n",
            rdv.total_dv_ms, rdv.propellant_used_kg, rdv.transfer_time_sec / 60.0);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Burn Points, Propellant & CW Rendezvous Data!\n");
+    printf("[MONTE CARLO DISPERSION ANALYSIS (%d RUNS) & MID-COURSE TCM BUDGET]\n", mc.num_runs);
+    printf("  * GNC Execution 1-Sigma : Thrust Error = %.2f%% | Attitude Pointing = %.2f deg\n",
+           mc.sigma_dv_pct, mc.sigma_point_deg);
+    printf("  * Uncorrected Miss Dist : Mean = %.2f km | 3-Sigma (99.7%% CEP) = %.2f km | Max = %.2f km\n",
+           mc.mean_miss_km, mc.cep_3sigma_km, mc.max_miss_km);
+    printf("  * 3-Sigma Ellipsoid RTN : [ 3s_R = %.2f km, 3s_T = %.2f km, 3s_N = %.2f km ]\n",
+           mc.ellipsoid_3sigma_rtn.x, mc.ellipsoid_3sigma_rtn.y, mc.ellipsoid_3sigma_rtn.z);
+    printf("  * Mid-Course TCM Budget : Mean = %.2f m/s | 99.7%% (3-Sigma) = %.2f m/s | Reserve Fuel = %.3f kg\n\n",
+           mc.tcm_dv_mean_ms, mc.tcm_dv_99_ms, mc.tcm_fuel_99_kg);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Burn Points, CW Rendezvous & Monte Carlo TCM Data!\n");
     }
-    // Esporta copia anche nella cartella corrente nel caso l'eseguibile venga lanciato dalla root
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

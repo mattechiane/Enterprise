@@ -155,6 +155,36 @@ typedef struct {
     bool converged;             // true se il sistema lineare CW è ben condizionato
 } RendezvousPlan;
 
+// ==========================================
+// SPRINT 13: MONTE CARLO DISPERSION & TCM BUDGET
+// ==========================================
+#define MAX_MC_RUNS 100
+
+typedef struct {
+    Vector3D arrival_pos_eci; // Coordinate ECI di arrivo perturbate [x, y, z] (km)
+    Vector3D dr_rtn_km;       // Scostamento rispetto al punto nominale Burn 2 nel frame RTN [dR, dT, dN] (km)
+    double miss_distance_km;  // Errore scalare di posizione all'arrivo dr_miss (km)
+    double tcm_dv_ms;         // Delta-V correttivo Mid-Course TCM richiesto a t = 0.5 * TOF (m/s)
+} DispersionSample;
+
+typedef struct {
+    double sigma_dv_pct;           // Errore 1-sigma sul modulo di spinta Delta-V1 (%)
+    double sigma_point_deg;        // Errore 1-sigma angolare di puntamento dell'ugello (deg)
+    int num_runs;                  // Numero di traiettorie Monte Carlo campionate (100)
+
+    double mean_miss_km;           // Errore medio di posizione all'arrivo senza correzione (km)
+    double std_miss_km;            // Deviazione standard dell'errore di posizione (km)
+    double cep_3sigma_km;          // 99.7% 3-Sigma Miss Radius all'arrivo (km)
+    double max_miss_km;            // Errore massimo osservato nella nuvola Monte Carlo (km)
+    Vector3D ellipsoid_3sigma_rtn; // Semiassi dell'ellissoide di incertezza 3-sigma (3*sigma_R, 3*sigma_T, 3*sigma_N) [km]
+
+    double tcm_dv_mean_ms;         // Delta-V medio per la Mid-Course TCM a t = 0.5 * TOF (m/s)
+    double tcm_dv_99_ms;           // Delta-V 99% (3-sigma) TCM Margin per il budget GNC (m/s)
+    double tcm_fuel_99_kg;         // Massa di propellente stocastico di riserva per la TCM (kg)
+
+    DispersionSample samples[MAX_MC_RUNS];
+} MonteCarloReport;
+
 typedef struct {
     KeplerianElements initial_kep;
     double period_min;
