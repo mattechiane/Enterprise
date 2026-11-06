@@ -14,8 +14,8 @@ FILE* telemetry_open(const char *filename);
 void  telemetry_write_step(FILE *fp, CartesianState state, KeplerianElements kep, GeodeticCoord geo, SpaceEnvironment env, bool thruster_on);
 void  telemetry_close(FILE *fp);
 
-// Esporta l'intero scenario di missione (Orbita 1 -> Trasferimento -> Orbita 2 -> Rendezvous CW -> Monte Carlo & TCM -> ADCS 6-DOF)
-// in formato JSON interattivo per la Web App 3D, Proximity Operations, Dispersion Analysis e Attitude Dynamics
+// Esporta l'intero scenario di missione (Orbita 1 -> Trasferimento -> Orbita 2 -> Rendezvous CW -> Monte Carlo & TCM -> ADCS 6-DOF -> Thermal TCS)
+// in formato JSON interattivo per la Web App 3D, Proximity Operations, Dispersion Analysis, Attitude Dynamics e Thermal Control
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
@@ -23,6 +23,7 @@ bool export_web_mission_json(const char *filename,
                              RendezvousPlan rdv,
                              MonteCarloReport mc,
                              ADCSReport adcs,
+                             ThermalReport tcs,
                              const GroundStation *station,
                              const SpacecraftConfig *sc);
 

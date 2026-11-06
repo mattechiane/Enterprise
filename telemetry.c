@@ -216,6 +216,17 @@ static void write_adcs_trajectory_json_array(FILE *fp, ADCSReport adcs) {
     fprintf(fp, "  ]");
 }
 
+static void write_thermal_trajectory_json_array(FILE *fp, ThermalReport tcs) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < tcs.num_samples; i++) {
+        ThermalSample s = tcs.samples[i];
+        fprintf(fp, "    {\"t_min\":%.2f,\"temp_c\":%.2f,\"q_sol_w\":%.1f,\"q_alb_w\":%.1f,\"q_ir_w\":%.1f,\"q_int_w\":%.1f,\"q_heater_w\":%.1f,\"q_rad_w\":%.1f,\"ecl\":%d}%s\n",
+                s.t_min, s.temp_c, s.q_sol_w, s.q_alb_w, s.q_ir_w, s.q_int_w, s.q_heater_w, s.q_rad_w, s.in_eclipse,
+                (i < tcs.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
@@ -223,6 +234,7 @@ bool export_web_mission_json(const char *filename,
                              RendezvousPlan rdv,
                              MonteCarloReport mc,
                              ADCSReport adcs,
+                             ThermalReport tcs,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -312,6 +324,20 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"desat_cycles\": %d, \"mean_power_w\": %.1f, \"peak_power_w\": %.1f\n  },\n",
             adcs.desat_cycles, adcs.mean_power_w, adcs.peak_power_w);
 
+    fprintf(fp, "  \"thermal_summary\": {\n");
+    fprintf(fp, "    \"alpha_solar\": %.2f, \"eps_ir\": %.2f, \"thermal_mass_j_k\": %.1f, \"rad_area_m2\": %.2f,\n",
+            tcs.alpha_solar, tcs.eps_ir, tcs.thermal_mass_j_k, tcs.rad_area_m2);
+    fprintf(fp, "    \"t_min_op_c\": %.1f, \"t_max_op_c\": %.1f,\n",
+            tcs.t_min_op_c, tcs.t_max_op_c);
+    fprintf(fp, "    \"min_temp_c\": %.2f, \"max_temp_c\": %.2f, \"mean_temp_c\": %.2f,\n",
+            tcs.min_temp_c, tcs.max_temp_c, tcs.mean_temp_c);
+    fprintf(fp, "    \"eq_sun_temp_c\": %.2f, \"eq_ecl_temp_c\": %.2f,\n",
+            tcs.eq_sun_temp_c, tcs.eq_ecl_temp_c);
+    fprintf(fp, "    \"mean_q_sol_w\": %.1f, \"mean_q_alb_w\": %.1f, \"mean_q_ir_w\": %.1f, \"mean_q_rad_w\": %.1f,\n",
+            tcs.mean_q_sol_w, tcs.mean_q_alb_w, tcs.mean_q_ir_w, tcs.mean_q_rad_w);
+    fprintf(fp, "    \"peak_heater_w\": %.1f, \"heater_duty_pct\": %.1f\n  },\n",
+            tcs.peak_heater_w, tcs.heater_duty_pct);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -375,6 +401,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_adcs\": ");
     write_adcs_trajectory_json_array(fp, adcs);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_thermal\": ");
+    write_thermal_trajectory_json_array(fp, tcs);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

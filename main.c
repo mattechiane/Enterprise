@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 14: 6-DOF ADCS & REACTION WHEEL ENGINE\n");
+    printf("   PROJECT ENTERPRISE - SPRINT 15: 6-DOF ADCS & THERMAL CONTROL (TCS)\n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -67,6 +67,14 @@ int main(void) {
     double rw_h_max_nms      = 10.0;                 // Capacità momento angolare Reaction Wheels [N*m*s]
     ADCSReport adcs = simulate_adcs_profile(orb_initial, orb_target, plan, sc_inertia_kgm2, rw_h_max_nms, EARTH_MU);
 
+    // 7. SPRINT 15: THERMAL CONTROL SYSTEM (TCS) & LUMPED-PARAMETER HEAT BALANCE
+    double alpha_solar = 0.28; // Assorbività solare rivestimento (White Paint / OSR)
+    double eps_ir      = 0.82; // Emissività infrarossa radiatori
+    double t_min_op_c  = -10.0;
+    double t_max_op_c  = 45.0;
+    ThermalReport tcs = simulate_thermal_profile(orb_initial, orb_target, plan,
+                                                 alpha_solar, eps_ir, t_min_op_c, t_max_op_c, EARTH_MU);
+
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -113,10 +121,20 @@ int main(void) {
     printf("  * Reaction Wheel Load   : Peak Torque = %.1f mN*m | Max H_rw = %.2f N*m*s (%.1f%% Sat) | MTQ Desats = %d\n\n",
            adcs.peak_rw_torque_mnm, adcs.max_rw_mom_nms, adcs.max_rw_sat_pct, adcs.desat_cycles);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with 6-DOF ADCS, CW Rendezvous & Monte Carlo TCM Data!\n");
+    printf("[SPACECRAFT THERMAL CONTROL SYSTEM (TCS) & ORBITAL HEAT FLUX BALANCE]\n");
+    printf("  * Coating Thermo-Optics : Absorptivity alpha_s = %.2f | IR Emissivity eps_ir = %.2f (alpha/eps = %.2f)\n",
+           tcs.alpha_solar, tcs.eps_ir, tcs.alpha_solar / tcs.eps_ir);
+    printf("  * Temperature Excursion : Min = %+.2f C | Max = %+.2f C | Mean = %+.2f C (Op Limits: [%.0f, +%.0f] C)\n",
+           tcs.min_temp_c, tcs.max_temp_c, tcs.mean_temp_c, tcs.t_min_op_c, tcs.t_max_op_c);
+    printf("  * Mean Heat Fluxes      : Solar = %.1f W | Albedo = %.1f W | Earth IR = %.1f W | Radiated = %.1f W\n",
+           tcs.mean_q_sol_w, tcs.mean_q_alb_w, tcs.mean_q_ir_w, tcs.mean_q_rad_w);
+    printf("  * Active Survival Heater: Peak Power = %.1f W | Duty Cycle = %.1f%% | Eq (Sun/Ecl) = %+.1f / %+.1f C\n\n",
+           tcs.peak_heater_w, tcs.heater_duty_pct, tcs.eq_sun_temp_c, tcs.eq_ecl_temp_c);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with 6-DOF ADCS, Thermal TCS, CW Rendezvous & Monte Carlo Data!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

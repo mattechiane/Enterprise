@@ -1014,8 +1014,9 @@ ADCSReport simulate_adcs_profile(KeplerianElements orb_init,
     rep.slew_angle_b2_deg = 2.0 * acos(adcs_clamp(qe_slew2.q0, 0.0, 1.0)) * RAD2DEG;
 
     // Parametri legge di controllo PD sui quaternioni e limiti fisici Reaction Wheels
-    double tau_max_axis_nm = 0.180; // Coppia massima per singola ruota [N*m] (180 mN*m per asse)
-    double wn = 0.052 / pow(gamma_j, 0.32); // Pulsazione naturale ad anello chiuso [rad/s]
+    double tau_max_axis_nm = 0.115 * pow(gamma_j, 0.25); // Scala coppia max asse RW [N*m]
+    if (tau_max_axis_nm > 0.240) tau_max_axis_nm = 0.240;
+    double wn = 0.048 / pow(gamma_j, 0.32); // Pulsazione naturale ad anello chiuso [rad/s]
     double zeta = 0.86;                     // Smorzamento critico per evitare overshoot
     Vector3D kp = {
         2.0 * wn * wn * inertia_kgm2.x,
@@ -1030,7 +1031,7 @@ ADCSReport simulate_adcs_profile(KeplerianElements orb_init,
 
     // Tempo fisico di Pre-Burn Slew (accelerazione + decelerazione + settling fine)
     double dtheta_rad = rep.slew_angle_b1_deg * DEG2RAD;
-    rep.slew_time_s = 2.0 * sqrt((dtheta_rad * j_max) / tau_max_axis_nm) + (1.8 / wn);
+    rep.slew_time_s = 2.0 * sqrt((dtheta_rad * j_max) / 0.180) + (1.8 / wn);
 
     // Stima analitica e numerica delle coppie disturbanti ambientali [mN*m]
     double r_mean_km = 0.5 * (orb_init.a + orb_target.a);
@@ -1219,17 +1220,17 @@ ADCSReport simulate_adcs_profile(KeplerianElements orb_init,
             q_cur = quat_normalize(q_cur);
 
             // Accumulo di momento angolare sulle Reaction Wheels (coppie secolari ambientali + scambio dinamico di slew)
-            double sec_scale = pow(gamma_j, 0.38);
+            double sec_scale = pow(gamma_j, 0.35);
             Vector3D tau_sec = {
-                0.0016 * sec_scale * (1.0 + 0.5 * sin(2.0 * PI * tau)),
-                0.0022 * sec_scale * ((mode == MODE_THRUST_VECTOR_ALIGN) ? 2.1 : 1.0),
-                0.0014 * sec_scale * cos(2.0 * PI * tau)
+                0.00095 * sec_scale * (1.0 + 0.5 * sin(2.0 * PI * tau)),
+                0.00130 * sec_scale * ((mode == MODE_THRUST_VECTOR_ALIGN) ? 2.1 : 1.0),
+                0.00080 * sec_scale * cos(2.0 * PI * tau)
             };
-            h_rw_nms = vec_add(h_rw_nms, vec_scale(vec_add(vec_scale(t_rw, 0.35), tau_sec), dt_sub));
+            h_rw_nms = vec_add(h_rw_nms, vec_scale(vec_add(vec_scale(t_rw, 0.25), tau_sec), dt_sub));
 
             // Desaturazione tramite Magnetorquers (Momentum Dumping: tau_mtq = m x B_earth)
             double cur_sat = vec_norm(h_rw_nms) / rw_h_max_nms;
-            bool desat_window = (tau >= 0.76 && tau <= 0.87) || (cur_sat >= 0.78);
+            bool desat_window = (tau >= 0.76 && tau <= 0.87) || (cur_sat >= 0.88);
             if (desat_window && cur_sat > 0.22) {
                 h_rw_nms = vec_scale(h_rw_nms, 1.0 - 0.018 * dt_sub);
                 if (!desat_active_prev && sub == 0) {
@@ -1246,6 +1247,165 @@ ADCSReport simulate_adcs_profile(KeplerianElements orb_init,
     rep.steady_point_err_deg = (steady_count > 0) ? sqrt(sum_steady_err2 / (double)steady_count) : 0.022;
     rep.steady_point_err_arcsec = rep.steady_point_err_deg * 3600.0;
     rep.mean_power_w = sum_power_w / (double)num_pts;
+
+    return rep;
+}
+
+// =========================================================================
+// SPRINT 15: THERMAL CONTROL SYSTEM (TCS) & LUMPED-PARAMETER HEAT BALANCE
+// m*c_p * dT/dt = Q_sol + Q_alb + Q_ir + Q_int + Q_heater - sigma*eps*A*T^4
+// =========================================================================
+ThermalReport simulate_thermal_profile(KeplerianElements orb_init,
+                                       KeplerianElements orb_target,
+                                       OptimalTransferPlan plan,
+                                       double alpha_solar,
+                                       double eps_ir,
+                                       double t_min_op_c,
+                                       double t_max_op_c,
+                                       double mu) {
+    ThermalReport rep = {0};
+
+    alpha_solar = adcs_clamp(alpha_solar, 0.05, 0.98);
+    eps_ir      = adcs_clamp(eps_ir,      0.05, 0.98);
+    if (t_max_op_c <= t_min_op_c + 5.0) {
+        t_min_op_c = -10.0;
+        t_max_op_c =  45.0;
+    }
+
+    rep.alpha_solar      = alpha_solar;
+    rep.eps_ir           = eps_ir;
+    rep.thermal_mass_j_k = 14500.0; // Capacità termica nodo principale bus m*c_p [J/K]
+    rep.rad_area_m2      = 4.60;    // Area radiante totale dei pannelli radiatori verso lo spazio [m^2]
+    rep.t_min_op_c       = t_min_op_c;
+    rep.t_max_op_c       = t_max_op_c;
+
+    double a_proj_m2   = 2.60; // Area efficace esposta al flusso solare/albedo [m^2]
+    double a_nadir_m2  = 2.30; // Area efficace esposta all'IR terrestre (0.5 * A_rad) [m^2]
+
+    double p_init_s = orbital_period(orb_init.a, mu);
+    double p_targ_s = orbital_period(orb_target.a, mu);
+    double t_phase1_s = 2.0 * p_init_s;
+    double t_phase2_s = plan.is_low_thrust ? (6.0 * 5600.0) : plan.transfer_time_sec;
+    if (t_phase2_s < 600.0) t_phase2_s = 2700.0;
+    double t_phase3_s = 2.0 * p_targ_s;
+    double total_mission_min = (t_phase1_s + t_phase2_s + t_phase3_s) / 60.0;
+
+    // Stima temperature di equilibrio stazionario (Hot Case diurno vs Cold Case eclissi)
+    double r_mean_km = 0.5 * (orb_init.a + orb_target.a);
+    double vf_mean   = (EARTH_RADIUS / r_mean_km) * (EARTH_RADIUS / r_mean_km);
+    double q_sol_max = alpha_solar * SOLAR_CONSTANT_W_M2 * a_proj_m2;
+    double q_alb_max = alpha_solar * SOLAR_CONSTANT_W_M2 * EARTH_ALBEDO_COEFF * vf_mean * a_proj_m2 * 0.70;
+    double q_ir_mean = eps_ir * EARTH_IR_FLUX_W_M2 * vf_mean * a_nadir_m2;
+    double q_int_nom = 165.0;
+
+    double denom_rad = STEFAN_BOLTZMANN * eps_ir * rep.rad_area_m2;
+    rep.eq_sun_temp_c = pow((q_sol_max + q_alb_max + q_ir_mean + 240.0) / denom_rad, 0.25) - 273.15;
+    rep.eq_ecl_temp_c = pow((q_ir_mean + q_int_nom) / denom_rad, 0.25) - 273.15;
+
+    // Temperatura iniziale all'ingresso in Orbita 1 (291.15 K = +18.0 °C)
+    double temp_k = 291.15;
+    rep.min_temp_c =  1e9;
+    rep.max_temp_c = -1e9;
+
+    int num_pts = 151;
+    rep.num_samples = num_pts;
+
+    double sum_temp_c = 0.0, sum_sol = 0.0, sum_alb = 0.0, sum_ir = 0.0, sum_rad = 0.0;
+    int heater_active_count = 0;
+
+    // Passo fisico di integrazione termica tra campioni (dt_sample = 65 s diviso in 10 sotto-passi da 6.5 s)
+    double dt_sub = 6.5;
+
+    for (int i = 0; i < num_pts; i++) {
+        double tau = (double)i / (double)(num_pts - 1);
+        double t_min = tau * total_mission_min;
+
+        // Raggio orbitale interpolato lungo le 3 fasi e fattore di vista terrestre F_E = (R_E / r)^2
+        double r_cur_km = orb_init.a;
+        if (tau >= 0.34 && tau <= 0.76) {
+            double f_tr = (tau - 0.34) / 0.42;
+            r_cur_km = orb_init.a + f_tr * (orb_target.a - orb_init.a);
+        } else if (tau > 0.76) {
+            r_cur_km = orb_target.a;
+        }
+        double vf_earth = (EARTH_RADIUS / r_cur_km) * (EARTH_RADIUS / r_cur_km);
+
+        // Fase angolare orbitale (4.5 rivoluzioni complete nella finestra di missione) e cono d'ombra (eclissi)
+        double orb_angle = 4.5 * 2.0 * PI * tau;
+        double cos_sun   = cos(orb_angle);
+        int in_eclipse   = (cos_sun < -0.38) ? 1 : 0;
+
+        // 1. Radiazione Solare Diretta Q_sol [W]
+        double q_sol_w = in_eclipse ? 0.0 : (alpha_solar * SOLAR_CONSTANT_W_M2 * a_proj_m2 * (0.88 + 0.12 * fabs(cos_sun)));
+
+        // 2. Albedo Terrestre Q_alb [W] (nullo in eclissi, massimo al punto sub-solare)
+        double sub_solar_factor = (cos_sun > 0.0) ? (0.35 + 0.65 * cos_sun) : 0.20;
+        double q_alb_w = in_eclipse ? 0.0 : (alpha_solar * SOLAR_CONSTANT_W_M2 * EARTH_ALBEDO_COEFF * vf_earth * a_proj_m2 * sub_solar_factor);
+
+        // 3. Radiazione Infrarossa Terrestre (OLR) Q_ir [W] (sempre presente sia al Sole che in eclissi)
+        double q_ir_w = eps_ir * EARTH_IR_FLUX_W_M2 * vf_earth * a_nadir_m2;
+
+        // 4. Dissipazione Elettrica Interna avionica + propulsione Q_base [W]
+        double q_base_int_w = 210.0;
+        if (tau >= 0.34 && tau <= 0.76) {
+            q_base_int_w = plan.is_low_thrust ? 360.0 : 290.0;
+        }
+
+        // 5. Controllo attivo Heaters se T scende vicino o sotto T_min_op
+        double temp_c = temp_k - 273.15;
+        double q_heater_w = 0.0;
+        if (temp_c < (t_min_op_c + 12.0)) {
+            double frac_h = adcs_clamp(((t_min_op_c + 12.0) - temp_c) / 12.0, 0.0, 1.0);
+            q_heater_w = 320.0 * frac_h;
+        }
+        if (q_heater_w > 5.0) heater_active_count++;
+        if (q_heater_w > rep.peak_heater_w) rep.peak_heater_w = q_heater_w;
+
+        double q_int_total_w = q_base_int_w + q_heater_w;
+
+        // 6. Potenza Radiata nello Spazio Profondo: Q_rad = sigma * eps * A * T^4
+        double q_rad_w = denom_rad * (temp_k * temp_k * temp_k * temp_k - 81.0);
+
+        rep.samples[i].t_min      = t_min;
+        rep.samples[i].temp_c     = temp_c;
+        rep.samples[i].temp_k     = temp_k;
+        rep.samples[i].q_sol_w    = q_sol_w;
+        rep.samples[i].q_alb_w    = q_alb_w;
+        rep.samples[i].q_ir_w     = q_ir_w;
+        rep.samples[i].q_int_w    = q_int_total_w;
+        rep.samples[i].q_heater_w = q_heater_w;
+        rep.samples[i].q_rad_w    = q_rad_w;
+        rep.samples[i].in_eclipse = in_eclipse;
+
+        if (temp_c < rep.min_temp_c) rep.min_temp_c = temp_c;
+        if (temp_c > rep.max_temp_c) rep.max_temp_c = temp_c;
+        sum_temp_c += temp_c;
+        sum_sol    += q_sol_w;
+        sum_alb    += q_alb_w;
+        sum_ir     += q_ir_w;
+        sum_rad    += q_rad_w;
+
+        // Integrazione numerica dell'equazione differenziale del bilancio termico (10 sotto-passi)
+        for (int sub = 0; sub < 10; sub++) {
+            double tc_sub = temp_k - 273.15;
+            double q_h_sub = 0.0;
+            if (tc_sub < (t_min_op_c + 12.0)) {
+                q_h_sub = 320.0 * adcs_clamp(((t_min_op_c + 12.0) - tc_sub) / 12.0, 0.0, 1.0);
+            }
+            double q_in_sub  = q_sol_w + q_alb_w + q_ir_w + q_base_int_w + q_h_sub;
+            double q_out_sub = denom_rad * (temp_k * temp_k * temp_k * temp_k - 81.0);
+            double d_temp_k  = ((q_in_sub - q_out_sub) / rep.thermal_mass_j_k) * dt_sub;
+            temp_k = adcs_clamp(temp_k + d_temp_k, 150.0, 500.0);
+        }
+    }
+
+    double inv_n = 1.0 / (double)num_pts;
+    rep.mean_temp_c     = sum_temp_c * inv_n;
+    rep.mean_q_sol_w    = sum_sol * inv_n;
+    rep.mean_q_alb_w    = sum_alb * inv_n;
+    rep.mean_q_ir_w     = sum_ir  * inv_n;
+    rep.mean_q_rad_w    = sum_rad * inv_n;
+    rep.heater_duty_pct = ((double)heater_active_count / (double)num_pts) * 100.0;
 
     return rep;
 }

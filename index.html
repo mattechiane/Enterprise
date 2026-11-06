@@ -423,6 +423,52 @@
     </div>
 </section>
 
+<!-- 9. NINTH OUTPUT BLOCK: THERMAL CONTROL SYSTEM (TCS) & SPACE ENVIRONMENT HEAT BALANCE -->
+<section class="section-block">
+    <div class="section-header">
+        <div>
+            <h2>9. Spacecraft Thermal Control System (TCS), Heat Flux Balance &amp; Temperature Evolution</h2>
+            <span>Lumped-Parameter Thermal Node (mc<sub>p</sub> dT/dt) &bull; Direct Solar, Albedo &amp; Earth IR (OLR) Fluxes &bull; Stefan-Boltzmann Radiators &amp; Survival Heaters</span>
+        </div>
+        <span class="badge" id="tcsStatusBadge" style="color:var(--green); border-color:var(--green);">&#127777; THERMAL ENVELOPE NOMINAL (WITHIN OPERATIONAL LIMITS)</span>
+    </div>
+
+    <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(255,171,0,0.13), rgba(0,230,118,0.10)); border-color: var(--amber);">
+        <div class="title-group">
+            <h3 id="tcsBannerTitle" style="color:var(--amber);">LUMPED-PARAMETER SPACECRAFT THERMAL BALANCE &amp; ACTIVE HEATER CONTROL</h3>
+            <p id="tcsBannerSub">Coating Thermo-Optics: Solar Absorptivity &alpha;<sub>s</sub> = 0.28 &bull; IR Emissivity &epsilon;<sub>ir</sub> = 0.82 (&alpha;/&epsilon; = 0.34) &bull; Operational Limits: [-10&deg;C, +45&deg;C]</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="tcsBannerRange" style="color:var(--cyan);">Temp Range: ---&deg;C to ---&deg;C</div>
+            <div class="sub-fuel" id="tcsBannerSubMetrics">Mean Temp: ---&deg;C | Peak Heater: --- W (Duty: ---%) | Mean Radiated: --- W</div>
+        </div>
+    </div>
+
+    <div class="datasheet-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+        <div class="data-card">
+            <h4 style="color:var(--cyan)">&#127777; Orbital Temperature Excursion</h4>
+            <div id="tcsCardTemp"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--amber)">&#9728; Environmental Heat Fluxes</h4>
+            <div id="tcsCardFlux"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--red)">&#128293; Radiators &amp; Survival Heaters</h4>
+            <div id="tcsCardHeater"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--green)">&#128737; Coating Thermo-Optical Specs</h4>
+            <div id="tcsCardCoating"></div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotThermalTemp" class="plot-container-rdv"></div>
+        <div id="plotThermalFlux" class="plot-container-rdv"></div>
+    </div>
+</section>
+
 
 <!-- POPUP MODAL: MISSION INPUT CONFIGURATOR -->
 <div class="modal-overlay" id="inputModal">
@@ -617,6 +663,37 @@
             </div>
         </div>
 
+        <div class="form-section" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--amber)">7. Thermal Control System (TCS), Surface Coating &amp; Operational Limits</h3>
+                <select class="mode-toggle" id="tcsPresetSelect" onchange="onTcsPresetChange()">
+                    <option value="0.28|0.82|-10|45" selected>Coating Preset: OSR / Space White Paint (&alpha;=0.28, &epsilon;=0.82)</option>
+                    <option value="0.35|0.60|-10|45">Coating Preset: Multi-Layer Insulation MLI (&alpha;=0.35, &epsilon;=0.60)</option>
+                    <option value="0.48|0.22|-10|45">Coating Preset: Bare Aluminum / Gold Foil (&alpha;=0.48, &epsilon;=0.22)</option>
+                    <option value="0.88|0.86|-10|45">Coating Preset: Black Anodized Radiator (&alpha;=0.88, &epsilon;=0.86)</option>
+                    <option value="custom">Custom Thermo-Optical Properties</option>
+                </select>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="field">
+                    <label>Solar Absorptivity &alpha;<sub>s</sub> <span>[0.05 - 0.98]</span></label>
+                    <input type="number" id="tcsAlpha" value="0.28" min="0.05" max="0.98" step="0.02">
+                </div>
+                <div class="field">
+                    <label>IR Emissivity &epsilon;<sub>ir</sub> <span>[0.05 - 0.98]</span></label>
+                    <input type="number" id="tcsEps" value="0.82" min="0.05" max="0.98" step="0.02">
+                </div>
+                <div class="field">
+                    <label>Min Operational Temp T<sub>min</sub> [&deg;C]</label>
+                    <input type="number" id="tcsTmin" value="-10" min="-80" max="30" step="2">
+                </div>
+                <div class="field">
+                    <label>Max Operational Temp T<sub>max</sub> [&deg;C]</label>
+                    <input type="number" id="tcsTmax" value="45" min="10" max="120" step="2">
+                </div>
+            </div>
+        </div>
+
         <div class="modal-footer">
             <button class="btn-secondary" id="btnCancelModal">Cancel</button>
             <button class="btn-primary" id="btnRunCustomMission">&#128640; Compute Optimal Maneuver &amp; Update Mission</button>
@@ -669,6 +746,18 @@
             document.getElementById('adcsJyy').value  = p[1];
             document.getElementById('adcsJzz').value  = p[2];
             document.getElementById('adcsHmax').value = p[3];
+        }
+    }
+
+    function onTcsPresetChange() {
+        const val = document.getElementById('tcsPresetSelect').value;
+        if (val === 'custom') return;
+        const p = val.split('|');
+        if (p.length >= 4) {
+            document.getElementById('tcsAlpha').value = p[0];
+            document.getElementById('tcsEps').value   = p[1];
+            document.getElementById('tcsTmin').value  = p[2];
+            document.getElementById('tcsTmax').value  = p[3];
         }
     }
 
@@ -991,6 +1080,12 @@
             if (data.adcs_summary.rw_h_max_nms !== undefined) {
                 document.getElementById('adcsHmax').value = data.adcs_summary.rw_h_max_nms;
             }
+        }
+        if (data.thermal_summary) {
+            if (data.thermal_summary.alpha_solar !== undefined) document.getElementById('tcsAlpha').value = data.thermal_summary.alpha_solar;
+            if (data.thermal_summary.eps_ir !== undefined)      document.getElementById('tcsEps').value   = data.thermal_summary.eps_ir;
+            if (data.thermal_summary.t_min_op_c !== undefined)  document.getElementById('tcsTmin').value  = data.thermal_summary.t_min_op_c;
+            if (data.thermal_summary.t_max_op_c !== undefined)  document.getElementById('tcsTmax').value  = data.thermal_summary.t_max_op_c;
         }
 
         validateModalOrbits(false);
@@ -1844,6 +1939,151 @@
             legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
+        // ---------------------------------------------------------------------
+        // SECTION 9: SPACECRAFT THERMAL CONTROL SYSTEM (TCS) & HEAT BALANCE
+        // ---------------------------------------------------------------------
+        const fallbackTcs = simulateThermalProfileJS(
+            aInitKm,
+            aTargKm,
+            (m.transfer_min || 47.57) * 60.0,
+            isLowThrust,
+            0.28,
+            0.82,
+            -10.0,
+            45.0
+        );
+        const tcsInfo = data.thermal_summary || fallbackTcs.thermal_summary;
+        const tcsTraj = (data.traj_thermal && data.traj_thermal.length) ? data.traj_thermal : fallbackTcs.traj_thermal;
+        const tMinOp = (tcsInfo.t_min_op_c !== undefined) ? tcsInfo.t_min_op_c : -10.0;
+        const tMaxOp = (tcsInfo.t_max_op_c !== undefined) ? tcsInfo.t_max_op_c : 45.0;
+        const tMinSurv = tMinOp - 15.0;
+        const tMaxSurv = tMaxOp + 15.0;
+        const withinOp = (tcsInfo.min_temp_c >= tMinOp - 1.5 && tcsInfo.max_temp_c <= tMaxOp + 1.5);
+
+        const tcsBadgeEl = document.getElementById('tcsStatusBadge');
+        if (tcsBadgeEl) {
+            tcsBadgeEl.innerHTML = withinOp
+                ? `&#127777; THERMAL ENVELOPE NOMINAL ([${tcsInfo.min_temp_c}&deg;C, +${tcsInfo.max_temp_c}&deg;C] WITHIN [${tMinOp}&deg;C, +${tMaxOp}&deg;C])`
+                : `&#9888; THERMAL EXCURSION ALERT ([${tcsInfo.min_temp_c}&deg;C, +${tcsInfo.max_temp_c}&deg;C] vs LIMITS [${tMinOp}&deg;C, +${tMaxOp}&deg;C])`;
+            tcsBadgeEl.style.color = withinOp ? 'var(--green)' : 'var(--amber)';
+            tcsBadgeEl.style.borderColor = withinOp ? 'var(--green)' : 'var(--amber)';
+        }
+
+        const alphaEpsRatio = (tcsInfo.alpha_solar / Math.max(0.05, tcsInfo.eps_ir)).toFixed(2);
+        document.getElementById('tcsBannerTitle').textContent =
+            `LUMPED-PARAMETER SPACECRAFT THERMAL BALANCE (mc_p = ${(tcsInfo.thermal_mass_j_k / 1000).toFixed(1)} kJ/K | A_rad = ${tcsInfo.rad_area_m2} m²)`;
+        document.getElementById('tcsBannerSub').innerHTML =
+            `Coating Thermo-Optics: Solar Absorptivity <strong>&alpha;<sub>s</sub> = ${tcsInfo.alpha_solar}</strong> &bull; IR Emissivity <strong>&epsilon;<sub>ir</sub> = ${tcsInfo.eps_ir}</strong> (&alpha;/&epsilon; = <strong>${alphaEpsRatio}</strong>) &bull; Operational Limits: <strong>[${tMinOp}&deg;C, +${tMaxOp}&deg;C]</strong>`;
+        document.getElementById('tcsBannerRange').textContent =
+            `Temp Excursion: ${tcsInfo.min_temp_c}°C to +${tcsInfo.max_temp_c}°C`;
+        document.getElementById('tcsBannerSubMetrics').textContent =
+            `Mean Temp: ${tcsInfo.mean_temp_c}°C • Peak Heater: ${tcsInfo.peak_heater_w} W (Duty: ${tcsInfo.heater_duty_pct}%) • Mean Radiated: ${tcsInfo.mean_q_rad_w} W`;
+
+        document.getElementById('tcsCardTemp').innerHTML = `
+            <div class="row-item"><span class="row-label">Min / Max Excursion</span><span class="row-val" style="color:var(--cyan)">${tcsInfo.min_temp_c}&deg;C / +${tcsInfo.max_temp_c}&deg;C</span></div>
+            <div class="row-item"><span class="row-label">Mean Orbital Temperature</span><span class="row-val">${tcsInfo.mean_temp_c}&deg;C</span></div>
+            <div class="row-item"><span class="row-label">Operational Limits</span><span class="row-val">[${tMinOp}&deg;C, +${tMaxOp}&deg;C]</span></div>
+        `;
+        document.getElementById('tcsCardFlux').innerHTML = `
+            <div class="row-item"><span class="row-label">Mean Direct Solar (Q_sol)</span><span class="row-val" style="color:var(--amber)">${tcsInfo.mean_q_sol_w} W</span></div>
+            <div class="row-item"><span class="row-label">Mean Earth Albedo (Q_alb)</span><span class="row-val">${tcsInfo.mean_q_alb_w} W</span></div>
+            <div class="row-item"><span class="row-label">Mean Earth IR OLR (Q_ir)</span><span class="row-val">${tcsInfo.mean_q_ir_w} W</span></div>
+        `;
+        document.getElementById('tcsCardHeater').innerHTML = `
+            <div class="row-item"><span class="row-label">Peak Heater Power</span><span class="row-val" style="color:var(--red)">${tcsInfo.peak_heater_w} W</span></div>
+            <div class="row-item"><span class="row-label">Heater Active Duty Cycle</span><span class="row-val">${tcsInfo.heater_duty_pct}%</span></div>
+            <div class="row-item"><span class="row-label">Mean Radiated (σ&epsilon;AT&sup4;)</span><span class="row-val">${tcsInfo.mean_q_rad_w} W</span></div>
+        `;
+        document.getElementById('tcsCardCoating').innerHTML = `
+            <div class="row-item"><span class="row-label">Coating &alpha;<sub>s</sub> / &epsilon;<sub>ir</sub> Ratio</span><span class="row-val" style="color:var(--green)">${tcsInfo.alpha_solar} / ${tcsInfo.eps_ir} (${alphaEpsRatio})</span></div>
+            <div class="row-item"><span class="row-label">Hot-Case Equilibrium</span><span class="row-val">+${tcsInfo.eq_sun_temp_c}&deg;C</span></div>
+            <div class="row-item"><span class="row-label">Unheated Eclipse Eq.</span><span class="row-val">${tcsInfo.eq_ecl_temp_c}&deg;C</span></div>
+        `;
+
+        const tcsTimeMin = tcsTraj.map(p => p.t_min);
+        const tStart = tcsTimeMin[0], tEnd = tcsTimeMin[tcsTimeMin.length - 1];
+
+        Plotly.newPlot('plotThermalTemp', [
+            {
+                type: 'scatter', mode: 'lines', name: `Max Survival Limit (+${tMaxSurv}°C)`,
+                x: [tStart, tEnd], y: [tMaxSurv, tMaxSurv],
+                line: { color: 'rgba(255, 23, 68, 0.55)', width: 1.5, dash: 'dot' }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: `Max Operational Limit (+${tMaxOp}°C)`,
+                x: [tStart, tEnd], y: [tMaxOp, tMaxOp],
+                line: { color: '#ffab00', width: 2.0, dash: 'dash' }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: `Min Operational Limit (${tMinOp}°C)`,
+                x: [tStart, tEnd], y: [tMinOp, tMinOp],
+                line: { color: '#00e676', width: 2.0, dash: 'dash' },
+                fill: 'tonexty', fillcolor: 'rgba(0, 230, 118, 0.06)'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: `Min Survival Limit (${tMinSurv}°C)`,
+                x: [tStart, tEnd], y: [tMinSurv, tMinSurv],
+                line: { color: 'rgba(0, 229, 255, 0.45)', width: 1.5, dash: 'dot' }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Spacecraft Bus Temperature T(t) [°C]',
+                x: tcsTimeMin, y: tcsTraj.map(p => p.temp_c),
+                line: { color: '#00e5ff', width: 3.2 },
+                text: tcsTraj.map(p => (p.ecl === 1 ? 'UMBRA ECLIPSE' : 'SUNLIGHT') + ` | Heater: ${p.q_heater_w} W`),
+                hovertemplate: '<b>Bus Temp</b>: %{y:.2f} °C<br>%{text}<extra></extra>'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Active Survival Heater Power [W]',
+                x: tcsTimeMin, y: tcsTraj.map(p => p.q_heater_w), yaxis: 'y2',
+                line: { color: '#ff1744', width: 2.0, shape: 'hv' },
+                fill: 'tozeroy', fillcolor: 'rgba(255, 23, 68, 0.12)'
+            }
+        ], {
+            title: { text: '9A. Spacecraft Lumped-Node Temperature T(t) [°C], Operational Envelope & Active Heater Control', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 60, r: 65, b: 48, t: 40 }, hovermode: 'x unified',
+            xaxis: { title: 'Mission Timeline [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Spacecraft Temperature [°C]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#222d42', range: [Math.min(tMinSurv - 8, tcsInfo.min_temp_c - 6), Math.max(tMaxSurv + 8, tcsInfo.max_temp_c + 6)] },
+            yaxis2: { title: 'Active Heater Power [W]', titlefont: { color: '#ff1744' }, tickfont: { color: '#ff1744' }, overlaying: 'y', side: 'right', showgrid: false, range: [0, 420] },
+            legend: { font: { color: '#e2e8f0', size: 10 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        Plotly.newPlot('plotThermalFlux', [
+            {
+                type: 'scatter', mode: 'lines', name: 'Direct Solar Flux Q_sol [W]',
+                x: tcsTimeMin, y: tcsTraj.map(p => p.q_sol_w),
+                line: { color: '#ffab00', width: 2.4 },
+                fill: 'tozeroy', fillcolor: 'rgba(255, 171, 0, 0.09)'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Earth Albedo Flux Q_alb [W]',
+                x: tcsTimeMin, y: tcsTraj.map(p => p.q_alb_w),
+                line: { color: '#00e676', width: 2.0 }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Earth Infrared OLR Q_ir [W]',
+                x: tcsTimeMin, y: tcsTraj.map(p => p.q_ir_w),
+                line: { color: '#00e5ff', width: 2.0, dash: 'dot' }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Internal + Heater Dissipation Q_int [W]',
+                x: tcsTimeMin, y: tcsTraj.map(p => p.q_int_w),
+                line: { color: '#ff1744', width: 2.2 }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Radiated Rejection σ·ε·A·T⁴ [W]',
+                x: tcsTimeMin, y: tcsTraj.map(p => p.q_rad_w),
+                line: { color: '#d500f9', width: 2.8, dash: 'dash' }
+            }
+        ], {
+            title: { text: '9B. Environmental & Internal Heat Flux Balance (Solar, Albedo, Earth OLR, Internal & Radiated) [Watts]', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 60, r: 30, b: 48, t: 40 }, hovermode: 'x unified',
+            xaxis: { title: 'Mission Timeline [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Thermal Power Flux [Watts]', titlefont: { color: '#ffab00' }, tickfont: { color: '#cbd5e1' }, gridcolor: '#222d42', rangemode: 'tozero' },
+            legend: { font: { color: '#e2e8f0', size: 10 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
         startAnimationLoop();
     }
 
@@ -2669,13 +2909,13 @@
         const slewAngleB1Deg = 2.0 * Math.acos(Math.max(0.0, Math.min(1.0, qeSlew1.q0))) * RAD2DEG;
         const slewAngleB2Deg = 2.0 * Math.acos(Math.max(0.0, Math.min(1.0, qeSlew2.q0))) * RAD2DEG;
 
-        const tauMaxAxisNm = 0.180;
-        const wn   = 0.052 / Math.pow(gammaJ, 0.32);
+        const tauMaxAxisNm = Math.min(0.240, 0.115 * Math.pow(gammaJ, 0.25));
+        const wn   = 0.048 / Math.pow(gammaJ, 0.32);
         const zeta = 0.86;
         const kp = { x: 2.0 * wn * wn * J.x, y: 2.0 * wn * wn * J.y, z: 2.0 * wn * wn * J.z };
         const kd = { x: 2.0 * zeta * wn * J.x, y: 2.0 * zeta * wn * J.y, z: 2.0 * zeta * wn * J.z };
 
-        const slewTimeS = 2.0 * Math.sqrt(((slewAngleB1Deg * DEG2RAD) * jMax) / tauMaxAxisNm) + (1.8 / wn);
+        const slewTimeS = 2.0 * Math.sqrt(((slewAngleB1Deg * DEG2RAD) * jMax) / 0.180) + (1.8 / wn);
 
         const rMeanKm = 0.5 * (aInitKm + aTargetKm);
         const muR3 = MU / Math.pow(rMeanKm, 3);
@@ -2808,16 +3048,16 @@
                     q3: qCur.q3 + dq.q3 * dtSub
                 });
 
-                const secScale = Math.pow(gammaJ, 0.38);
+                const secScale = Math.pow(gammaJ, 0.35);
                 const tauSec = {
-                    x: 0.0016 * secScale * (1.0 + 0.5 * Math.sin(2.0 * Math.PI * tau)),
-                    y: 0.0022 * secScale * ((modeId === 2) ? 2.1 : 1.0),
-                    z: 0.0014 * secScale * Math.cos(2.0 * Math.PI * tau)
+                    x: 0.00095 * secScale * (1.0 + 0.5 * Math.sin(2.0 * Math.PI * tau)),
+                    y: 0.00130 * secScale * ((modeId === 2) ? 2.1 : 1.0),
+                    z: 0.00080 * secScale * Math.cos(2.0 * Math.PI * tau)
                 };
-                hRwNms = vecAdd(hRwNms, vecScale(vecAdd(vecScale(tRw, 0.35), tauSec), dtSub));
+                hRwNms = vecAdd(hRwNms, vecScale(vecAdd(vecScale(tRw, 0.25), tauSec), dtSub));
 
                 const curSat = vecNorm(hRwNms) / hMax;
-                const desatWindow = (tau >= 0.76 && tau <= 0.87) || (curSat >= 0.78);
+                const desatWindow = (tau >= 0.76 && tau <= 0.87) || (curSat >= 0.88);
                 if (desatWindow && curSat > 0.22) {
                     hRwNms = vecScale(hRwNms, 1.0 - 0.018 * dtSub);
                     if (!desatActivePrev && sub === 0) {
@@ -2855,6 +3095,151 @@
                 peak_power_w: +peakPowerW.toFixed(1)
             },
             traj_adcs: trajAdcs
+        };
+    }
+
+    // =========================================================================
+    // SPRINT 15: THERMAL CONTROL SYSTEM (TCS) & HEAT FLUX BALANCE ENGINE (JS)
+    // =========================================================================
+    function simulateThermalProfileJS(aInitKm, aTargetKm, tofSec, isLowThrust, alphaSolarIn, epsIrIn, tMinOpIn, tMaxOpIn) {
+        const STEFAN_BOLTZ = 5.670374419e-8;
+        const SOLAR_CONST  = 1361.0;
+        const EARTH_IR_OLR = 237.0;
+        const EARTH_ALBEDO = 0.30;
+
+        const alphaSolar = Math.max(0.05, Math.min(0.98, alphaSolarIn || 0.28));
+        const epsIr      = Math.max(0.05, Math.min(0.98, epsIrIn      || 0.82));
+        let tMinOpC = (tMinOpIn !== undefined && !isNaN(tMinOpIn)) ? tMinOpIn : -10.0;
+        let tMaxOpC = (tMaxOpIn !== undefined && !isNaN(tMaxOpIn)) ? tMaxOpIn : 45.0;
+        if (tMaxOpC <= tMinOpC + 5.0) {
+            tMinOpC = -10.0;
+            tMaxOpC = 45.0;
+        }
+
+        const thermalMassJK = 14500.0;
+        const radAreaM2     = 4.60;
+        const aProjM2       = 2.60;
+        const aNadirM2      = 2.30;
+
+        const pInitS = 2.0 * Math.PI * Math.sqrt(Math.pow(aInitKm, 3) / MU);
+        const pTargS = 2.0 * Math.PI * Math.sqrt(Math.pow(aTargetKm, 3) / MU);
+        const tPhase1S = 2.0 * pInitS;
+        const tPhase2S = isLowThrust ? (6.0 * 5600.0) : Math.max(600.0, tofSec || 2700.0);
+        const tPhase3S = 2.0 * pTargS;
+        const totalMissionMin = (tPhase1S + tPhase2S + tPhase3S) / 60.0;
+
+        const rMeanKm  = 0.5 * (aInitKm + aTargetKm);
+        const vfMean   = (R_EQ / rMeanKm) * (R_EQ / rMeanKm);
+        const qSolMax  = alphaSolar * SOLAR_CONST * aProjM2;
+        const qAlbMax  = alphaSolar * SOLAR_CONST * EARTH_ALBEDO * vfMean * aProjM2 * 0.70;
+        const qIrMean  = epsIr * EARTH_IR_OLR * vfMean * aNadirM2;
+        const denomRad = STEFAN_BOLTZ * epsIr * radAreaM2;
+
+        const eqSunTempC = Math.pow((qSolMax + qAlbMax + qIrMean + 240.0) / denomRad, 0.25) - 273.15;
+        const eqEclTempC = Math.pow((qIrMean + 165.0) / denomRad, 0.25) - 273.15;
+
+        let tempK = 291.15;
+        let minTempC = 1e9, maxTempC = -1e9, peakHeaterW = 0.0;
+        let sumTempC = 0.0, sumSol = 0.0, sumAlb = 0.0, sumIr = 0.0, sumRad = 0.0;
+        let heaterActiveCount = 0;
+
+        const numPts = 151;
+        const dtSub  = 6.5;
+        const trajThermal = [];
+
+        for (let i = 0; i < numPts; i++) {
+            const tau = i / (numPts - 1);
+            const tMin = tau * totalMissionMin;
+
+            let rCurKm = aInitKm;
+            if (tau >= 0.34 && tau <= 0.76) {
+                rCurKm = aInitKm + ((tau - 0.34) / 0.42) * (aTargetKm - aInitKm);
+            } else if (tau > 0.76) {
+                rCurKm = aTargetKm;
+            }
+            const vfEarth = (R_EQ / rCurKm) * (R_EQ / rCurKm);
+
+            const orbAngle = 4.5 * 2.0 * Math.PI * tau;
+            const cosSun   = Math.cos(orbAngle);
+            const inEclipse = (cosSun < -0.38) ? 1 : 0;
+
+            const qSolW = inEclipse ? 0.0 : (alphaSolar * SOLAR_CONST * aProjM2 * (0.88 + 0.12 * Math.abs(cosSun)));
+            const subSolarFactor = (cosSun > 0.0) ? (0.35 + 0.65 * cosSun) : 0.20;
+            const qAlbW = inEclipse ? 0.0 : (alphaSolar * SOLAR_CONST * EARTH_ALBEDO * vfEarth * aProjM2 * subSolarFactor);
+            const qIrW  = epsIr * EARTH_IR_OLR * vfEarth * aNadirM2;
+
+            let qBaseIntW = 210.0;
+            if (tau >= 0.34 && tau <= 0.76) {
+                qBaseIntW = isLowThrust ? 360.0 : 290.0;
+            }
+
+            const tempC = tempK - 273.15;
+            let qHeaterW = 0.0;
+            if (tempC < (tMinOpC + 12.0)) {
+                const fracH = Math.max(0.0, Math.min(1.0, ((tMinOpC + 12.0) - tempC) / 12.0));
+                qHeaterW = 320.0 * fracH;
+            }
+            if (qHeaterW > 5.0) heaterActiveCount++;
+            if (qHeaterW > peakHeaterW) peakHeaterW = qHeaterW;
+
+            const qIntTotalW = qBaseIntW + qHeaterW;
+            const qRadW = denomRad * (Math.pow(tempK, 4) - 81.0);
+
+            trajThermal.push({
+                t_min: +tMin.toFixed(2),
+                temp_c: +tempC.toFixed(2),
+                q_sol_w: +qSolW.toFixed(1),
+                q_alb_w: +qAlbW.toFixed(1),
+                q_ir_w: +qIrW.toFixed(1),
+                q_int_w: +qIntTotalW.toFixed(1),
+                q_heater_w: +qHeaterW.toFixed(1),
+                q_rad_w: +qRadW.toFixed(1),
+                ecl: inEclipse
+            });
+
+            if (tempC < minTempC) minTempC = tempC;
+            if (tempC > maxTempC) maxTempC = tempC;
+            sumTempC += tempC;
+            sumSol   += qSolW;
+            sumAlb   += qAlbW;
+            sumIr    += qIrW;
+            sumRad   += qRadW;
+
+            for (let sub = 0; sub < 10; sub++) {
+                const tcSub = tempK - 273.15;
+                let qHSub = 0.0;
+                if (tcSub < (tMinOpC + 12.0)) {
+                    qHSub = 320.0 * Math.max(0.0, Math.min(1.0, ((tMinOpC + 12.0) - tcSub) / 12.0));
+                }
+                const qInSub  = qSolW + qAlbW + qIrW + qBaseIntW + qHSub;
+                const qOutSub = denomRad * (Math.pow(tempK, 4) - 81.0);
+                const dTempK  = ((qInSub - qOutSub) / thermalMassJK) * dtSub;
+                tempK = Math.max(150.0, Math.min(500.0, tempK + dTempK));
+            }
+        }
+
+        const invN = 1.0 / numPts;
+        return {
+            thermal_summary: {
+                alpha_solar: +alphaSolar.toFixed(2),
+                eps_ir: +epsIr.toFixed(2),
+                thermal_mass_j_k: +thermalMassJK.toFixed(1),
+                rad_area_m2: +radAreaM2.toFixed(2),
+                t_min_op_c: +tMinOpC.toFixed(1),
+                t_max_op_c: +tMaxOpC.toFixed(1),
+                min_temp_c: +minTempC.toFixed(2),
+                max_temp_c: +maxTempC.toFixed(2),
+                mean_temp_c: +(sumTempC * invN).toFixed(2),
+                eq_sun_temp_c: +eqSunTempC.toFixed(2),
+                eq_ecl_temp_c: +eqEclTempC.toFixed(2),
+                mean_q_sol_w: +(sumSol * invN).toFixed(1),
+                mean_q_alb_w: +(sumAlb * invN).toFixed(1),
+                mean_q_ir_w: +(sumIr * invN).toFixed(1),
+                mean_q_rad_w: +(sumRad * invN).toFixed(1),
+                peak_heater_w: +peakHeaterW.toFixed(1),
+                heater_duty_pct: +((heaterActiveCount / numPts) * 100.0).toFixed(1)
+            },
+            traj_thermal: trajThermal
         };
     }
 
@@ -3101,6 +3486,14 @@
         const adcsHmax = Math.max(1.0,  parseFloat(document.getElementById('adcsHmax').value) || 10.0);
         const adcsRes  = simulateAdcsProfileJS(kepInit.a, kepTarg.a, tofSec, isLowThrust, b1Dir, b2Dir, { x: adcsJxx, y: adcsJyy, z: adcsJzz }, adcsHmax);
 
+        // Sprint 15: Spacecraft Thermal Control System (TCS) & Heat Flux Balance
+        const tcsAlpha = Math.max(0.05, Math.min(0.98, parseFloat(document.getElementById('tcsAlpha').value) || 0.28));
+        const tcsEps   = Math.max(0.05, Math.min(0.98, parseFloat(document.getElementById('tcsEps').value)   || 0.82));
+        const tcsTmin  = parseFloat(document.getElementById('tcsTmin').value);
+        const tcsTmax  = parseFloat(document.getElementById('tcsTmax').value);
+        const tcsRes   = simulateThermalProfileJS(kepInit.a, kepTarg.a, tofSec, isLowThrust, tcsAlpha, tcsEps,
+            isNaN(tcsTmin) ? -10.0 : tcsTmin, isNaN(tcsTmax) ? 45.0 : tcsTmax);
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -3121,11 +3514,13 @@
             rendezvous: cwRes.rendezvous,
             monte_carlo: mcRes.monte_carlo,
             adcs_summary: adcsRes.adcs_summary,
+            thermal_summary: tcsRes.thermal_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
             mc_cloud: mcRes.mc_cloud,
-            traj_adcs: adcsRes.traj_adcs
+            traj_adcs: adcsRes.traj_adcs,
+            traj_thermal: tcsRes.traj_thermal
         };
 
         document.getElementById('inputModal').classList.remove('open');
