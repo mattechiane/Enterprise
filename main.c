@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 13: MONTE CARLO DISPERSION & TCM ENGINE\n");
+    printf("   PROJECT ENTERPRISE - SPRINT 14: 6-DOF ADCS & REACTION WHEEL ENGINE\n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -62,6 +62,11 @@ int main(void) {
     MonteCarloReport mc = run_monte_carlo_dispersion(orb_initial, orb_target, plan,
                                                      sigma_dv_pct, sigma_point_deg, MAX_MC_RUNS, EARTH_MU);
 
+    // 6. SPRINT 14: DINAMICA D'ASSETTO 6-DOF (ADCS), SLEW QUATERNIONI & REACTION WHEELS
+    Vector3D sc_inertia_kgm2 = {120.0, 110.0, 85.0}; // Tensore principale d'inerzia J = diag(Jxx, Jyy, Jzz) [kg*m^2]
+    double rw_h_max_nms      = 10.0;                 // Capacità momento angolare Reaction Wheels [N*m*s]
+    ADCSReport adcs = simulate_adcs_profile(orb_initial, orb_target, plan, sc_inertia_kgm2, rw_h_max_nms, EARTH_MU);
+
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -97,10 +102,21 @@ int main(void) {
     printf("  * Mid-Course TCM Budget : Mean = %.2f m/s | 99.7%% (3-Sigma) = %.2f m/s | Reserve Fuel = %.3f kg\n\n",
            mc.tcm_dv_mean_ms, mc.tcm_dv_99_ms, mc.tcm_fuel_99_kg);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Burn Points, CW Rendezvous & Monte Carlo TCM Data!\n");
+    printf("[6-DOF ATTITUDE DYNAMICS (ADCS), QUATERNION SLEW & REACTION WHEELS]\n");
+    printf("  * Principal Inertia J   : diag(%.1f, %.1f, %.1f) kg*m^2 | RW Capacity = %.1f N*m*s\n",
+           adcs.inertia_kgm2.x, adcs.inertia_kgm2.y, adcs.inertia_kgm2.z, adcs.rw_h_max_nms);
+    printf("  * Pre-Burn Slew Agile   : Duration = %.1f s | Burn 1 Slew = %.1f deg | Burn 2 Slew = %.1f deg\n",
+           adcs.slew_time_s, adcs.slew_angle_b1_deg, adcs.slew_angle_b2_deg);
+    printf("  * Steady Pointing RMS   : %.4f deg (%.1f arcsec) | Env Torques (GG/Aero/SRP) = %.2f / %.2f / %.2f mN*m\n",
+           adcs.steady_point_err_deg, adcs.steady_point_err_arcsec,
+           adcs.gg_torque_mnm, adcs.aero_torque_mnm, adcs.srp_torque_mnm);
+    printf("  * Reaction Wheel Load   : Peak Torque = %.1f mN*m | Max H_rw = %.2f N*m*s (%.1f%% Sat) | MTQ Desats = %d\n\n",
+           adcs.peak_rw_torque_mnm, adcs.max_rw_mom_nms, adcs.max_rw_sat_pct, adcs.desat_cycles);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with 6-DOF ADCS, CW Rendezvous & Monte Carlo TCM Data!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

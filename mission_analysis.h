@@ -65,4 +65,22 @@ MonteCarloReport run_monte_carlo_dispersion(KeplerianElements orb_init,
                                             int num_runs,
                                             double mu);
 
+// Sprint 14: Dinamica d'Assetto 6-DOF (Eulero + Quaternioni), Slew Control PD e Gestione Reaction Wheels
+ADCSReport simulate_adcs_profile(KeplerianElements orb_init,
+                                 KeplerianElements orb_target,
+                                 OptimalTransferPlan plan,
+                                 Vector3D inertia_kgm2,
+                                 double rw_h_max_nms,
+                                 double mu);
+
+// Sprint 15: Controllo Termico (TCS) a Nodi Raggruppati, Flussi Radiativi (Solare, Albedo, OLR) e Heaters
+ThermalReport simulate_thermal_profile(KeplerianElements orb_init,
+                                       KeplerianElements orb_target,
+                                       OptimalTransferPlan plan,
+                                       double alpha_solar,
+                                       double eps_ir,
+                                       double t_min_op_c,
+                                       double t_max_op_c,
+                                       double mu);
+
 #endif // MISSION_ANALYSIS_H

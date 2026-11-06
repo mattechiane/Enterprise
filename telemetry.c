@@ -204,12 +204,25 @@ static void write_monte_carlo_cloud_json_array(FILE *fp, MonteCarloReport mc) {
     fprintf(fp, "  ]");
 }
 
+static void write_adcs_trajectory_json_array(FILE *fp, ADCSReport adcs) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < adcs.num_samples; i++) {
+        AttitudeSample s = adcs.samples[i];
+        fprintf(fp, "    {\"t_min\":%.2f,\"roll_deg\":%.2f,\"pitch_deg\":%.2f,\"yaw_deg\":%.2f,\"point_err_deg\":%.3f,\"omega_deg_s\":%.3f,\"rw_torque_mnm\":%.2f,\"rw_mom_nms\":%.3f,\"rw_sat_pct\":%.2f,\"mode_id\":%d}%s\n",
+                s.t_min, s.roll_deg, s.pitch_deg, s.yaw_deg, s.point_err_deg,
+                s.omega_norm_deg_s, s.rw_torque_mnm, s.rw_mom_nms, s.rw_sat_pct, (int)s.mode,
+                (i < adcs.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
                              OrbitReport rep_target,
                              RendezvousPlan rdv,
                              MonteCarloReport mc,
+                             ADCSReport adcs,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -285,6 +298,20 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"tcm_dv_mean_ms\": %.2f, \"tcm_dv_99_ms\": %.2f, \"tcm_fuel_99_kg\": %.3f\n  },\n",
             mc.tcm_dv_mean_ms, mc.tcm_dv_99_ms, mc.tcm_fuel_99_kg);
 
+    fprintf(fp, "  \"adcs_summary\": {\n");
+    fprintf(fp, "    \"inertia_kgm2\": [%.1f, %.1f, %.1f], \"rw_h_max_nms\": %.2f,\n",
+            adcs.inertia_kgm2.x, adcs.inertia_kgm2.y, adcs.inertia_kgm2.z, adcs.rw_h_max_nms);
+    fprintf(fp, "    \"slew_time_s\": %.1f, \"slew_angle_b1_deg\": %.1f, \"slew_angle_b2_deg\": %.1f,\n",
+            adcs.slew_time_s, adcs.slew_angle_b1_deg, adcs.slew_angle_b2_deg);
+    fprintf(fp, "    \"steady_point_err_deg\": %.4f, \"steady_point_err_arcsec\": %.1f,\n",
+            adcs.steady_point_err_deg, adcs.steady_point_err_arcsec);
+    fprintf(fp, "    \"gg_torque_mnm\": %.3f, \"aero_torque_mnm\": %.3f, \"srp_torque_mnm\": %.3f,\n",
+            adcs.gg_torque_mnm, adcs.aero_torque_mnm, adcs.srp_torque_mnm);
+    fprintf(fp, "    \"peak_rw_torque_mnm\": %.2f, \"max_rw_mom_nms\": %.3f, \"max_rw_sat_pct\": %.1f,\n",
+            adcs.peak_rw_torque_mnm, adcs.max_rw_mom_nms, adcs.max_rw_sat_pct);
+    fprintf(fp, "    \"desat_cycles\": %d, \"mean_power_w\": %.1f, \"peak_power_w\": %.1f\n  },\n",
+            adcs.desat_cycles, adcs.mean_power_w, adcs.peak_power_w);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -344,6 +371,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"mc_cloud\": ");
     write_monte_carlo_cloud_json_array(fp, mc);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_adcs\": ");
+    write_adcs_trajectory_json_array(fp, adcs);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

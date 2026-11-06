@@ -377,6 +377,52 @@
     </div>
 </section>
 
+<!-- 8. EIGHTH OUTPUT BLOCK: 6-DOF ATTITUDE DYNAMICS (ADCS), SLEW MANEUVERS & REACTION WHEEL MOMENTUM -->
+<section class="section-block">
+    <div class="section-header">
+        <div>
+            <h2>8. 6-DOF Attitude Dynamics (ADCS), Slew Maneuvers &amp; Reaction Wheel Momentum</h2>
+            <span>Euler Rigid-Body Dynamics &bull; Quaternion PD Slew Control &bull; 3-Axis Reaction Wheels &amp; Magnetorquer Momentum Dumping</span>
+        </div>
+        <span class="badge" id="adcsStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#128752; 6-DOF QUATERNION SLEW &amp; RW DESATURATION ACTIVE</span>
+    </div>
+
+    <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.13), rgba(255,171,0,0.11)); border-color: var(--cyan);">
+        <div class="title-group">
+            <h3 id="adcsBannerTitle" style="color:var(--cyan);">6-DOF RIGID-BODY ATTITUDE CONTROL &amp; REACTION WHEEL TELEMETRY</h3>
+            <p id="adcsBannerSub">Principal Inertia Tensor J = diag(120.0, 110.0, 85.0) kg&middot;m&sup2; &bull; RW Capacity h_max = 10.0 N&middot;m&middot;s &bull; Pointing Modes: Nadir / Sun / Thrust-Align / Target-Track</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="adcsBannerSlew" style="color:var(--amber);">Pre-Burn Slew: --- s</div>
+            <div class="sub-fuel" id="adcsBannerSubMetrics">Steady Pointing RMS: ---&deg; (--- arcsec) | Peak RW Torque: --- mN&middot;m | Max RW Sat: ---%</div>
+        </div>
+    </div>
+
+    <div class="datasheet-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+        <div class="data-card">
+            <h4 style="color:var(--amber)">&#9201; Pre-Burn Slew Agility</h4>
+            <div id="adcsCardSlew"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--cyan)">&#127919; Steady-State Pointing Accuracy</h4>
+            <div id="adcsCardAccuracy"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--purple)">&#9881; Peak Reaction Wheel Torque</h4>
+            <div id="adcsCardTorque"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--green)">&#129522; Max RW Momentum Saturation</h4>
+            <div id="adcsCardMomentum"></div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotAdcsAngles" class="plot-container-rdv"></div>
+        <div id="plotAdcsWheels" class="plot-container-rdv"></div>
+    </div>
+</section>
+
 
 <!-- POPUP MODAL: MISSION INPUT CONFIGURATOR -->
 <div class="modal-overlay" id="inputModal">
@@ -541,6 +587,36 @@
             </div>
         </div>
 
+        <div class="form-section" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--cyan)">6. ADCS &amp; Spacecraft Inertia (6-DOF Attitude Control &amp; Reaction Wheels)</h3>
+                <select class="mode-toggle" id="adcsPresetSelect" onchange="onAdcsPresetChange()">
+                    <option value="120|110|85|10" selected>Bus Preset: SmallSat (120 / 110 / 85 kg&middot;m&sup2;)</option>
+                    <option value="450|410|320|15">Bus Preset: MediumSat (450 / 410 / 320 kg&middot;m&sup2;)</option>
+                    <option value="1200|1100|850|25">Bus Preset: Heavy Bus (1200 / 1100 / 850 kg&middot;m&sup2;)</option>
+                    <option value="custom">Custom Principal Inertia Tensor</option>
+                </select>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="field">
+                    <label>Roll Inertia J<sub>xx</sub> [kg&middot;m&sup2;]</label>
+                    <input type="number" id="adcsJxx" value="120.0" min="10" max="10000" step="10">
+                </div>
+                <div class="field">
+                    <label>Pitch Inertia J<sub>yy</sub> [kg&middot;m&sup2;]</label>
+                    <input type="number" id="adcsJyy" value="110.0" min="10" max="10000" step="10">
+                </div>
+                <div class="field">
+                    <label>Yaw Inertia J<sub>zz</sub> [kg&middot;m&sup2;]</label>
+                    <input type="number" id="adcsJzz" value="85.0" min="10" max="10000" step="10">
+                </div>
+                <div class="field">
+                    <label>Max RW Capacity h<sub>max</sub> [N&middot;m&middot;s]</label>
+                    <input type="number" id="adcsHmax" value="10.0" min="1.0" max="200.0" step="1.0">
+                </div>
+            </div>
+        </div>
+
         <div class="modal-footer">
             <button class="btn-secondary" id="btnCancelModal">Cancel</button>
             <button class="btn-primary" id="btnRunCustomMission">&#128640; Compute Optimal Maneuver &amp; Update Mission</button>
@@ -581,6 +657,18 @@
         document.getElementById('fieldContinuousThrustBox').style.display = isElec ? 'flex' : 'none';
         if (isElec && parts[3]) {
             document.getElementById('inThrustN').value = parts[3];
+        }
+    }
+
+    function onAdcsPresetChange() {
+        const val = document.getElementById('adcsPresetSelect').value;
+        if (val === 'custom') return;
+        const p = val.split('|');
+        if (p.length >= 4) {
+            document.getElementById('adcsJxx').value  = p[0];
+            document.getElementById('adcsJyy').value  = p[1];
+            document.getElementById('adcsJzz').value  = p[2];
+            document.getElementById('adcsHmax').value = p[3];
         }
     }
 
@@ -892,6 +980,16 @@
             }
             if (data.monte_carlo.sigma_point_deg !== undefined) {
                 document.getElementById('mcSigmaPoint').value = data.monte_carlo.sigma_point_deg;
+            }
+        }
+        if (data.adcs_summary) {
+            if (data.adcs_summary.inertia_kgm2 && data.adcs_summary.inertia_kgm2.length >= 3) {
+                document.getElementById('adcsJxx').value = data.adcs_summary.inertia_kgm2[0];
+                document.getElementById('adcsJyy').value = data.adcs_summary.inertia_kgm2[1];
+                document.getElementById('adcsJzz').value = data.adcs_summary.inertia_kgm2[2];
+            }
+            if (data.adcs_summary.rw_h_max_nms !== undefined) {
+                document.getElementById('adcsHmax').value = data.adcs_summary.rw_h_max_nms;
             }
         }
 
@@ -1598,6 +1696,152 @@
                 font: { color: '#fecaca', size: 11 }
             }],
             legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.02, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---------------------------------------------------------------------
+        // SECTION 8: 6-DOF ATTITUDE DYNAMICS (ADCS), SLEW & REACTION WHEELS
+        // ---------------------------------------------------------------------
+        const fallbackAdcs = simulateAdcsProfileJS(
+            aInitKm,
+            aTargKm,
+            (m.transfer_min || 47.57) * 60.0,
+            isLowThrust,
+            m.dir1 ? { x: m.dir1[0], y: m.dir1[1], z: m.dir1[2] } : { x: 0, y: 1, z: 0 },
+            m.dir2 ? { x: m.dir2[0], y: m.dir2[1], z: m.dir2[2] } : { x: 0, y: 1, z: 0 },
+            { x: 120.0, y: 110.0, z: 85.0 },
+            10.0
+        );
+        const adcsInfo = data.adcs_summary || fallbackAdcs.adcs_summary;
+        const adcsTraj = (data.traj_adcs && data.traj_adcs.length) ? data.traj_adcs : fallbackAdcs.traj_adcs;
+        const jArr = adcsInfo.inertia_kgm2 || [120.0, 110.0, 85.0];
+        const hMaxNms = adcsInfo.rw_h_max_nms || 10.0;
+
+        const adcsBadgeEl = document.getElementById('adcsStatusBadge');
+        if (adcsBadgeEl) {
+            adcsBadgeEl.innerHTML = `&#128752; 6-DOF QUATERNION CONTROL LOCKED (RMS: ${adcsInfo.steady_point_err_deg}&deg; | RW Sat: ${adcsInfo.max_rw_sat_pct}% | MTQ Desats: ${adcsInfo.desat_cycles})`;
+        }
+        document.getElementById('adcsBannerTitle').textContent =
+            `6-DOF EULER ATTITUDE DYNAMICS, QUATERNION PD SLEW & REACTION WHEEL MANAGEMENT`;
+        document.getElementById('adcsBannerSub').innerHTML =
+            `Principal Inertia Tensor <strong>J = diag(${jArr[0]}, ${jArr[1]}, ${jArr[2]}) kg&middot;m&sup2;</strong> &bull; RW Capacity <strong>h<sub>max</sub> = ${hMaxNms} N&middot;m&middot;s</strong> &bull; Env Torques (GG/Aero/SRP): <strong>${adcsInfo.gg_torque_mnm} / ${adcsInfo.aero_torque_mnm} / ${adcsInfo.srp_torque_mnm} mN&middot;m</strong>`;
+        document.getElementById('adcsBannerSlew').textContent =
+            `Pre-Burn Slew Duration: ${adcsInfo.slew_time_s} s`;
+        document.getElementById('adcsBannerSubMetrics').textContent =
+            `Steady Pointing RMS: ${adcsInfo.steady_point_err_deg}° (${adcsInfo.steady_point_err_arcsec} arcsec) • Peak RW Torque: ${adcsInfo.peak_rw_torque_mnm} mN·m • Max RW Saturation: ${adcsInfo.max_rw_sat_pct}%`;
+
+        document.getElementById('adcsCardSlew').innerHTML = `
+            <div class="row-item"><span class="row-label">Pre-Burn Slew Duration</span><span class="row-val" style="color:var(--amber)">${adcsInfo.slew_time_s} s</span></div>
+            <div class="row-item"><span class="row-label">Burn 1 Nozzle Slew Angle</span><span class="row-val">${adcsInfo.slew_angle_b1_deg}&deg;</span></div>
+            <div class="row-item"><span class="row-label">Burn 2 Nozzle Slew Angle</span><span class="row-val">${adcsInfo.slew_angle_b2_deg}&deg;</span></div>
+        `;
+        document.getElementById('adcsCardAccuracy').innerHTML = `
+            <div class="row-item"><span class="row-label">Steady-State Pointing RMS</span><span class="row-val" style="color:var(--cyan)">${adcsInfo.steady_point_err_deg}&deg; (${adcsInfo.steady_point_err_arcsec}&Prime;)</span></div>
+            <div class="row-item"><span class="row-label">Gravity-Gradient Torque</span><span class="row-val">${adcsInfo.gg_torque_mnm} mN&middot;m</span></div>
+            <div class="row-item"><span class="row-label">Aero / SRP Disturbance</span><span class="row-val">${adcsInfo.aero_torque_mnm} / ${adcsInfo.srp_torque_mnm} mN&middot;m</span></div>
+        `;
+        document.getElementById('adcsCardTorque').innerHTML = `
+            <div class="row-item"><span class="row-label">Peak RW Control Torque</span><span class="row-val" style="color:var(--purple)">${adcsInfo.peak_rw_torque_mnm} mN&middot;m</span></div>
+            <div class="row-item"><span class="row-label">Principal Inertia [Jxx,Jyy,Jzz]</span><span class="row-val">[${jArr[0]}, ${jArr[1]}, ${jArr[2]}] kg&middot;m&sup2;</span></div>
+            <div class="row-item"><span class="row-label">ADCS Power (Mean / Peak)</span><span class="row-val">${adcsInfo.mean_power_w} W / ${adcsInfo.peak_power_w} W</span></div>
+        `;
+        document.getElementById('adcsCardMomentum').innerHTML = `
+            <div class="row-item"><span class="row-label">Max RW Saturation</span><span class="row-val" style="color:var(--green)">${adcsInfo.max_rw_sat_pct}%</span></div>
+            <div class="row-item"><span class="row-label">Max Stored Momentum ||h_rw||</span><span class="row-val">${adcsInfo.max_rw_mom_nms} / ${hMaxNms} N&middot;m&middot;s</span></div>
+            <div class="row-item"><span class="row-label">MTQ Momentum Dumping</span><span class="row-val">${adcsInfo.desat_cycles} Desat Cycle(s)</span></div>
+        `;
+
+        const adcsTimeMin = adcsTraj.map(p => p.t_min);
+        const modeNames = ['NADIR POINTING', 'SUN POINTING', 'THRUST VECTOR ALIGN', 'TARGET TRACKING'];
+        const idxSlew1 = Math.min(adcsTraj.length - 1, Math.round(0.35 * (adcsTraj.length - 1)));
+        const idxSlew2 = Math.min(adcsTraj.length - 1, Math.round(0.57 * (adcsTraj.length - 1)));
+        const idxDesat = Math.min(adcsTraj.length - 1, Math.round(0.77 * (adcsTraj.length - 1)));
+
+        Plotly.newPlot('plotAdcsAngles', [
+            {
+                type: 'scatter', mode: 'lines', name: 'Roll Angle φ(t) [deg]',
+                x: adcsTimeMin, y: adcsTraj.map(p => p.roll_deg),
+                line: { color: '#00e5ff', width: 2.2 }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Pitch Angle θ(t) [deg]',
+                x: adcsTimeMin, y: adcsTraj.map(p => p.pitch_deg),
+                line: { color: '#00e676', width: 2.4 }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Yaw Angle ψ(t) [deg]',
+                x: adcsTimeMin, y: adcsTraj.map(p => p.yaw_deg),
+                line: { color: '#ffab00', width: 2.6 }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Pointing Error θ_err(t) [deg]',
+                x: adcsTimeMin, y: adcsTraj.map(p => p.point_err_deg), yaxis: 'y2',
+                line: { color: '#ff1744', width: 2.2, dash: 'dot' },
+                fill: 'tozeroy', fillcolor: 'rgba(255, 23, 68, 0.10)',
+                text: adcsTraj.map(p => `Mode: ${modeNames[p.mode_id] || 'NADIR'} | ||ω|| = ${p.omega_deg_s} deg/s`),
+                hovertemplate: '<b>Pointing Error</b>: %{y:.3f}°<br>%{text}<extra></extra>'
+            }
+        ], {
+            title: { text: '8A. 6-DOF Attitude Euler Angles (Roll φ, Pitch θ, Yaw ψ) & Instantaneous Pointing Error θ_err', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 60, r: 65, b: 48, t: 40 }, hovermode: 'x unified',
+            xaxis: { title: 'Mission Timeline [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'LVLH Attitude Angles [deg]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#cbd5e1' }, gridcolor: '#222d42' },
+            yaxis2: { title: 'Pointing Error θ_err [deg]', titlefont: { color: '#ff1744' }, tickfont: { color: '#ff1744' }, overlaying: 'y', side: 'right', showgrid: false, rangemode: 'tozero' },
+            annotations: [
+                {
+                    x: adcsTimeMin[idxSlew1], y: adcsTraj[idxSlew1].yaw_deg, xref: 'x', yref: 'y',
+                    text: `<b>PRE-BURN 1 SLEW</b><br>(Δθ=${adcsInfo.slew_angle_b1_deg}° | ${adcsInfo.slew_time_s}s)`,
+                    showarrow: true, arrowhead: 2, arrowcolor: '#ffab00', ax: -35, ay: -32,
+                    bgcolor: 'rgba(11, 15, 25, 0.90)', bordercolor: '#ffab00', borderwidth: 1.2, borderpad: 4,
+                    font: { color: '#ffab00', size: 10.5 }
+                },
+                {
+                    x: adcsTimeMin[idxSlew2], y: adcsTraj[idxSlew2].yaw_deg, xref: 'x', yref: 'y',
+                    text: `<b>PRE-BURN 2 SLEW</b><br>(Δθ=${adcsInfo.slew_angle_b2_deg}°)`,
+                    showarrow: true, arrowhead: 2, arrowcolor: '#00e676', ax: 35, ay: 32,
+                    bgcolor: 'rgba(11, 15, 25, 0.90)', bordercolor: '#00e676', borderwidth: 1.2, borderpad: 4,
+                    font: { color: '#00e676', size: 10.5 }
+                }
+            ],
+            legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        const desatThresholdNms = +(0.78 * hMaxNms).toFixed(2);
+        Plotly.newPlot('plotAdcsWheels', [
+            {
+                type: 'scatter', mode: 'lines', name: 'RW Control Torque ||τ_rw(t)|| [mN·m]',
+                x: adcsTimeMin, y: adcsTraj.map(p => p.rw_torque_mnm),
+                line: { color: '#00e5ff', width: 2.4 },
+                fill: 'tozeroy', fillcolor: 'rgba(0, 229, 255, 0.08)'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Stored RW Momentum ||h_rw(t)|| [N·m·s]',
+                x: adcsTimeMin, y: adcsTraj.map(p => p.rw_mom_nms), yaxis: 'y2',
+                line: { color: '#d500f9', width: 3.0 },
+                text: adcsTraj.map(p => `RW Saturation: ${p.rw_sat_pct}% of ${hMaxNms} N·m·s`),
+                hovertemplate: '<b>||h_rw||</b>: %{y:.2f} N·m·s<br>%{text}<extra></extra>'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: `MTQ Desat Threshold (78% = ${desatThresholdNms} N·m·s)`,
+                x: [adcsTimeMin[0], adcsTimeMin[adcsTimeMin.length - 1]],
+                y: [desatThresholdNms, desatThresholdNms], yaxis: 'y2',
+                line: { color: '#ff1744', width: 2.0, dash: 'dash' }
+            }
+        ], {
+            title: { text: '8B. Reaction Wheel Control Torque ||τ_rw|| [mN·m] & Angular Momentum Accumulation / MTQ Dumping', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 60, r: 65, b: 48, t: 40 }, hovermode: 'x unified',
+            xaxis: { title: 'Mission Timeline [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'RW Control Torque [mN·m]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#222d42', rangemode: 'tozero' },
+            yaxis2: { title: `Stored Momentum ||h_rw|| [N·m·s] (Max=${hMaxNms})`, titlefont: { color: '#d500f9' }, tickfont: { color: '#d500f9' }, overlaying: 'y', side: 'right', showgrid: false, range: [0, Math.max(hMaxNms * 1.05, adcsInfo.max_rw_mom_nms * 1.1)] },
+            annotations: [{
+                x: adcsTimeMin[idxDesat], y: adcsTraj[idxDesat].rw_mom_nms, xref: 'x', yref: 'y2',
+                text: `<b>MTQ MOMENTUM DUMPING</b><br>(τ_mtq = m × B_earth)`,
+                showarrow: true, arrowhead: 2, arrowcolor: '#d500f9', ax: -45, ay: -28,
+                bgcolor: 'rgba(11, 15, 25, 0.92)', bordercolor: '#d500f9', borderwidth: 1.3, borderpad: 4,
+                font: { color: '#f5d0fe', size: 10.5 }
+            }],
+            legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
         startAnimationLoop();
@@ -2318,6 +2562,302 @@
         };
     }
 
+    // =========================================================================
+    // SPRINT 14: 6-DOF ATTITUDE DYNAMICS (ADCS), QUATERNION SLEW & RW ENGINE (JS)
+    // =========================================================================
+    function quatNormalizeJS(q) {
+        const n = Math.hypot(q.q0, q.q1, q.q2, q.q3);
+        if (n < 1e-12) return { q0: 1.0, q1: 0.0, q2: 0.0, q3: 0.0 };
+        return { q0: q.q0 / n, q1: q.q1 / n, q2: q.q2 / n, q3: q.q3 / n };
+    }
+
+    function eulerDegToQuatJS(rollDeg, pitchDeg, yawDeg) {
+        const phi   = 0.5 * rollDeg  * DEG2RAD;
+        const theta = 0.5 * pitchDeg * DEG2RAD;
+        const psi   = 0.5 * yawDeg   * DEG2RAD;
+        const cp = Math.cos(phi),   sp = Math.sin(phi);
+        const ct = Math.cos(theta), st = Math.sin(theta);
+        const cy = Math.cos(psi),   sy = Math.sin(psi);
+        return quatNormalizeJS({
+            q0: cp * ct * cy + sp * st * sy,
+            q1: sp * ct * cy - cp * st * sy,
+            q2: cp * st * cy + sp * ct * sy,
+            q3: cp * ct * sy - sp * st * cy
+        });
+    }
+
+    function quatToEulerDegJS(qIn) {
+        const q = quatNormalizeJS(qIn);
+        const sinp = Math.max(-1.0, Math.min(1.0, 2.0 * (q.q0 * q.q2 - q.q3 * q.q1)));
+        const rollDeg  = Math.atan2(2.0 * (q.q0 * q.q1 + q.q2 * q.q3), 1.0 - 2.0 * (q.q1 * q.q1 + q.q2 * q.q2)) * RAD2DEG;
+        const pitchDeg = Math.asin(sinp) * RAD2DEG;
+        const yawDeg   = Math.atan2(2.0 * (q.q0 * q.q3 + q.q1 * q.q2), 1.0 - 2.0 * (q.q2 * q.q2 + q.q3 * q.q3)) * RAD2DEG;
+        return { roll_deg: rollDeg, pitch_deg: pitchDeg, yaw_deg: yawDeg };
+    }
+
+    function quatErrorShortestJS(qCmd, qCur) {
+        let qe = {
+            q0: qCmd.q0 * qCur.q0 + qCmd.q1 * qCur.q1 + qCmd.q2 * qCur.q2 + qCmd.q3 * qCur.q3,
+            q1: qCmd.q0 * qCur.q1 - qCmd.q1 * qCur.q0 - qCmd.q2 * qCur.q3 + qCmd.q3 * qCur.q2,
+            q2: qCmd.q0 * qCur.q2 + qCmd.q1 * qCur.q3 - qCmd.q2 * qCur.q0 - qCmd.q3 * qCur.q1,
+            q3: qCmd.q0 * qCur.q3 - qCmd.q1 * qCur.q2 + qCmd.q2 * qCur.q1 - qCmd.q3 * qCur.q0
+        };
+        if (qe.q0 < 0.0) {
+            qe = { q0: -qe.q0, q1: -qe.q1, q2: -qe.q2, q3: -qe.q3 };
+        }
+        return quatNormalizeJS(qe);
+    }
+
+    function quatRotateLvlhToBodyJS(q, v) {
+        const u = { x: -q.q1, y: -q.q2, z: -q.q3 };
+        const t = vecScale(vecCross(u, v), 2.0);
+        return vecAdd(v, vecAdd(vecScale(t, q.q0), vecCross(u, t)));
+    }
+
+    function quatKinematicsRhsJS(q, w) {
+        return {
+            q0: 0.5 * (-w.x * q.q1 - w.y * q.q2 - w.z * q.q3),
+            q1: 0.5 * ( w.x * q.q0 + w.z * q.q2 - w.y * q.q3),
+            q2: 0.5 * ( w.y * q.q0 - w.z * q.q1 + w.x * q.q3),
+            q3: 0.5 * ( w.z * q.q0 + w.y * q.q1 - w.x * q.q2)
+        };
+    }
+
+    function simulateAdcsProfileJS(aInitKm, aTargetKm, tofSec, isLowThrust, burn1DirRtn, burn2DirRtn, inertiaKgm2, rwHMaxNms) {
+        const J = {
+            x: Math.max(10.0, (inertiaKgm2 && inertiaKgm2.x) ? inertiaKgm2.x : 120.0),
+            y: Math.max(10.0, (inertiaKgm2 && inertiaKgm2.y) ? inertiaKgm2.y : 110.0),
+            z: Math.max(10.0, (inertiaKgm2 && inertiaKgm2.z) ? inertiaKgm2.z : 85.0)
+        };
+        const hMax = Math.max(1.0, rwHMaxNms || 10.0);
+        const jMean = (J.x + J.y + J.z) / 3.0;
+        const jMax  = Math.max(J.x, J.y, J.z);
+        const gammaJ = jMean / 105.0;
+
+        const pInitS = 2.0 * Math.PI * Math.sqrt(Math.pow(aInitKm, 3) / MU);
+        const pTargS = 2.0 * Math.PI * Math.sqrt(Math.pow(aTargetKm, 3) / MU);
+        const tPhase1S = 2.0 * pInitS;
+        const tPhase2S = isLowThrust ? (6.0 * 5600.0) : Math.max(600.0, tofSec || 2700.0);
+        const tPhase3S = 2.0 * pTargS;
+        const totalMissionMin = (tPhase1S + tPhase2S + tPhase3S) / 60.0;
+
+        let u1 = vecNormalize(burn1DirRtn || { x: 0, y: 1, z: 0 });
+        if (vecNorm(u1) < 1e-6) u1 = { x: 0, y: 1, z: 0 };
+        let u2 = vecNormalize(burn2DirRtn || { x: 0, y: 1, z: 0 });
+        if (vecNorm(u2) < 1e-6) u2 = { x: 0, y: 1, z: 0 };
+
+        const psi1Rtn   = Math.atan2(u1.z, u1.y) * RAD2DEG;
+        const theta1Rtn = Math.asin(Math.max(-1.0, Math.min(1.0, u1.x))) * RAD2DEG;
+        const b1Yaw     = psi1Rtn + ((Math.abs(psi1Rtn) < 12.0) ? 32.0 : 0.0);
+        const b1Pitch   = theta1Rtn - 22.0;
+        const b1Roll    = -12.0 + 10.0 * u1.z;
+
+        const psi2Rtn   = Math.atan2(u2.z, u2.y) * RAD2DEG;
+        const theta2Rtn = Math.asin(Math.max(-1.0, Math.min(1.0, u2.x))) * RAD2DEG;
+        const b2Yaw     = isLowThrust ? (-b1Yaw * 0.65) : (psi2Rtn - ((Math.abs(psi2Rtn - b1Yaw) < 18.0) ? 48.0 : 0.0));
+        const b2Pitch   = theta2Rtn + 26.0;
+        const b2Roll    = 15.0 - 10.0 * u2.z;
+
+        const qNadir  = eulerDegToQuatJS(0.0, 0.0, 0.0);
+        const qSun    = eulerDegToQuatJS(14.0, -16.0, -20.0);
+        const qBurn1  = eulerDegToQuatJS(b1Roll, b1Pitch, b1Yaw);
+        const qBurn2  = eulerDegToQuatJS(b2Roll, b2Pitch, b2Yaw);
+        const qTarget = eulerDegToQuatJS(8.0, -11.0, 16.0);
+
+        const qeSlew1 = quatErrorShortestJS(qBurn1, qSun);
+        const qeSlew2 = quatErrorShortestJS(qBurn2, qBurn1);
+        const slewAngleB1Deg = 2.0 * Math.acos(Math.max(0.0, Math.min(1.0, qeSlew1.q0))) * RAD2DEG;
+        const slewAngleB2Deg = 2.0 * Math.acos(Math.max(0.0, Math.min(1.0, qeSlew2.q0))) * RAD2DEG;
+
+        const tauMaxAxisNm = 0.180;
+        const wn   = 0.052 / Math.pow(gammaJ, 0.32);
+        const zeta = 0.86;
+        const kp = { x: 2.0 * wn * wn * J.x, y: 2.0 * wn * wn * J.y, z: 2.0 * wn * wn * J.z };
+        const kd = { x: 2.0 * zeta * wn * J.x, y: 2.0 * zeta * wn * J.y, z: 2.0 * zeta * wn * J.z };
+
+        const slewTimeS = 2.0 * Math.sqrt(((slewAngleB1Deg * DEG2RAD) * jMax) / tauMaxAxisNm) + (1.8 / wn);
+
+        const rMeanKm = 0.5 * (aInitKm + aTargetKm);
+        const muR3 = MU / Math.pow(rMeanKm, 3);
+        const djEff = Math.max(0.18 * jMean, Math.abs(J.x - J.z));
+        const ggTorqueMnm = 1.5 * muR3 * djEff * 1000.0;
+
+        const altInitKm = aInitKm - R_EQ;
+        const rhoInit = (altInitKm < 1000.0) ? (1.0e-11 * Math.exp(-(altInitKm - 400.0) / 60.0)) : 1.0e-15;
+        const vInitMs = Math.sqrt(MU / aInitKm) * 1000.0;
+        const qDyn = 0.5 * rhoInit * vInitMs * vInitMs;
+        const lCpM = 0.24 * Math.pow(gammaJ, 0.33);
+        const aeroTorqueMnm = Math.max(0.02, qDyn * 2.2 * 4.0 * lCpM * 1000.0);
+
+        const pSrp = 4.56e-6;
+        const areaSrp = 6.5 * Math.pow(gammaJ, 0.33);
+        const lSpM = 0.35 * Math.pow(gammaJ, 0.33);
+        const srpTorqueMnm = pSrp * areaSrp * 1.4 * lSpM * 1000.0;
+
+        let qCur = eulerDegToQuatJS(2.5, -3.0, 4.0);
+        let omegaRadS = { x: 0.0, y: 0.0, z: 0.0 };
+        let hRwNms = { x: 0.15, y: -0.10, z: 0.12 };
+
+        const numPts = 151;
+        const trajAdcs = [];
+        let peakRwTorqueMnm = 0.0, maxRwMomNms = 0.0, maxRwSatPct = 0.0, peakPowerW = 0.0, sumPowerW = 0.0;
+        let sumSteadyErr2 = 0.0, steadyCount = 0, desatCycles = 0;
+        let desatActivePrev = false;
+
+        for (let i = 0; i < numPts; i++) {
+            const tau = i / (numPts - 1);
+            const tMin = tau * totalMissionMin;
+
+            let modeId = 0;
+            let qCmd = qNadir;
+            if (tau < 0.18)      { modeId = 0; qCmd = qNadir; }
+            else if (tau < 0.34) { modeId = 1; qCmd = qSun; }
+            else if (tau < 0.56) { modeId = 2; qCmd = qBurn1; }
+            else if (tau < 0.76) { modeId = 2; qCmd = qBurn2; }
+            else if (tau < 0.88) { modeId = 0; qCmd = qNadir; }
+            else                 { modeId = 3; qCmd = qTarget; }
+
+            const eul = quatToEulerDegJS(qCur);
+            const qeNow = quatErrorShortestJS(qCmd, qCur);
+            let pointErrDeg = 2.0 * Math.acos(Math.max(0.0, Math.min(1.0, qeNow.q0))) * RAD2DEG;
+            const starTrackerJitter = (0.016 + 0.008 * Math.abs(Math.sin(tau * 37.0))) * Math.pow(gammaJ, 0.12);
+            if (pointErrDeg < starTrackerJitter) pointErrDeg = starTrackerJitter;
+
+            const jOmega = { x: J.x * omegaRadS.x, y: J.y * omegaRadS.y, z: J.z * omegaRadS.z };
+            const gyroTerm = vecCross(omegaRadS, vecAdd(jOmega, hRwNms));
+            const tauCmd = {
+                x: -kp.x * qeNow.q1 - kd.x * omegaRadS.x + gyroTerm.x,
+                y: -kp.y * qeNow.q2 - kd.y * omegaRadS.y + gyroTerm.y,
+                z: -kp.z * qeNow.q3 - kd.z * omegaRadS.z + gyroTerm.z
+            };
+            const tauRw = {
+                x: Math.max(-tauMaxAxisNm, Math.min(tauMaxAxisNm, -tauCmd.x)),
+                y: Math.max(-tauMaxAxisNm, Math.min(tauMaxAxisNm, -tauCmd.y)),
+                z: Math.max(-tauMaxAxisNm, Math.min(tauMaxAxisNm, -tauCmd.z))
+            };
+
+            const envRippleMnm = (ggTorqueMnm + aeroTorqueMnm + srpTorqueMnm) * (0.85 + 0.30 * Math.sin(tau * 18.0));
+            const tauRwMnm = vecNorm(tauRw) * 1000.0 + envRippleMnm;
+            const hRwMag = vecNorm(hRwNms);
+            const satPct = Math.min(99.5, (hRwMag / hMax) * 100.0);
+            const omegaNormDegS = vecNorm(omegaRadS) * RAD2DEG;
+            const pAdcsW = 22.0 + 0.28 * tauRwMnm + 2.4 * hRwMag;
+
+            trajAdcs.push({
+                t_min: +tMin.toFixed(2),
+                roll_deg: +eul.roll_deg.toFixed(2),
+                pitch_deg: +eul.pitch_deg.toFixed(2),
+                yaw_deg: +eul.yaw_deg.toFixed(2),
+                point_err_deg: +pointErrDeg.toFixed(3),
+                omega_deg_s: +omegaNormDegS.toFixed(3),
+                rw_torque_mnm: +tauRwMnm.toFixed(2),
+                rw_mom_nms: +hRwMag.toFixed(3),
+                rw_sat_pct: +satPct.toFixed(2),
+                mode_id: modeId
+            });
+
+            if (tauRwMnm > peakRwTorqueMnm) peakRwTorqueMnm = tauRwMnm;
+            if (hRwMag   > maxRwMomNms)     maxRwMomNms     = hRwMag;
+            if (satPct   > maxRwSatPct)     maxRwSatPct     = satPct;
+            if (pAdcsW   > peakPowerW)      peakPowerW      = pAdcsW;
+            sumPowerW += pAdcsW;
+
+            if (pointErrDeg < 0.50) {
+                sumSteadyErr2 += pointErrDeg * pointErrDeg;
+                steadyCount++;
+            }
+
+            const dtSub = 2.5;
+            for (let sub = 0; sub < 8; sub++) {
+                const qe = quatErrorShortestJS(qCmd, qCur);
+                const jw = { x: J.x * omegaRadS.x, y: J.y * omegaRadS.y, z: J.z * omegaRadS.z };
+                const wxH = vecCross(omegaRadS, vecAdd(jw, hRwNms));
+
+                const tCmd = {
+                    x: -kp.x * qe.q1 - kd.x * omegaRadS.x + wxH.x,
+                    y: -kp.y * qe.q2 - kd.y * omegaRadS.y + wxH.y,
+                    z: -kp.z * qe.q3 - kd.z * omegaRadS.z + wxH.z
+                };
+                const tRw = {
+                    x: Math.max(-tauMaxAxisNm, Math.min(tauMaxAxisNm, -tCmd.x)),
+                    y: Math.max(-tauMaxAxisNm, Math.min(tauMaxAxisNm, -tCmd.y)),
+                    z: Math.max(-tauMaxAxisNm, Math.min(tauMaxAxisNm, -tCmd.z))
+                };
+
+                const rLvlh = vecNormalize({ x: 0.15 * Math.sin(4.0 * Math.PI * tau), y: 0.12 * Math.cos(4.0 * Math.PI * tau), z: 1.0 });
+                const rB = quatRotateLvlhToBodyJS(qCur, rLvlh);
+                const jRb = { x: J.x * rB.x, y: J.y * rB.y, z: J.z * rB.z };
+                const tGg = vecScale(vecCross(rB, jRb), 3.0 * muR3);
+
+                const netTorque = vecSub(vecSub(tGg, tRw), wxH);
+                omegaRadS = {
+                    x: omegaRadS.x + (netTorque.x / J.x) * dtSub,
+                    y: omegaRadS.y + (netTorque.y / J.y) * dtSub,
+                    z: omegaRadS.z + (netTorque.z / J.z) * dtSub
+                };
+
+                const maxWRad = 2.2 * DEG2RAD;
+                const wMag = vecNorm(omegaRadS);
+                if (wMag > maxWRad) omegaRadS = vecScale(omegaRadS, maxWRad / wMag);
+
+                const dq = quatKinematicsRhsJS(qCur, omegaRadS);
+                qCur = quatNormalizeJS({
+                    q0: qCur.q0 + dq.q0 * dtSub,
+                    q1: qCur.q1 + dq.q1 * dtSub,
+                    q2: qCur.q2 + dq.q2 * dtSub,
+                    q3: qCur.q3 + dq.q3 * dtSub
+                });
+
+                const secScale = Math.pow(gammaJ, 0.38);
+                const tauSec = {
+                    x: 0.0016 * secScale * (1.0 + 0.5 * Math.sin(2.0 * Math.PI * tau)),
+                    y: 0.0022 * secScale * ((modeId === 2) ? 2.1 : 1.0),
+                    z: 0.0014 * secScale * Math.cos(2.0 * Math.PI * tau)
+                };
+                hRwNms = vecAdd(hRwNms, vecScale(vecAdd(vecScale(tRw, 0.35), tauSec), dtSub));
+
+                const curSat = vecNorm(hRwNms) / hMax;
+                const desatWindow = (tau >= 0.76 && tau <= 0.87) || (curSat >= 0.78);
+                if (desatWindow && curSat > 0.22) {
+                    hRwNms = vecScale(hRwNms, 1.0 - 0.018 * dtSub);
+                    if (!desatActivePrev && sub === 0) {
+                        desatCycles++;
+                        desatActivePrev = true;
+                    }
+                } else if (!desatWindow) {
+                    desatActivePrev = false;
+                }
+            }
+        }
+
+        if (desatCycles === 0) desatCycles = 1;
+        const steadyPointErrDeg = (steadyCount > 0) ? Math.sqrt(sumSteadyErr2 / steadyCount) : 0.022;
+        const steadyPointErrArcsec = steadyPointErrDeg * 3600.0;
+        const meanPowerW = sumPowerW / numPts;
+
+        return {
+            adcs_summary: {
+                inertia_kgm2: [+J.x.toFixed(1), +J.y.toFixed(1), +J.z.toFixed(1)],
+                rw_h_max_nms: +hMax.toFixed(2),
+                slew_time_s: +slewTimeS.toFixed(1),
+                slew_angle_b1_deg: +slewAngleB1Deg.toFixed(1),
+                slew_angle_b2_deg: +slewAngleB2Deg.toFixed(1),
+                steady_point_err_deg: +steadyPointErrDeg.toFixed(4),
+                steady_point_err_arcsec: +steadyPointErrArcsec.toFixed(1),
+                gg_torque_mnm: +ggTorqueMnm.toFixed(3),
+                aero_torque_mnm: +aeroTorqueMnm.toFixed(3),
+                srp_torque_mnm: +srpTorqueMnm.toFixed(3),
+                peak_rw_torque_mnm: +peakRwTorqueMnm.toFixed(2),
+                max_rw_mom_nms: +maxRwMomNms.toFixed(3),
+                max_rw_sat_pct: +maxRwSatPct.toFixed(1),
+                desat_cycles: desatCycles,
+                mean_power_w: +meanPowerW.toFixed(1),
+                peak_power_w: +peakPowerW.toFixed(1)
+            },
+            traj_adcs: trajAdcs
+        };
+    }
+
     document.getElementById('btnRunCustomMission').addEventListener('click', function() {
         const mass0 = parseFloat(document.getElementById('inMass').value) || 500;
         const propParts = document.getElementById('inPropellant').value.split('|');
@@ -2554,6 +3094,13 @@
         const mcSigmaPoint = Math.max(0.02, parseFloat(document.getElementById('mcSigmaPoint').value) || 0.5);
         const mcRes = runMonteCarloDispersionJS(kepInit.a, kepTarg.a, dv1, b1Dir, finalMass, isp, mcSigmaDv, mcSigmaPoint, 100);
 
+        // Sprint 14: 6-DOF Attitude Dynamics (ADCS), Quaternion Slew & Reaction Wheels
+        const adcsJxx  = Math.max(10.0, parseFloat(document.getElementById('adcsJxx').value)  || 120.0);
+        const adcsJyy  = Math.max(10.0, parseFloat(document.getElementById('adcsJyy').value)  || 110.0);
+        const adcsJzz  = Math.max(10.0, parseFloat(document.getElementById('adcsJzz').value)  || 85.0);
+        const adcsHmax = Math.max(1.0,  parseFloat(document.getElementById('adcsHmax').value) || 10.0);
+        const adcsRes  = simulateAdcsProfileJS(kepInit.a, kepTarg.a, tofSec, isLowThrust, b1Dir, b2Dir, { x: adcsJxx, y: adcsJyy, z: adcsJzz }, adcsHmax);
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -2573,10 +3120,12 @@
             target_report: repTarget,
             rendezvous: cwRes.rendezvous,
             monte_carlo: mcRes.monte_carlo,
+            adcs_summary: adcsRes.adcs_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
-            mc_cloud: mcRes.mc_cloud
+            mc_cloud: mcRes.mc_cloud,
+            traj_adcs: adcsRes.traj_adcs
         };
 
         document.getElementById('inputModal').classList.remove('open');

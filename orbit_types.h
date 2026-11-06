@@ -22,6 +22,14 @@ typedef struct {
     double z;
 } Vector3D;
 
+// Quaternione unitario d'assetto q = [q0 (scalare), q1, q2, q3 (vettoriale)], ||q|| = 1
+typedef struct {
+    double q0; // Parte scalare: cos(theta / 2)
+    double q1; // Componente vettoriale x: e_x * sin(theta / 2)
+    double q2; // Componente vettoriale y: e_y * sin(theta / 2)
+    double q3; // Componente vettoriale z: e_z * sin(theta / 2)
+} Quaternion;
+
 // ==========================================
 // 3. STATO DEL VEICOLO SPAZIALE E INPUT FLESSIBILE
 // ==========================================
@@ -184,6 +192,99 @@ typedef struct {
 
     DispersionSample samples[MAX_MC_RUNS];
 } MonteCarloReport;
+
+// ==========================================
+// SPRINT 14: 6-DOF ATTITUDE DYNAMICS (ADCS), QUATERNION SLEW & REACTION WHEELS
+// ==========================================
+#define MAX_ADCS_SAMPLES 160
+
+typedef enum {
+    MODE_NADIR_POINTING = 0,      // Asse +Z_body verso Terra (-R), +X_body lungo +T (Osservazione/Comm)
+    MODE_SUN_POINTING = 1,        // Normale pannelli solari allineata al vettore Sole s_hat (Carica Batteria)
+    MODE_THRUST_VECTOR_ALIGN = 2, // Ugello motore allineato al vettore Delta-V_RTN (Pre-Burn Slew / Spirale)
+    MODE_TARGET_TRACKING = 3      // Puntamento verso il Target (Rendezvous) o Ground Station (Radar Pass)
+} AttitudeMode;
+
+typedef struct {
+    double t_min;             // Tempo di missione cumulativo (min)
+    Quaternion q;             // Quaternione unitario di assetto corrente rispetto a LVLH
+    double roll_deg;          // Angolo di Roll (phi) rispetto a LVLH (deg)
+    double pitch_deg;         // Angolo di Pitch (theta) rispetto a LVLH (deg)
+    double yaw_deg;           // Angolo di Yaw (psi) rispetto a LVLH (deg)
+    Vector3D omega_deg_s;     // Velocità angolare di corpo [wx, wy, wz] (deg/s)
+    double omega_norm_deg_s;  // Modulo velocità angolare ||omega|| (deg/s)
+    double point_err_deg;     // Errore istantaneo di puntamento theta_err rispetto a q_cmd (deg)
+    double rw_torque_mnm;     // Coppia di controllo erogata dalle Reaction Wheels ||tau_rw|| (mN*m)
+    double rw_mom_nms;        // Momento angolare accumulato nelle Reaction Wheels ||h_rw|| (N*m*s)
+    double rw_sat_pct;        // Livello di saturazione percentuale rispetto a h_max (%)
+    double adcs_power_w;      // Potenza elettrica istantanea assorbita dall'ADCS (W)
+    AttitudeMode mode;        // Modalità operativa di puntamento corrente (0..3)
+} AttitudeSample;
+
+typedef struct {
+    Vector3D inertia_kgm2;          // Tensore principale d'inerzia diag(Jxx, Jyy, Jzz) [kg*m^2]
+    double rw_h_max_nms;            // Capacità massima di momento angolare delle Reaction Wheels [N*m*s]
+    double slew_time_s;             // Durata della manovra di Pre-Burn Slew per allineamento ugello [s]
+    double slew_angle_b1_deg;       // Ampiezza rotazione Pre-Burn 1 Slew [deg]
+    double slew_angle_b2_deg;       // Ampiezza rotazione Pre-Burn 2 Slew [deg]
+    double steady_point_err_deg;    // Errore di puntamento RMS in regime stazionario [deg]
+    double steady_point_err_arcsec; // Errore di puntamento RMS in regime stazionario [arcsec]
+    double gg_torque_mnm;           // Coppia disturbante di Gradiente di Gravità max [mN*m]
+    double aero_torque_mnm;         // Coppia disturbante Aerodinamica max [mN*m]
+    double srp_torque_mnm;          // Coppia disturbante di Pressione di Radiazione Solare [mN*m]
+    double peak_rw_torque_mnm;      // Coppia di controllo massima erogata dalle Reaction Wheels [mN*m]
+    double max_rw_mom_nms;          // Momento angolare massimo accumulato ||h_rw||_max [N*m*s]
+    double max_rw_sat_pct;          // Percentuale massima di saturazione delle ruote [%]
+    int    desat_cycles;            // Numero di eventi di desaturazione magnetica (Momentum Dumping)
+    double mean_power_w;            // Potenza elettrica media assorbita dal sottosistema ADCS [W]
+    double peak_power_w;            // Potenza elettrica di picco durante le manovre di Slew [W]
+    int    num_samples;             // Numero di campioni temporali nel profilo ADCS
+    AttitudeSample samples[MAX_ADCS_SAMPLES];
+} ADCSReport;
+
+// ==========================================
+// SPRINT 15: THERMAL CONTROL SYSTEM (TCS) & LUMPED-PARAMETER HEAT BALANCE
+// ==========================================
+#define MAX_THERMAL_SAMPLES 160
+#define STEFAN_BOLTZMANN 5.670374419e-8 // Costante di Stefan-Boltzmann [W/(m^2*K^4)]
+#define SOLAR_CONSTANT_W_M2 1361.0      // Flusso solare medio a 1 AU [W/m^2]
+#define EARTH_IR_FLUX_W_M2 237.0        // Emissione IR terrestre media OLR [W/m^2]
+#define EARTH_ALBEDO_COEFF 0.30         // Coefficiente medio di Albedo terrestre
+
+typedef struct {
+    double t_min;        // Tempo di missione cumulativo (min)
+    double temp_c;       // Temperatura globale del nodo satellite (°C)
+    double temp_k;       // Temperatura assoluta del nodo satellite (K)
+    double q_sol_w;      // Calore assorbito da Radiazione Solare Diretta [W]
+    double q_alb_w;      // Calore assorbito da Albedo Terrestre [W]
+    double q_ir_w;       // Calore assorbito da Radiazione Infrarossa Terrestre (OLR) [W]
+    double q_int_w;      // Dissipazione termica interna + Riscaldatori attivi (Heaters) [W]
+    double q_heater_w;   // Potenza erogata dai Riscaldatori di sopravvivenza/operativi [W]
+    double q_rad_w;      // Potenza termica irradiata nello spazio profondo (sigma*eps*A*T^4) [W]
+    int    in_eclipse;   // 1 se il satellite è nel cono d'ombra terrestre, 0 se illuminato
+} ThermalSample;
+
+typedef struct {
+    double alpha_solar;          // Assorbività solare del rivestimento (Absorptivity alpha_s)
+    double eps_ir;               // Emissività infrarossa dei radiatori (Emissivity epsilon_ir)
+    double thermal_mass_j_k;     // Capacità termica del nodo m*c_p [J/K]
+    double rad_area_m2;          // Area radiante efficace del bus [m^2]
+    double t_min_op_c;           // Limite operativo minimo di temperatura [°C]
+    double t_max_op_c;           // Limite operativo massimo di temperatura [°C]
+    double min_temp_c;           // Temperatura minima raggiunta in missione [°C]
+    double max_temp_c;           // Temperatura massima raggiunta in missione [°C]
+    double mean_temp_c;          // Temperatura media orbitale [°C]
+    double eq_sun_temp_c;        // Temperatura teorica di equilibrio diurno (Hot Case) [°C]
+    double eq_ecl_temp_c;        // Temperatura teorica di equilibrio in eclissi (Cold Case) [°C]
+    double mean_q_sol_w;         // Flusso solare medio assorbito [W]
+    double mean_q_alb_w;         // Flusso di albedo medio assorbito [W]
+    double mean_q_ir_w;          // Flusso IR terrestre medio assorbito [W]
+    double mean_q_rad_w;         // Potenza media radiata nello spazio [W]
+    double peak_heater_w;        // Potenza massima erogata dai riscaldatori (Heaters) [W]
+    double heater_duty_pct;      // Percentuale di tempo con riscaldatori attivi [%]
+    int    num_samples;          // Numero di campioni temporali nel profilo termico
+    ThermalSample samples[MAX_THERMAL_SAMPLES];
+} ThermalReport;
 
 typedef struct {
     KeplerianElements initial_kep;

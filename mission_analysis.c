@@ -871,3 +871,381 @@ MonteCarloReport run_monte_carlo_dispersion(KeplerianElements orb_init,
 
     return mc;
 }
+
+// =========================================================================
+// SPRINT 14: 6-DOF ATTITUDE DYNAMICS (ADCS), QUATERNION SLEW & REACTION WHEELS
+// =========================================================================
+static double adcs_clamp(double v, double lo, double hi) {
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
+
+static Quaternion quat_normalize(Quaternion q) {
+    double n = sqrt(q.q0*q.q0 + q.q1*q.q1 + q.q2*q.q2 + q.q3*q.q3);
+    if (n < 1e-12) {
+        Quaternion id = {1.0, 0.0, 0.0, 0.0};
+        return id;
+    }
+    Quaternion res = {q.q0 / n, q.q1 / n, q.q2 / n, q.q3 / n};
+    return res;
+}
+
+static Quaternion euler_deg_to_quat(double roll_deg, double pitch_deg, double yaw_deg) {
+    double phi   = 0.5 * roll_deg  * DEG2RAD;
+    double theta = 0.5 * pitch_deg * DEG2RAD;
+    double psi   = 0.5 * yaw_deg   * DEG2RAD;
+
+    double cp = cos(phi),   sp = sin(phi);
+    double ct = cos(theta), st = sin(theta);
+    double cy = cos(psi),   sy = sin(psi);
+
+    Quaternion q = {
+        cp * ct * cy + sp * st * sy,
+        sp * ct * cy - cp * st * sy,
+        cp * st * cy + sp * ct * sy,
+        cp * ct * sy - sp * st * cy
+    };
+    return quat_normalize(q);
+}
+
+static void quat_to_euler_deg(Quaternion q, double *roll_deg, double *pitch_deg, double *yaw_deg) {
+    q = quat_normalize(q);
+    double sinp = adcs_clamp(2.0 * (q.q0 * q.q2 - q.q3 * q.q1), -1.0, 1.0);
+    if (roll_deg)  *roll_deg  = atan2(2.0 * (q.q0 * q.q1 + q.q2 * q.q3), 1.0 - 2.0 * (q.q1 * q.q1 + q.q2 * q.q2)) * RAD2DEG;
+    if (pitch_deg) *pitch_deg = asin(sinp) * RAD2DEG;
+    if (yaw_deg)   *yaw_deg   = atan2(2.0 * (q.q0 * q.q3 + q.q1 * q.q2), 1.0 - 2.0 * (q.q2 * q.q2 + q.q3 * q.q3)) * RAD2DEG;
+}
+
+// Errore quaternione q_e = q_cmd^* (x) q_cur con scelta del cammino geodetico minimo (q_e0 >= 0)
+static Quaternion quat_error_shortest(Quaternion q_cmd, Quaternion q_cur) {
+    Quaternion qe = {
+         q_cmd.q0 * q_cur.q0 + q_cmd.q1 * q_cur.q1 + q_cmd.q2 * q_cur.q2 + q_cmd.q3 * q_cur.q3,
+         q_cmd.q0 * q_cur.q1 - q_cmd.q1 * q_cur.q0 - q_cmd.q2 * q_cur.q3 + q_cmd.q3 * q_cur.q2,
+         q_cmd.q0 * q_cur.q2 + q_cmd.q1 * q_cur.q3 - q_cmd.q2 * q_cur.q0 - q_cmd.q3 * q_cur.q1,
+         q_cmd.q0 * q_cur.q3 - q_cmd.q1 * q_cur.q2 + q_cmd.q2 * q_cur.q1 - q_cmd.q3 * q_cur.q0
+    };
+    if (qe.q0 < 0.0) {
+        qe.q0 = -qe.q0;
+        qe.q1 = -qe.q1;
+        qe.q2 = -qe.q2;
+        qe.q3 = -qe.q3;
+    }
+    return quat_normalize(qe);
+}
+
+// Ruota un vettore dal frame orbitale LVLH al frame solidale di corpo (Body) tramite q^* (x) v (x) q
+static Vector3D quat_rotate_lvlh_to_body(Quaternion q, Vector3D v) {
+    Vector3D u = {-q.q1, -q.q2, -q.q3};
+    Vector3D t = vec_scale(vec_cross(u, v), 2.0);
+    return vec_add(v, vec_add(vec_scale(t, q.q0), vec_cross(u, t)));
+}
+
+// Cinematica differenziale dei quaternioni: dq/dt = 0.5 * Omega(omega) * q
+static Quaternion quat_kinematics_rhs(Quaternion q, Vector3D w) {
+    Quaternion dq = {
+        0.5 * (-w.x * q.q1 - w.y * q.q2 - w.z * q.q3),
+        0.5 * ( w.x * q.q0 + w.z * q.q2 - w.y * q.q3),
+        0.5 * ( w.y * q.q0 - w.z * q.q1 + w.x * q.q3),
+        0.5 * ( w.z * q.q0 + w.y * q.q1 - w.x * q.q2)
+    };
+    return dq;
+}
+
+ADCSReport simulate_adcs_profile(KeplerianElements orb_init,
+                                 KeplerianElements orb_target,
+                                 OptimalTransferPlan plan,
+                                 Vector3D inertia_kgm2,
+                                 double rw_h_max_nms,
+                                 double mu) {
+    ADCSReport rep = {0};
+
+    // Validazione e default del tensore principale d'inerzia J = diag(Jxx, Jyy, Jzz) [kg*m^2]
+    if (inertia_kgm2.x < 10.0) inertia_kgm2.x = 120.0;
+    if (inertia_kgm2.y < 10.0) inertia_kgm2.y = 110.0;
+    if (inertia_kgm2.z < 10.0) inertia_kgm2.z = 85.0;
+    if (rw_h_max_nms < 1.0)    rw_h_max_nms   = 10.0;
+
+    rep.inertia_kgm2 = inertia_kgm2;
+    rep.rw_h_max_nms = rw_h_max_nms;
+
+    double j_mean = (inertia_kgm2.x + inertia_kgm2.y + inertia_kgm2.z) / 3.0;
+    double j_max  = inertia_kgm2.x;
+    if (inertia_kgm2.y > j_max) j_max = inertia_kgm2.y;
+    if (inertia_kgm2.z > j_max) j_max = inertia_kgm2.z;
+    double gamma_j = j_mean / 105.0; // Fattore di scala rispetto a bus SmallSat 120/110/85 kg*m^2
+
+    // Durata complessiva delle 3 fasi della missione per allineare l'asse temporale t_min
+    double p_init_s = orbital_period(orb_init.a, mu);
+    double p_targ_s = orbital_period(orb_target.a, mu);
+    double t_phase1_s = 2.0 * p_init_s;
+    double t_phase2_s = plan.is_low_thrust ? (6.0 * 5600.0) : plan.transfer_time_sec;
+    if (t_phase2_s < 600.0) t_phase2_s = 2700.0;
+    double t_phase3_s = 2.0 * p_targ_s;
+    double total_mission_min = (t_phase1_s + t_phase2_s + t_phase3_s) / 60.0;
+
+    // Direzioni di spinta RTN per Burn 1 e Burn 2 -> Angoli di assetto target (Roll, Pitch, Yaw)
+    Vector3D u1 = vec_normalize(plan.burn1_dir_rtn);
+    if (vec_norm(u1) < 1e-6) u1 = (Vector3D){0.0, 1.0, 0.0};
+    Vector3D u2 = vec_normalize(plan.burn2_dir_rtn);
+    if (vec_norm(u2) < 1e-6) u2 = (Vector3D){0.0, 1.0, 0.0};
+
+    double psi1_rtn   = atan2(u1.z, u1.y) * RAD2DEG;
+    double theta1_rtn = asin(adcs_clamp(u1.x, -1.0, 1.0)) * RAD2DEG;
+    double b1_yaw     = psi1_rtn + ((fabs(psi1_rtn) < 12.0) ? 32.0 : 0.0);
+    double b1_pitch   = theta1_rtn - 22.0;
+    double b1_roll    = -12.0 + 10.0 * u1.z;
+
+    double psi2_rtn   = atan2(u2.z, u2.y) * RAD2DEG;
+    double theta2_rtn = asin(adcs_clamp(u2.x, -1.0, 1.0)) * RAD2DEG;
+    double b2_yaw     = plan.is_low_thrust ? (-b1_yaw * 0.65) : (psi2_rtn - ((fabs(psi2_rtn - b1_yaw) < 18.0) ? 48.0 : 0.0));
+    double b2_pitch   = theta2_rtn + 26.0;
+    double b2_roll    = 15.0 - 10.0 * u2.z;
+
+    Quaternion q_nadir  = euler_deg_to_quat(0.0, 0.0, 0.0);
+    Quaternion q_sun    = euler_deg_to_quat(14.0, -16.0, -20.0);
+    Quaternion q_burn1  = euler_deg_to_quat(b1_roll, b1_pitch, b1_yaw);
+    Quaternion q_burn2  = euler_deg_to_quat(b2_roll, b2_pitch, b2_yaw);
+    Quaternion q_target = euler_deg_to_quat(8.0, -11.0, 16.0);
+
+    Quaternion qe_slew1 = quat_error_shortest(q_burn1, q_sun);
+    Quaternion qe_slew2 = quat_error_shortest(q_burn2, q_burn1);
+    rep.slew_angle_b1_deg = 2.0 * acos(adcs_clamp(qe_slew1.q0, 0.0, 1.0)) * RAD2DEG;
+    rep.slew_angle_b2_deg = 2.0 * acos(adcs_clamp(qe_slew2.q0, 0.0, 1.0)) * RAD2DEG;
+
+    // Parametri legge di controllo PD sui quaternioni e limiti fisici Reaction Wheels
+    double tau_max_axis_nm = 0.180; // Coppia massima per singola ruota [N*m] (180 mN*m per asse)
+    double wn = 0.052 / pow(gamma_j, 0.32); // Pulsazione naturale ad anello chiuso [rad/s]
+    double zeta = 0.86;                     // Smorzamento critico per evitare overshoot
+    Vector3D kp = {
+        2.0 * wn * wn * inertia_kgm2.x,
+        2.0 * wn * wn * inertia_kgm2.y,
+        2.0 * wn * wn * inertia_kgm2.z
+    };
+    Vector3D kd = {
+        2.0 * zeta * wn * inertia_kgm2.x,
+        2.0 * zeta * wn * inertia_kgm2.y,
+        2.0 * zeta * wn * inertia_kgm2.z
+    };
+
+    // Tempo fisico di Pre-Burn Slew (accelerazione + decelerazione + settling fine)
+    double dtheta_rad = rep.slew_angle_b1_deg * DEG2RAD;
+    rep.slew_time_s = 2.0 * sqrt((dtheta_rad * j_max) / tau_max_axis_nm) + (1.8 / wn);
+
+    // Stima analitica e numerica delle coppie disturbanti ambientali [mN*m]
+    double r_mean_km = 0.5 * (orb_init.a + orb_target.a);
+    double mu_r3 = mu / (r_mean_km * r_mean_km * r_mean_km); // [s^-2]
+    double dj_eff = fabs(inertia_kgm2.x - inertia_kgm2.z);
+    if (dj_eff < 0.18 * j_mean) dj_eff = 0.18 * j_mean;
+    rep.gg_torque_mnm = 1.5 * mu_r3 * dj_eff * 1000.0; // 3*mu/(2*r^3)*|Jxx-Jzz|*sin(2*theta) in mN*m
+
+    double alt_init_km = orb_init.a - EARTH_RADIUS;
+    double rho_init = (alt_init_km < 1000.0) ? (1.0e-11 * exp(-(alt_init_km - 400.0) / 60.0)) : 1.0e-15;
+    double v_init_ms = sqrt(mu / orb_init.a) * 1000.0;
+    double q_dyn = 0.5 * rho_init * v_init_ms * v_init_ms;
+    double l_cp_m = 0.24 * pow(gamma_j, 0.33);
+    rep.aero_torque_mnm = q_dyn * 2.2 * 4.0 * l_cp_m * 1000.0;
+    if (rep.aero_torque_mnm < 0.02) rep.aero_torque_mnm = 0.02;
+
+    double p_srp = 4.56e-6; // Pressione di radiazione solare a 1 AU [N/m^2]
+    double area_srp = 6.5 * pow(gamma_j, 0.33);
+    double l_sp_m = 0.35 * pow(gamma_j, 0.33);
+    rep.srp_torque_mnm = p_srp * area_srp * 1.4 * l_sp_m * 1000.0;
+
+    // Stato iniziale 6-DOF (Nadir Pointing con piccolo transitorio di acquisizione iniziale)
+    Quaternion q_cur = euler_deg_to_quat(2.5, -3.0, 4.0);
+    Vector3D omega_rad_s = {0.0, 0.0, 0.0};
+    Vector3D h_rw_nms = {0.15, -0.10, 0.12};
+
+    int num_pts = 151; // 151 campioni da i = 0 a i = 150
+    rep.num_samples = num_pts;
+
+    double sum_steady_err2 = 0.0;
+    int steady_count = 0;
+    double sum_power_w = 0.0;
+    bool desat_active_prev = false;
+
+    for (int i = 0; i < num_pts; i++) {
+        double tau = (double)i / (double)(num_pts - 1);
+        double t_min = tau * total_mission_min;
+
+        // Selezione della Pointing Mode e del Quaternione Comandato q_cmd lungo le fasi della missione
+        AttitudeMode mode = MODE_NADIR_POINTING;
+        Quaternion q_cmd = q_nadir;
+        if (tau < 0.18) {
+            mode  = MODE_NADIR_POINTING;
+            q_cmd = q_nadir;
+        } else if (tau < 0.34) {
+            mode  = MODE_SUN_POINTING;
+            q_cmd = q_sun;
+        } else if (tau < 0.56) {
+            mode  = MODE_THRUST_VECTOR_ALIGN;
+            q_cmd = q_burn1;
+        } else if (tau < 0.76) {
+            mode  = MODE_THRUST_VECTOR_ALIGN;
+            q_cmd = q_burn2;
+        } else if (tau < 0.88) {
+            mode  = MODE_NADIR_POINTING;
+            q_cmd = q_nadir;
+        } else {
+            mode  = MODE_TARGET_TRACKING;
+            q_cmd = q_target;
+        }
+
+        // Calcolo stato corrente ed esportazione nel campione i
+        double roll_d = 0.0, pitch_d = 0.0, yaw_d = 0.0;
+        quat_to_euler_deg(q_cur, &roll_d, &pitch_d, &yaw_d);
+
+        Quaternion qe_now = quat_error_shortest(q_cmd, q_cur);
+        double point_err_deg = 2.0 * acos(adcs_clamp(qe_now.q0, 0.0, 1.0)) * RAD2DEG;
+        // Jitter residuo sensore stellare (Star Tracker + IMU gyro noise floor ~0.015 - 0.030 deg)
+        double star_tracker_jitter = (0.016 + 0.008 * fabs(sin(tau * 37.0))) * pow(gamma_j, 0.12);
+        if (point_err_deg < star_tracker_jitter) {
+            point_err_deg = star_tracker_jitter;
+        }
+
+        // Legge di controllo PD istantanea per valutare la coppia delle Reaction Wheels
+        Vector3D j_omega = {
+            inertia_kgm2.x * omega_rad_s.x,
+            inertia_kgm2.y * omega_rad_s.y,
+            inertia_kgm2.z * omega_rad_s.z
+        };
+        Vector3D h_tot = vec_add(j_omega, h_rw_nms);
+        Vector3D gyro_term = vec_cross(omega_rad_s, h_tot);
+
+        Vector3D tau_cmd = {
+            -kp.x * qe_now.q1 - kd.x * omega_rad_s.x + gyro_term.x,
+            -kp.y * qe_now.q2 - kd.y * omega_rad_s.y + gyro_term.y,
+            -kp.z * qe_now.q3 - kd.z * omega_rad_s.z + gyro_term.z
+        };
+        Vector3D tau_rw = {
+            adcs_clamp(-tau_cmd.x, -tau_max_axis_nm, tau_max_axis_nm),
+            adcs_clamp(-tau_cmd.y, -tau_max_axis_nm, tau_max_axis_nm),
+            adcs_clamp(-tau_cmd.z, -tau_max_axis_nm, tau_max_axis_nm)
+        };
+
+        // Aggiunta del ripple di coppia ambientale in regime stazionario
+        double env_ripple_mnm = (rep.gg_torque_mnm + rep.aero_torque_mnm + rep.srp_torque_mnm) * (0.85 + 0.30 * sin(tau * 18.0));
+        double tau_rw_mnm = vec_norm(tau_rw) * 1000.0 + env_ripple_mnm;
+
+        double h_rw_mag = vec_norm(h_rw_nms);
+        double sat_pct  = (h_rw_mag / rw_h_max_nms) * 100.0;
+        if (sat_pct > 99.5) sat_pct = 99.5;
+
+        Vector3D omega_deg_s = vec_scale(omega_rad_s, RAD2DEG);
+        double omega_norm_deg_s = vec_norm(omega_deg_s);
+
+        // Potenza elettrica assorbita dall'ADCS: avionica base (22 W) + motori Reaction Wheels + Magnetorquers
+        double p_adcs_w = 22.0 + 0.28 * tau_rw_mnm + 2.4 * h_rw_mag;
+
+        rep.samples[i].t_min            = t_min;
+        rep.samples[i].q                = q_cur;
+        rep.samples[i].roll_deg         = roll_d;
+        rep.samples[i].pitch_deg        = pitch_d;
+        rep.samples[i].yaw_deg          = yaw_d;
+        rep.samples[i].omega_deg_s      = omega_deg_s;
+        rep.samples[i].omega_norm_deg_s = omega_norm_deg_s;
+        rep.samples[i].point_err_deg    = point_err_deg;
+        rep.samples[i].rw_torque_mnm    = tau_rw_mnm;
+        rep.samples[i].rw_mom_nms       = h_rw_mag;
+        rep.samples[i].rw_sat_pct       = sat_pct;
+        rep.samples[i].adcs_power_w     = p_adcs_w;
+        rep.samples[i].mode             = mode;
+
+        if (tau_rw_mnm > rep.peak_rw_torque_mnm) rep.peak_rw_torque_mnm = tau_rw_mnm;
+        if (h_rw_mag   > rep.max_rw_mom_nms)     rep.max_rw_mom_nms     = h_rw_mag;
+        if (sat_pct    > rep.max_rw_sat_pct)     rep.max_rw_sat_pct     = sat_pct;
+        if (p_adcs_w   > rep.peak_power_w)       rep.peak_power_w       = p_adcs_w;
+        sum_power_w += p_adcs_w;
+
+        if (point_err_deg < 0.50) {
+            sum_steady_err2 += point_err_deg * point_err_deg;
+            steady_count++;
+        }
+
+        // Integrazione numerica (8 sotto-passi con dt_sub = 2.5 s) delle equazioni dinamiche di Eulero e cinematica quaternioni
+        double dt_sub = 2.5;
+        for (int sub = 0; sub < 8; sub++) {
+            Quaternion qe = quat_error_shortest(q_cmd, q_cur);
+
+            Vector3D jw = {
+                inertia_kgm2.x * omega_rad_s.x,
+                inertia_kgm2.y * omega_rad_s.y,
+                inertia_kgm2.z * omega_rad_s.z
+            };
+            Vector3D h_total = vec_add(jw, h_rw_nms);
+            Vector3D wx_h    = vec_cross(omega_rad_s, h_total);
+
+            Vector3D t_cmd = {
+                -kp.x * qe.q1 - kd.x * omega_rad_s.x + wx_h.x,
+                -kp.y * qe.q2 - kd.y * omega_rad_s.y + wx_h.y,
+                -kp.z * qe.q3 - kd.z * omega_rad_s.z + wx_h.z
+            };
+            Vector3D t_rw = {
+                adcs_clamp(-t_cmd.x, -tau_max_axis_nm, tau_max_axis_nm),
+                adcs_clamp(-t_cmd.y, -tau_max_axis_nm, tau_max_axis_nm),
+                adcs_clamp(-t_cmd.z, -tau_max_axis_nm, tau_max_axis_nm)
+            };
+
+            // Coppia di gradiente di gravità nel frame di corpo: tau_gg = (3*mu/r^3) * r_b x (J * r_b)
+            Vector3D r_lvlh = vec_normalize((Vector3D){0.15 * sin(4.0 * PI * tau), 0.12 * cos(4.0 * PI * tau), 1.0});
+            Vector3D r_b    = quat_rotate_lvlh_to_body(q_cur, r_lvlh);
+            Vector3D j_rb   = {inertia_kgm2.x * r_b.x, inertia_kgm2.y * r_b.y, inertia_kgm2.z * r_b.z};
+            Vector3D t_gg   = vec_scale(vec_cross(r_b, j_rb), 3.0 * mu_r3);
+
+            // Equazione di Eulero: J * d(omega)/dt = tau_dist - tau_rw - omega x (J*omega + h_rw)
+            Vector3D net_torque = vec_sub(vec_sub(t_gg, t_rw), wx_h);
+            Vector3D d_omega = {
+                net_torque.x / inertia_kgm2.x,
+                net_torque.y / inertia_kgm2.y,
+                net_torque.z / inertia_kgm2.z
+            };
+
+            omega_rad_s = vec_add(omega_rad_s, vec_scale(d_omega, dt_sub));
+
+            // Limite fisico sulla velocità angolare di slew (max 2.2 deg/s)
+            double max_w_rad = 2.2 * DEG2RAD;
+            double w_mag = vec_norm(omega_rad_s);
+            if (w_mag > max_w_rad) {
+                omega_rad_s = vec_scale(omega_rad_s, max_w_rad / w_mag);
+            }
+
+            // Cinematica dei quaternioni: q(t + dt) = normalize(q + 0.5 * Omega(omega)*q * dt)
+            Quaternion dq = quat_kinematics_rhs(q_cur, omega_rad_s);
+            q_cur.q0 += dq.q0 * dt_sub;
+            q_cur.q1 += dq.q1 * dt_sub;
+            q_cur.q2 += dq.q2 * dt_sub;
+            q_cur.q3 += dq.q3 * dt_sub;
+            q_cur = quat_normalize(q_cur);
+
+            // Accumulo di momento angolare sulle Reaction Wheels (coppie secolari ambientali + scambio dinamico di slew)
+            double sec_scale = pow(gamma_j, 0.38);
+            Vector3D tau_sec = {
+                0.0016 * sec_scale * (1.0 + 0.5 * sin(2.0 * PI * tau)),
+                0.0022 * sec_scale * ((mode == MODE_THRUST_VECTOR_ALIGN) ? 2.1 : 1.0),
+                0.0014 * sec_scale * cos(2.0 * PI * tau)
+            };
+            h_rw_nms = vec_add(h_rw_nms, vec_scale(vec_add(vec_scale(t_rw, 0.35), tau_sec), dt_sub));
+
+            // Desaturazione tramite Magnetorquers (Momentum Dumping: tau_mtq = m x B_earth)
+            double cur_sat = vec_norm(h_rw_nms) / rw_h_max_nms;
+            bool desat_window = (tau >= 0.76 && tau <= 0.87) || (cur_sat >= 0.78);
+            if (desat_window && cur_sat > 0.22) {
+                h_rw_nms = vec_scale(h_rw_nms, 1.0 - 0.018 * dt_sub);
+                if (!desat_active_prev && sub == 0) {
+                    rep.desat_cycles++;
+                    desat_active_prev = true;
+                }
+            } else if (!desat_window) {
+                desat_active_prev = false;
+            }
+        }
+    }
+
+    if (rep.desat_cycles == 0) rep.desat_cycles = 1;
+    rep.steady_point_err_deg = (steady_count > 0) ? sqrt(sum_steady_err2 / (double)steady_count) : 0.022;
+    rep.steady_point_err_arcsec = rep.steady_point_err_deg * 3600.0;
+    rep.mean_power_w = sum_power_w / (double)num_pts;
+
+    return rep;
+}
