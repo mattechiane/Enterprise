@@ -243,7 +243,7 @@ typedef struct {
 } ADCSReport;
 
 // ==========================================
-// SPRINT 15: THERMAL CONTROL SYSTEM (TCS) & LUMPED-PARAMETER HEAT BALANCE
+// SPRINT 15: THERMAL CONTROL SYSTEM (TCS) & IONIZING RADIATION (VAN ALLEN / SAA)
 // ==========================================
 #define MAX_THERMAL_SAMPLES 160
 #define STEFAN_BOLTZMANN 5.670374419e-8 // Costante di Stefan-Boltzmann [W/(m^2*K^4)]
@@ -251,40 +251,75 @@ typedef struct {
 #define EARTH_IR_FLUX_W_M2 237.0        // Emissione IR terrestre media OLR [W/m^2]
 #define EARTH_ALBEDO_COEFF 0.30         // Coefficiente medio di Albedo terrestre
 
+typedef enum {
+    COATING_WHITE_PAINT_SG121 = 0, // White Paint SG121 (alpha_s = 0.20, eps_IR = 0.88)
+    COATING_OSR_MIRROR        = 1, // Optical Solar Reflector OSR (alpha_s = 0.10, eps_IR = 0.82)
+    COATING_MLI_GOLD_KAPTON   = 2, // MLI Gold Kapton (alpha_s = 0.35, eps_IR = 0.55)
+    COATING_BLACK_ANODIZED    = 3, // Black Anodized Al (alpha_s = 0.88, eps_IR = 0.86)
+    COATING_CUSTOM            = 4  // Custom Thermo-Optical Properties
+} ThermalCoatingType;
+
 typedef struct {
-    double t_min;        // Tempo di missione cumulativo (min)
-    double temp_c;       // Temperatura globale del nodo satellite (°C)
-    double temp_k;       // Temperatura assoluta del nodo satellite (K)
-    double q_sol_w;      // Calore assorbito da Radiazione Solare Diretta [W]
-    double q_alb_w;      // Calore assorbito da Albedo Terrestre [W]
-    double q_ir_w;       // Calore assorbito da Radiazione Infrarossa Terrestre (OLR) [W]
-    double q_int_w;      // Dissipazione termica interna + Riscaldatori attivi (Heaters) [W]
-    double q_heater_w;   // Potenza erogata dai Riscaldatori di sopravvivenza/operativi [W]
-    double q_rad_w;      // Potenza termica irradiata nello spazio profondo (sigma*eps*A*T^4) [W]
-    int    in_eclipse;   // 1 se il satellite è nel cono d'ombra terrestre, 0 se illuminato
+    ThermalCoatingType type;
+    char name[64];
+    double alpha_s; // Assorbivita solare (alpha_s)
+    double eps_ir;  // Emissivita infrarossa (epsilon_IR)
+} SurfaceOpticalProps;
+
+typedef struct {
+    double t_min;            // Tempo di missione cumulativo (min)
+    double t_ext_c;          // Temperatura nodo esterno: Pannelli/Superficie Esterna (°C)
+    double t_bus_c;          // Temperatura nodo interno: Bus / Batterie Li-Ion (°C)
+    double temp_c;           // Alias temperatura principale del bus (°C)
+    double temp_k;           // Temperatura assoluta del bus (K)
+    double q_sun_w;          // Flusso solare diretto assorbito Q_sun [W]
+    double q_sol_w;          // Alias Q_sun [W]
+    double q_alb_w;          // Flusso di Albedo terrestre assorbito Q_albedo [W]
+    double q_ir_w;           // Flusso Infrarosso terrestre assorbito Q_IR [W]
+    double q_ir_alb_w;       // Somma flussi planetari Q_albedo + Q_IR [W]
+    double q_int_w;          // Dissipazione elettronica interna + Riscaldatori [W]
+    double q_heater_w;       // Potenza erogata dai Riscaldatori termostatati di sopravvivenza [W]
+    double q_rad_w;          // Potenza termica irradiata nello spazio (sigma*eps*A*T^4) [W]
+    double inst_dose_urad_h; // Rateo di dose ionizzante istantanea dietro schermatura Al [urad/h]
+    int    in_eclipse;       // 1 se il satellite è nel cono d'ombra terrestre, 0 se illuminato
+    int    in_saa;           // 1 se il satellite attraversa la South Atlantic Anomaly (SAA)
 } ThermalSample;
 
 typedef struct {
-    double alpha_solar;          // Assorbività solare del rivestimento (Absorptivity alpha_s)
-    double eps_ir;               // Emissività infrarossa dei radiatori (Emissivity epsilon_ir)
-    double thermal_mass_j_k;     // Capacità termica del nodo m*c_p [J/K]
-    double rad_area_m2;          // Area radiante efficace del bus [m^2]
-    double t_min_op_c;           // Limite operativo minimo di temperatura [°C]
-    double t_max_op_c;           // Limite operativo massimo di temperatura [°C]
-    double min_temp_c;           // Temperatura minima raggiunta in missione [°C]
-    double max_temp_c;           // Temperatura massima raggiunta in missione [°C]
-    double mean_temp_c;          // Temperatura media orbitale [°C]
-    double eq_sun_temp_c;        // Temperatura teorica di equilibrio diurno (Hot Case) [°C]
-    double eq_ecl_temp_c;        // Temperatura teorica di equilibrio in eclissi (Cold Case) [°C]
-    double mean_q_sol_w;         // Flusso solare medio assorbito [W]
-    double mean_q_alb_w;         // Flusso di albedo medio assorbito [W]
-    double mean_q_ir_w;          // Flusso IR terrestre medio assorbito [W]
-    double mean_q_rad_w;         // Potenza media radiata nello spazio [W]
-    double peak_heater_w;        // Potenza massima erogata dai riscaldatori (Heaters) [W]
-    double heater_duty_pct;      // Percentuale di tempo con riscaldatori attivi [%]
-    int    num_samples;          // Numero di campioni temporali nel profilo termico
+    SurfaceOpticalProps coating;     // Proprietà termo-ottiche del rivestimento selezionato
+    double alpha_solar;              // Assorbività solare del rivestimento (alpha_s)
+    double eps_ir;                   // Emissività infrarossa dei radiatori (epsilon_IR)
+    double al_shield_mm;             // Spessore schermatura in Alluminio [mm] (default 4.0 mm)
+    double thermal_mass_j_k;         // Capacità termica del nodo Bus interno m*c_p [J/K]
+    double ext_thermal_mass_j_k;     // Capacità termica del nodo Pannelli/Guscio esterno [J/K]
+    double rad_area_m2;              // Area radiante efficace del satellite [m^2]
+    double t_min_op_c;               // Limite operativo minimo batterie Li-Ion [°C] (-10 °C)
+    double t_max_op_c;               // Limite operativo massimo batterie Li-Ion [°C] (+45 °C)
+    double min_temp_c;               // Temperatura minima raggiunta dal Bus interno [°C]
+    double max_temp_c;               // Temperatura massima raggiunta dal Bus interno [°C]
+    double mean_temp_c;              // Temperatura media orbitale del Bus interno [°C]
+    double ext_min_temp_c;           // Temperatura minima raggiunta dalla superficie esterna [°C]
+    double ext_max_temp_c;           // Temperatura massima raggiunta dalla superficie esterna [°C]
+    double eq_sun_temp_c;            // Temperatura teorica di equilibrio diurno (Hot Case) [°C]
+    double eq_ecl_temp_c;            // Temperatura teorica di equilibrio in eclissi (Cold Case) [°C]
+    double mean_q_sol_w;             // Flusso solare medio assorbito [W]
+    double mean_q_alb_w;             // Flusso di albedo medio assorbito [W]
+    double mean_q_ir_w;              // Flusso IR terrestre medio assorbito [W]
+    double mean_q_rad_w;             // Potenza media radiata nello spazio [W]
+    double peak_heater_w;            // Potenza massima erogata dai riscaldatori (Heaters) [W]
+    double heater_duty_pct;          // Percentuale di tempo con riscaldatori attivi [%]
+    double heater_energy_wh;         // Energia elettrica totale consumata dagli heater in missione [Wh]
+    double tid_krad_yr;              // Total Ionizing Dose annuale dietro schermatura Al [krad/yr]
+    double peak_dose_urad_h;         // Picco di dose radiativa istantanea (SAA / Van Allen) [urad/h]
+    double seu_rate_day;             // Rateo stimato di Single Event Upsets [SEU/day]
+    double avionics_life_yr;         // Vita utile stimata dell'elettronica di bordo [anni]
+    bool   saa_encountered;          // true se l'orbita interseca l'Anomalia del Sud Atlantico (SAA)
+    char   saa_status[64];           // Stringa di stato attraversamento SAA / Fasce di Van Allen
+    int    num_samples;              // Numero di campioni temporali nel profilo termico/radiativo
     ThermalSample samples[MAX_THERMAL_SAMPLES];
-} ThermalReport;
+} ThermalRadReport;
+
+typedef ThermalRadReport ThermalReport;
 
 typedef struct {
     KeplerianElements initial_kep;

@@ -1252,35 +1252,79 @@ ADCSReport simulate_adcs_profile(KeplerianElements orb_init,
 }
 
 // =========================================================================
-// SPRINT 15: THERMAL CONTROL SYSTEM (TCS) & LUMPED-PARAMETER HEAT BALANCE
-// m*c_p * dT/dt = Q_sol + Q_alb + Q_ir + Q_int + Q_heater - sigma*eps*A*T^4
+// SPRINT 15: THERMAL CONTROL SYSTEM (TCS) 2-NODE MODEL & RADIATION (VAN ALLEN / SAA)
+// m*c_p * dT/dt = Q_sun + Q_albedo + Q_IR + Q_int + Q_heater - sigma*eps*A*T^4
 // =========================================================================
-ThermalReport simulate_thermal_profile(KeplerianElements orb_init,
-                                       KeplerianElements orb_target,
-                                       OptimalTransferPlan plan,
-                                       double alpha_solar,
-                                       double eps_ir,
-                                       double t_min_op_c,
-                                       double t_max_op_c,
-                                       double mu) {
-    ThermalReport rep = {0};
+SurfaceOpticalProps get_surface_optical_props(ThermalCoatingType type) {
+    SurfaceOpticalProps p = {0};
+    p.type = type;
+    switch (type) {
+        case COATING_OSR_MIRROR:
+            strcpy(p.name, "Optical Solar Reflector (OSR)");
+            p.alpha_s = 0.10;
+            p.eps_ir  = 0.82;
+            break;
+        case COATING_MLI_GOLD_KAPTON:
+            strcpy(p.name, "MLI Gold Kapton");
+            p.alpha_s = 0.35;
+            p.eps_ir  = 0.55;
+            break;
+        case COATING_BLACK_ANODIZED:
+            strcpy(p.name, "Black Anodized Al");
+            p.alpha_s = 0.88;
+            p.eps_ir  = 0.86;
+            break;
+        case COATING_WHITE_PAINT_SG121:
+        default:
+            strcpy(p.name, "White Paint SG121");
+            p.alpha_s = 0.22;
+            p.eps_ir  = 0.86;
+            break;
+    }
+    return p;
+}
 
-    alpha_solar = adcs_clamp(alpha_solar, 0.05, 0.98);
-    eps_ir      = adcs_clamp(eps_ir,      0.05, 0.98);
+ThermalRadReport simulate_thermal_and_radiation(KeplerianElements orb_init,
+                                                KeplerianElements orb_target,
+                                                OptimalTransferPlan plan,
+                                                SurfaceOpticalProps coating,
+                                                double al_shield_mm,
+                                                double t_min_op_c,
+                                                double t_max_op_c,
+                                                double mu) {
+    ThermalRadReport rep = {0};
+
+    double alpha_solar = adcs_clamp(coating.alpha_s, 0.05, 0.98);
+    double eps_ir      = adcs_clamp(coating.eps_ir,  0.05, 0.98);
+    al_shield_mm       = adcs_clamp(al_shield_mm,    0.50, 30.0);
     if (t_max_op_c <= t_min_op_c + 5.0) {
         t_min_op_c = -10.0;
         t_max_op_c =  45.0;
     }
 
-    rep.alpha_solar      = alpha_solar;
-    rep.eps_ir           = eps_ir;
-    rep.thermal_mass_j_k = 14500.0; // Capacità termica nodo principale bus m*c_p [J/K]
-    rep.rad_area_m2      = 4.60;    // Area radiante totale dei pannelli radiatori verso lo spazio [m^2]
-    rep.t_min_op_c       = t_min_op_c;
-    rep.t_max_op_c       = t_max_op_c;
+    coating.alpha_s = alpha_solar;
+    coating.eps_ir  = eps_ir;
+    if (coating.name[0] == '\0') {
+        if (fabs(alpha_solar - 0.10) < 0.04)      strcpy(coating.name, "Optical Solar Reflector (OSR)");
+        else if (fabs(alpha_solar - 0.35) < 0.05) strcpy(coating.name, "MLI Gold Kapton");
+        else if (alpha_solar > 0.70)              strcpy(coating.name, "Black Anodized Al");
+        else                                      strcpy(coating.name, "White Paint SG121");
+    }
 
-    double a_proj_m2   = 2.60; // Area efficace esposta al flusso solare/albedo [m^2]
-    double a_nadir_m2  = 2.30; // Area efficace esposta all'IR terrestre (0.5 * A_rad) [m^2]
+    rep.coating              = coating;
+    rep.alpha_solar          = alpha_solar;
+    rep.eps_ir               = eps_ir;
+    rep.al_shield_mm         = al_shield_mm;
+    rep.thermal_mass_j_k     = 14500.0; // Capacità termica nodo Bus Interno m*c_p [J/K]
+    rep.ext_thermal_mass_j_k = 3400.0;  // Capacità termica nodo Pannelli/Superficie Esterna [J/K]
+    rep.rad_area_m2          = 3.85;    // Area radiante efficace dei radiatori del Bus [m^2]
+    rep.t_min_op_c           = t_min_op_c;
+    rep.t_max_op_c           = t_max_op_c;
+
+    double a_proj_m2   = 2.60; // Area efficace esposta al flusso solare diretto [m^2]
+    double a_nadir_m2  = 2.30; // Area efficace esposta ad Albedo e IR terrestre [m^2]
+    double a_rad_ext   = 3.15; // Area radiante efficace nodo esterno [m^2]
+    double g_link_w_k  = 8.50; // Conduttanza termica d'accoppiamento tra nodo esterno e bus [W/K]
 
     double p_init_s = orbital_period(orb_init.a, mu);
     double p_targ_s = orbital_period(orb_target.a, mu);
@@ -1290,44 +1334,58 @@ ThermalReport simulate_thermal_profile(KeplerianElements orb_init,
     double t_phase3_s = 2.0 * p_targ_s;
     double total_mission_min = (t_phase1_s + t_phase2_s + t_phase3_s) / 60.0;
 
-    // Stima temperature di equilibrio stazionario (Hot Case diurno vs Cold Case eclissi)
+    // Temperature teoriche di equilibrio stazionario (Hot Case diurno vs Cold Case eclissi)
     double r_mean_km = 0.5 * (orb_init.a + orb_target.a);
     double vf_mean   = (EARTH_RADIUS / r_mean_km) * (EARTH_RADIUS / r_mean_km);
     double q_sol_max = alpha_solar * SOLAR_CONSTANT_W_M2 * a_proj_m2;
-    double q_alb_max = alpha_solar * SOLAR_CONSTANT_W_M2 * EARTH_ALBEDO_COEFF * vf_mean * a_proj_m2 * 0.70;
+    double q_alb_max = alpha_solar * SOLAR_CONSTANT_W_M2 * EARTH_ALBEDO_COEFF * vf_mean * a_nadir_m2 * 0.70;
     double q_ir_mean = eps_ir * EARTH_IR_FLUX_W_M2 * vf_mean * a_nadir_m2;
     double q_int_nom = 165.0;
 
-    double denom_rad = STEFAN_BOLTZMANN * eps_ir * rep.rad_area_m2;
-    rep.eq_sun_temp_c = pow((q_sol_max + q_alb_max + q_ir_mean + 240.0) / denom_rad, 0.25) - 273.15;
-    rep.eq_ecl_temp_c = pow((q_ir_mean + q_int_nom) / denom_rad, 0.25) - 273.15;
+    double denom_rad_bus = STEFAN_BOLTZMANN * eps_ir * rep.rad_area_m2;
+    double denom_rad_ext = STEFAN_BOLTZMANN * eps_ir * a_rad_ext;
+    rep.eq_sun_temp_c = pow((q_sol_max + q_alb_max + q_ir_mean + 240.0) / denom_rad_bus, 0.25) - 273.15;
+    rep.eq_ecl_temp_c = pow((q_ir_mean + q_int_nom) / denom_rad_bus, 0.25) - 273.15;
 
-    // Temperatura iniziale all'ingresso in Orbita 1 (291.15 K = +18.0 °C)
-    double temp_k = 291.15;
-    rep.min_temp_c =  1e9;
-    rep.max_temp_c = -1e9;
+    // Fattore di attenuazione schermatura in Alluminio rispetto al riferimento di 4.0 mm
+    double f_shield = exp(-0.36 * (al_shield_mm - 4.0)) * pow(4.0 / al_shield_mm, 0.60);
+
+    // Temperature iniziali dei 2 nodi (T_bus = +18.0 °C, T_ext = +21.0 °C)
+    double t_bus_k = 291.15;
+    double t_ext_k = 294.15;
+    rep.min_temp_c     =  1e9;
+    rep.max_temp_c     = -1e9;
+    rep.ext_min_temp_c =  1e9;
+    rep.ext_max_temp_c = -1e9;
 
     int num_pts = 151;
     rep.num_samples = num_pts;
 
     double sum_temp_c = 0.0, sum_sol = 0.0, sum_alb = 0.0, sum_ir = 0.0, sum_rad = 0.0;
+    double sum_tid_krad_yr = 0.0;
     int heater_active_count = 0;
 
     // Passo fisico di integrazione termica tra campioni (dt_sample = 65 s diviso in 10 sotto-passi da 6.5 s)
     double dt_sub = 6.5;
+    double dt_sample_s = (total_mission_min * 60.0) / (double)(num_pts - 1);
 
     for (int i = 0; i < num_pts; i++) {
         double tau = (double)i / (double)(num_pts - 1);
         double t_min = tau * total_mission_min;
 
-        // Raggio orbitale interpolato lungo le 3 fasi e fattore di vista terrestre F_E = (R_E / r)^2
+        // Raggio e inclinazione interpolati lungo le 3 fasi e fattore di vista terrestre F_E = (R_E / r)^2
         double r_cur_km = orb_init.a;
+        double inc_cur_rad = orb_init.i;
         if (tau >= 0.34 && tau <= 0.76) {
             double f_tr = (tau - 0.34) / 0.42;
-            r_cur_km = orb_init.a + f_tr * (orb_target.a - orb_init.a);
+            r_cur_km    = orb_init.a + f_tr * (orb_target.a - orb_init.a);
+            inc_cur_rad = orb_init.i + f_tr * (orb_target.i - orb_init.i);
         } else if (tau > 0.76) {
-            r_cur_km = orb_target.a;
+            r_cur_km    = orb_target.a;
+            inc_cur_rad = orb_target.i;
         }
+        double alt_cur_km = r_cur_km - EARTH_RADIUS;
+        if (alt_cur_km < 150.0) alt_cur_km = 150.0;
         double vf_earth = (EARTH_RADIUS / r_cur_km) * (EARTH_RADIUS / r_cur_km);
 
         // Fase angolare orbitale (4.5 rivoluzioni complete nella finestra di missione) e cono d'ombra (eclissi)
@@ -1335,67 +1393,126 @@ ThermalReport simulate_thermal_profile(KeplerianElements orb_init,
         double cos_sun   = cos(orb_angle);
         int in_eclipse   = (cos_sun < -0.38) ? 1 : 0;
 
-        // 1. Radiazione Solare Diretta Q_sol [W]
-        double q_sol_w = in_eclipse ? 0.0 : (alpha_solar * SOLAR_CONSTANT_W_M2 * a_proj_m2 * (0.88 + 0.12 * fabs(cos_sun)));
+        // 1. Flusso Solare Diretto: Q_sun = (1 - eclipse) * G_s * A_proj * alpha_s
+        double q_sun_w = in_eclipse ? 0.0 : (alpha_solar * SOLAR_CONSTANT_W_M2 * a_proj_m2 * (0.88 + 0.12 * fabs(cos_sun)));
 
-        // 2. Albedo Terrestre Q_alb [W] (nullo in eclissi, massimo al punto sub-solare)
-        double sub_solar_factor = (cos_sun > 0.0) ? (0.35 + 0.65 * cos_sun) : 0.20;
-        double q_alb_w = in_eclipse ? 0.0 : (alpha_solar * SOLAR_CONSTANT_W_M2 * EARTH_ALBEDO_COEFF * vf_earth * a_proj_m2 * sub_solar_factor);
+        // 2. Flusso di Albedo Terrestre: Q_albedo = (1 - eclipse) * G_s * a_alb * F_E * A_nadir * alpha_s * cos(theta_sun)
+        double cos_theta_sun = (cos_sun > 0.0) ? (0.35 + 0.65 * cos_sun) : 0.20;
+        double q_alb_w = in_eclipse ? 0.0 : (alpha_solar * SOLAR_CONSTANT_W_M2 * EARTH_ALBEDO_COEFF * vf_earth * a_nadir_m2 * cos_theta_sun);
 
-        // 3. Radiazione Infrarossa Terrestre (OLR) Q_ir [W] (sempre presente sia al Sole che in eclissi)
+        // 3. Emissione Infrarossa Terrestre (Earth IR): Q_IR = q_IR * F_E * A_nadir * eps_IR
         double q_ir_w = eps_ir * EARTH_IR_FLUX_W_M2 * vf_earth * a_nadir_m2;
+        double q_ir_alb_w = q_alb_w + q_ir_w;
 
-        // 4. Dissipazione Elettrica Interna avionica + propulsione Q_base [W]
+        // 4. Dissipazione Elettronica Interna avionica + propulsione durante i burn / spinta elettrica Q_int [W]
         double q_base_int_w = 210.0;
         if (tau >= 0.34 && tau <= 0.76) {
             q_base_int_w = plan.is_low_thrust ? 360.0 : 290.0;
         }
 
-        // 5. Controllo attivo Heaters se T scende vicino o sotto T_min_op
-        double temp_c = temp_k - 273.15;
+        // 5. Potenza dei Riscaldatori termostatati di sopravvivenza Q_heater [W]
+        double t_bus_c = t_bus_k - 273.15;
+        double t_ext_c = t_ext_k - 273.15;
         double q_heater_w = 0.0;
-        if (temp_c < (t_min_op_c + 12.0)) {
-            double frac_h = adcs_clamp(((t_min_op_c + 12.0) - temp_c) / 12.0, 0.0, 1.0);
+        if (t_bus_c < (t_min_op_c + 12.0)) {
+            double frac_h = adcs_clamp(((t_min_op_c + 12.0) - t_bus_c) / 12.0, 0.0, 1.0);
             q_heater_w = 320.0 * frac_h;
         }
         if (q_heater_w > 5.0) heater_active_count++;
         if (q_heater_w > rep.peak_heater_w) rep.peak_heater_w = q_heater_w;
+        rep.heater_energy_wh += q_heater_w * (dt_sample_s / 3600.0);
 
         double q_int_total_w = q_base_int_w + q_heater_w;
+        double q_rad_w = denom_rad_bus * (t_bus_k * t_bus_k * t_bus_k * t_bus_k - 81.0);
 
-        // 6. Potenza Radiata nello Spazio Profondo: Q_rad = sigma * eps * A * T^4
-        double q_rad_w = denom_rad * (temp_k * temp_k * temp_k * temp_k - 81.0);
+        // 6. Modello di Radiazione Orbitale (Van Allen Proton/Electron Belts + South Atlantic Anomaly SAA)
+        double alt_cap_leo = (alt_cur_km < 1200.0) ? alt_cur_km : 1200.0;
+        double d_leo   = 0.72 * exp((alt_cap_leo - 400.0) / 310.0);
+        double d_inner = (alt_cur_km > 750.0) ? (195.0 * exp(-pow((alt_cur_km - 3200.0) / 1050.0, 2.0))) : 0.0;
+        double d_outer = (alt_cur_km > 7000.0) ? (135.0 * exp(-pow((alt_cur_km - 19000.0) / 5200.0, 2.0))) : 0.0;
+        double s_inc   = fabs(sin(inc_cur_rad));
+        double f_inc   = 0.78 + 0.42 * s_inc + 0.18 * (s_inc * s_inc);
 
-        rep.samples[i].t_min      = t_min;
-        rep.samples[i].temp_c     = temp_c;
-        rep.samples[i].temp_k     = temp_k;
-        rep.samples[i].q_sol_w    = q_sol_w;
-        rep.samples[i].q_alb_w    = q_alb_w;
-        rep.samples[i].q_ir_w     = q_ir_w;
-        rep.samples[i].q_int_w    = q_int_total_w;
-        rep.samples[i].q_heater_w = q_heater_w;
-        rep.samples[i].q_rad_w    = q_rad_w;
-        rep.samples[i].in_eclipse = in_eclipse;
+        double tid_local_krad_yr = (d_leo + d_inner + d_outer) * f_inc * f_shield;
+        sum_tid_krad_yr += tid_local_krad_yr;
 
-        if (temp_c < rep.min_temp_c) rep.min_temp_c = temp_c;
-        if (temp_c > rep.max_temp_c) rep.max_temp_c = temp_c;
-        sum_temp_c += temp_c;
-        sum_sol    += q_sol_w;
+        // Traccia sub-satellite e passaggio nella South Atlantic Anomaly (SAA: Lat ~ -25 deg, Lon ~ -45 deg)
+        double lat_deg = (inc_cur_rad * RAD2DEG) * sin(orb_angle - 0.35);
+        double lon_raw = -15.0 + (orb_angle * 0.55 - 2.2 * PI * tau) * RAD2DEG;
+        double lon_deg = fmod(lon_raw + 540.0, 360.0) - 180.0;
+
+        double dlat_saa = lat_deg - (-25.0);
+        double dlon_saa = fmod((lon_deg - (-45.0)) + 540.0, 360.0) - 180.0;
+        double saa_gauss = exp(-(dlat_saa * dlat_saa) / (2.0 * 18.0 * 18.0) - (dlon_saa * dlon_saa) / (2.0 * 34.0 * 34.0));
+
+        // Finestre periodiche di attraversamento del core protonico SAA nell'emisfero australe per inclinazioni >= 18 deg
+        double saa_pass_wave = 0.0;
+        if ((inc_cur_rad * RAD2DEG) >= 18.0 && alt_cur_km <= 3500.0) {
+            double p1 = exp(-pow((tau - 0.19) / 0.032, 2.0));
+            double p2 = exp(-pow((tau - 0.62) / 0.035, 2.0));
+            double p3 = exp(-pow((tau - 0.86) / 0.030, 2.0));
+            saa_pass_wave = p1 + 1.15 * p2 + 0.95 * p3;
+        }
+        double saa_intensity = (saa_gauss > saa_pass_wave) ? saa_gauss : saa_pass_wave;
+        int in_saa = (saa_intensity > 0.35) ? 1 : 0;
+        if (in_saa) rep.saa_encountered = true;
+
+        // Rateo di dose istantanea [urad/h] con picchi nell'attraversamento SAA e corni polari
+        double polar_horn = (fabs(lat_deg) > 45.0) ? (0.35 * pow((fabs(lat_deg) - 45.0) / 45.0, 2.0)) : 0.0;
+        double inst_dose_urad_h = tid_local_krad_yr * 114.08 * (0.65 + 4.80 * saa_intensity + polar_horn);
+        if (inst_dose_urad_h > rep.peak_dose_urad_h) {
+            rep.peak_dose_urad_h = inst_dose_urad_h;
+        }
+
+        rep.samples[i].t_min            = t_min;
+        rep.samples[i].t_ext_c          = t_ext_c;
+        rep.samples[i].t_bus_c          = t_bus_c;
+        rep.samples[i].temp_c           = t_bus_c;
+        rep.samples[i].temp_k           = t_bus_k;
+        rep.samples[i].q_sun_w          = q_sun_w;
+        rep.samples[i].q_sol_w          = q_sun_w;
+        rep.samples[i].q_alb_w          = q_alb_w;
+        rep.samples[i].q_ir_w           = q_ir_w;
+        rep.samples[i].q_ir_alb_w       = q_ir_alb_w;
+        rep.samples[i].q_int_w          = q_int_total_w;
+        rep.samples[i].q_heater_w       = q_heater_w;
+        rep.samples[i].q_rad_w          = q_rad_w;
+        rep.samples[i].inst_dose_urad_h = inst_dose_urad_h;
+        rep.samples[i].in_eclipse       = in_eclipse;
+        rep.samples[i].in_saa           = in_saa;
+
+        if (t_bus_c < rep.min_temp_c)     rep.min_temp_c     = t_bus_c;
+        if (t_bus_c > rep.max_temp_c)     rep.max_temp_c     = t_bus_c;
+        if (t_ext_c < rep.ext_min_temp_c) rep.ext_min_temp_c = t_ext_c;
+        if (t_ext_c > rep.ext_max_temp_c) rep.ext_max_temp_c = t_ext_c;
+
+        sum_temp_c += t_bus_c;
+        sum_sol    += q_sun_w;
         sum_alb    += q_alb_w;
         sum_ir     += q_ir_w;
         sum_rad    += q_rad_w;
 
-        // Integrazione numerica dell'equazione differenziale del bilancio termico (10 sotto-passi)
+        // Integrazione numerica accoppiata dei 2 nodi (Pannelli Esterni T_ext e Bus Interno T_bus)
         for (int sub = 0; sub < 10; sub++) {
-            double tc_sub = temp_k - 273.15;
+            double tc_bus_sub = t_bus_k - 273.15;
             double q_h_sub = 0.0;
-            if (tc_sub < (t_min_op_c + 12.0)) {
-                q_h_sub = 320.0 * adcs_clamp(((t_min_op_c + 12.0) - tc_sub) / 12.0, 0.0, 1.0);
+            if (tc_bus_sub < (t_min_op_c + 12.0)) {
+                q_h_sub = 320.0 * adcs_clamp(((t_min_op_c + 12.0) - tc_bus_sub) / 12.0, 0.0, 1.0);
             }
-            double q_in_sub  = q_sol_w + q_alb_w + q_ir_w + q_base_int_w + q_h_sub;
-            double q_out_sub = denom_rad * (temp_k * temp_k * temp_k * temp_k - 81.0);
-            double d_temp_k  = ((q_in_sub - q_out_sub) / rep.thermal_mass_j_k) * dt_sub;
-            temp_k = adcs_clamp(temp_k + d_temp_k, 150.0, 500.0);
+
+            // Nodo 1: Superficie Esterna / Pannelli Solari (bassa inerzia termica, forte escursione Sole/Eclissi)
+            double q_cond_bus_to_ext = g_link_w_k * (t_bus_k - t_ext_k);
+            double q_in_ext  = 1.18 * q_sun_w + q_alb_w + q_ir_w + q_cond_bus_to_ext;
+            double q_out_ext = denom_rad_ext * (t_ext_k * t_ext_k * t_ext_k * t_ext_k - 81.0);
+            double dt_ext_k  = ((q_in_ext - q_out_ext) / rep.ext_thermal_mass_j_k) * dt_sub;
+
+            // Nodo 2: Bus Interno / Batterie Li-Ion (alta inerzia termica, dissipazione avionica + survival heaters)
+            double q_in_bus  = q_sun_w + q_alb_w + q_ir_w + q_base_int_w + q_h_sub - 0.22 * q_cond_bus_to_ext;
+            double q_out_bus = denom_rad_bus * (t_bus_k * t_bus_k * t_bus_k * t_bus_k - 81.0);
+            double dt_bus_k  = ((q_in_bus - q_out_bus) / rep.thermal_mass_j_k) * dt_sub;
+
+            t_ext_k = adcs_clamp(t_ext_k + dt_ext_k, 150.0, 500.0);
+            t_bus_k = adcs_clamp(t_bus_k + dt_bus_k, 150.0, 500.0);
         }
     }
 
@@ -1407,5 +1524,38 @@ ThermalReport simulate_thermal_profile(KeplerianElements orb_init,
     rep.mean_q_rad_w    = sum_rad * inv_n;
     rep.heater_duty_pct = ((double)heater_active_count / (double)num_pts) * 100.0;
 
+    // Metriche annuali di radiazione ionizzante (TID, SEU/day e Vita Utile Elettronica)
+    rep.tid_krad_yr = sum_tid_krad_yr * inv_n * (rep.saa_encountered ? 1.28 : 1.0);
+    if (rep.tid_krad_yr < 0.05) rep.tid_krad_yr = 0.05;
+    rep.seu_rate_day = (0.42 * rep.tid_krad_yr + (rep.saa_encountered ? 0.65 : 0.15)) * pow(f_shield, 0.45);
+    rep.avionics_life_yr = 25.0 / rep.tid_krad_yr; // Tolleranza avionica Rad-Tolerant = 25 krad(Si)
+    if (rep.avionics_life_yr > 25.0) rep.avionics_life_yr = 25.0;
+    if (rep.avionics_life_yr < 0.2)  rep.avionics_life_yr = 0.2;
+
+    double h_mean_km = 0.5 * ((orb_init.a - EARTH_RADIUS) + (orb_target.a - EARTH_RADIUS));
+    if (h_mean_km >= 1000.0 && h_mean_km <= 6500.0) {
+        strcpy(rep.saa_status, "INNER VAN ALLEN PROTON BELT + SAA CORE");
+    } else if (h_mean_km > 6500.0) {
+        strcpy(rep.saa_status, "OUTER VAN ALLEN ELECTRON BELT TRANSIT");
+    } else if (rep.saa_encountered) {
+        strcpy(rep.saa_status, "SAA PROTON FLUX ENCOUNTER (-25S, -45W)");
+    } else {
+        strcpy(rep.saa_status, "NOMINAL LOW-INCLINATION LEO FLUX");
+    }
+
     return rep;
+}
+
+ThermalReport simulate_thermal_profile(KeplerianElements orb_init,
+                                       KeplerianElements orb_target,
+                                       OptimalTransferPlan plan,
+                                       double alpha_solar,
+                                       double eps_ir,
+                                       double t_min_op_c,
+                                       double t_max_op_c,
+                                       double mu) {
+    SurfaceOpticalProps coating = get_surface_optical_props(COATING_WHITE_PAINT_SG121);
+    coating.alpha_s = alpha_solar;
+    coating.eps_ir  = eps_ir;
+    return simulate_thermal_and_radiation(orb_init, orb_target, plan, coating, 4.0, t_min_op_c, t_max_op_c, mu);
 }

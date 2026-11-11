@@ -73,7 +73,18 @@ ADCSReport simulate_adcs_profile(KeplerianElements orb_init,
                                  double rw_h_max_nms,
                                  double mu);
 
-// Sprint 15: Controllo Termico (TCS) a Nodi Raggruppati, Flussi Radiativi (Solare, Albedo, OLR) e Heaters
+// Sprint 15: Controllo Termico (TCS) a 2 Nodi (Bus + Array) e Ambiente Radiativo (Van Allen TID & SAA)
+SurfaceOpticalProps get_surface_optical_props(ThermalCoatingType type);
+
+ThermalRadReport simulate_thermal_and_radiation(KeplerianElements orb_init,
+                                                KeplerianElements orb_target,
+                                                OptimalTransferPlan plan,
+                                                SurfaceOpticalProps coating,
+                                                double al_shield_mm,
+                                                double t_min_op_c,
+                                                double t_max_op_c,
+                                                double mu);
+
 ThermalReport simulate_thermal_profile(KeplerianElements orb_init,
                                        KeplerianElements orb_target,
                                        OptimalTransferPlan plan,

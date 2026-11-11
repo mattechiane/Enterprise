@@ -216,12 +216,13 @@ static void write_adcs_trajectory_json_array(FILE *fp, ADCSReport adcs) {
     fprintf(fp, "  ]");
 }
 
-static void write_thermal_trajectory_json_array(FILE *fp, ThermalReport tcs) {
+static void write_thermal_trajectory_json_array(FILE *fp, ThermalRadReport tcs) {
     fprintf(fp, "[\n");
     for (int i = 0; i < tcs.num_samples; i++) {
         ThermalSample s = tcs.samples[i];
-        fprintf(fp, "    {\"t_min\":%.2f,\"temp_c\":%.2f,\"q_sol_w\":%.1f,\"q_alb_w\":%.1f,\"q_ir_w\":%.1f,\"q_int_w\":%.1f,\"q_heater_w\":%.1f,\"q_rad_w\":%.1f,\"ecl\":%d}%s\n",
-                s.t_min, s.temp_c, s.q_sol_w, s.q_alb_w, s.q_ir_w, s.q_int_w, s.q_heater_w, s.q_rad_w, s.in_eclipse,
+        fprintf(fp, "    {\"t_min\":%.2f,\"t_ext_c\":%.2f,\"t_bus_c\":%.2f,\"q_sun_w\":%.1f,\"q_ir_alb_w\":%.1f,\"q_heater_w\":%.1f,\"inst_dose_urad_h\":%.1f,\"temp_c\":%.2f,\"q_sol_w\":%.1f,\"q_alb_w\":%.1f,\"q_ir_w\":%.1f,\"q_int_w\":%.1f,\"q_rad_w\":%.1f,\"ecl\":%d,\"saa\":%d}%s\n",
+                s.t_min, s.t_ext_c, s.t_bus_c, s.q_sun_w, s.q_ir_alb_w, s.q_heater_w, s.inst_dose_urad_h,
+                s.temp_c, s.q_sol_w, s.q_alb_w, s.q_ir_w, s.q_int_w, s.q_rad_w, s.in_eclipse, s.in_saa,
                 (i < tcs.num_samples - 1) ? "," : "");
     }
     fprintf(fp, "  ]");
@@ -324,19 +325,45 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"desat_cycles\": %d, \"mean_power_w\": %.1f, \"peak_power_w\": %.1f\n  },\n",
             adcs.desat_cycles, adcs.mean_power_w, adcs.peak_power_w);
 
-    fprintf(fp, "  \"thermal_summary\": {\n");
-    fprintf(fp, "    \"alpha_solar\": %.2f, \"eps_ir\": %.2f, \"thermal_mass_j_k\": %.1f, \"rad_area_m2\": %.2f,\n",
-            tcs.alpha_solar, tcs.eps_ir, tcs.thermal_mass_j_k, tcs.rad_area_m2);
+    fprintf(fp, "  \"thermal_rad_summary\": {\n");
+    fprintf(fp, "    \"coating_name\": \"%s\", \"alpha_solar\": %.2f, \"eps_ir\": %.2f, \"al_shield_mm\": %.1f,\n",
+            tcs.coating.name, tcs.alpha_solar, tcs.eps_ir, tcs.al_shield_mm);
+    fprintf(fp, "    \"thermal_mass_j_k\": %.1f, \"ext_thermal_mass_j_k\": %.1f, \"rad_area_m2\": %.2f,\n",
+            tcs.thermal_mass_j_k, tcs.ext_thermal_mass_j_k, tcs.rad_area_m2);
     fprintf(fp, "    \"t_min_op_c\": %.1f, \"t_max_op_c\": %.1f,\n",
             tcs.t_min_op_c, tcs.t_max_op_c);
-    fprintf(fp, "    \"min_temp_c\": %.2f, \"max_temp_c\": %.2f, \"mean_temp_c\": %.2f,\n",
-            tcs.min_temp_c, tcs.max_temp_c, tcs.mean_temp_c);
-    fprintf(fp, "    \"eq_sun_temp_c\": %.2f, \"eq_ecl_temp_c\": %.2f,\n",
-            tcs.eq_sun_temp_c, tcs.eq_ecl_temp_c);
+    fprintf(fp, "    \"t_min_c\": %.2f, \"t_max_c\": %.2f, \"min_temp_c\": %.2f, \"max_temp_c\": %.2f, \"mean_temp_c\": %.2f,\n",
+            tcs.min_temp_c, tcs.max_temp_c, tcs.min_temp_c, tcs.max_temp_c, tcs.mean_temp_c);
+    fprintf(fp, "    \"ext_min_temp_c\": %.2f, \"ext_max_temp_c\": %.2f, \"eq_sun_temp_c\": %.2f, \"eq_ecl_temp_c\": %.2f,\n",
+            tcs.ext_min_temp_c, tcs.ext_max_temp_c, tcs.eq_sun_temp_c, tcs.eq_ecl_temp_c);
     fprintf(fp, "    \"mean_q_sol_w\": %.1f, \"mean_q_alb_w\": %.1f, \"mean_q_ir_w\": %.1f, \"mean_q_rad_w\": %.1f,\n",
             tcs.mean_q_sol_w, tcs.mean_q_alb_w, tcs.mean_q_ir_w, tcs.mean_q_rad_w);
-    fprintf(fp, "    \"peak_heater_w\": %.1f, \"heater_duty_pct\": %.1f\n  },\n",
-            tcs.peak_heater_w, tcs.heater_duty_pct);
+    fprintf(fp, "    \"peak_heater_w\": %.1f, \"heater_duty_pct\": %.1f, \"heater_energy_wh\": %.2f,\n",
+            tcs.peak_heater_w, tcs.heater_duty_pct, tcs.heater_energy_wh);
+    fprintf(fp, "    \"tid_krad_yr\": %.2f, \"peak_dose_urad_h\": %.1f, \"seu_rate_day\": %.2f, \"avionics_life_yr\": %.1f,\n",
+            tcs.tid_krad_yr, tcs.peak_dose_urad_h, tcs.seu_rate_day, tcs.avionics_life_yr);
+    fprintf(fp, "    \"saa_encountered\": %d, \"saa_status\": \"%s\"\n  },\n",
+            tcs.saa_encountered ? 1 : 0, tcs.saa_status);
+
+    fprintf(fp, "  \"thermal_summary\": {\n");
+    fprintf(fp, "    \"coating_name\": \"%s\", \"alpha_solar\": %.2f, \"eps_ir\": %.2f, \"al_shield_mm\": %.1f,\n",
+            tcs.coating.name, tcs.alpha_solar, tcs.eps_ir, tcs.al_shield_mm);
+    fprintf(fp, "    \"thermal_mass_j_k\": %.1f, \"ext_thermal_mass_j_k\": %.1f, \"rad_area_m2\": %.2f,\n",
+            tcs.thermal_mass_j_k, tcs.ext_thermal_mass_j_k, tcs.rad_area_m2);
+    fprintf(fp, "    \"t_min_op_c\": %.1f, \"t_max_op_c\": %.1f,\n",
+            tcs.t_min_op_c, tcs.t_max_op_c);
+    fprintf(fp, "    \"t_min_c\": %.2f, \"t_max_c\": %.2f, \"min_temp_c\": %.2f, \"max_temp_c\": %.2f, \"mean_temp_c\": %.2f,\n",
+            tcs.min_temp_c, tcs.max_temp_c, tcs.min_temp_c, tcs.max_temp_c, tcs.mean_temp_c);
+    fprintf(fp, "    \"ext_min_temp_c\": %.2f, \"ext_max_temp_c\": %.2f, \"eq_sun_temp_c\": %.2f, \"eq_ecl_temp_c\": %.2f,\n",
+            tcs.ext_min_temp_c, tcs.ext_max_temp_c, tcs.eq_sun_temp_c, tcs.eq_ecl_temp_c);
+    fprintf(fp, "    \"mean_q_sol_w\": %.1f, \"mean_q_alb_w\": %.1f, \"mean_q_ir_w\": %.1f, \"mean_q_rad_w\": %.1f,\n",
+            tcs.mean_q_sol_w, tcs.mean_q_alb_w, tcs.mean_q_ir_w, tcs.mean_q_rad_w);
+    fprintf(fp, "    \"peak_heater_w\": %.1f, \"heater_duty_pct\": %.1f, \"heater_energy_wh\": %.2f,\n",
+            tcs.peak_heater_w, tcs.heater_duty_pct, tcs.heater_energy_wh);
+    fprintf(fp, "    \"tid_krad_yr\": %.2f, \"peak_dose_urad_h\": %.1f, \"seu_rate_day\": %.2f, \"avionics_life_yr\": %.1f,\n",
+            tcs.tid_krad_yr, tcs.peak_dose_urad_h, tcs.seu_rate_day, tcs.avionics_life_yr);
+    fprintf(fp, "    \"saa_encountered\": %d, \"saa_status\": \"%s\"\n  },\n",
+            tcs.saa_encountered ? 1 : 0, tcs.saa_status);
 
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
