@@ -653,6 +653,52 @@
     </div>
 </section>
 
+<!-- 14. FOURTEENTH OUTPUT BLOCK: END-OF-LIFE (EoL) DEORBITING, ATMOSPHERIC RE-ENTRY CORRIDOR & AEROTHERMAL HEATING -->
+<section class="section-block">
+    <div class="section-header">
+        <div>
+            <h2>14. End-of-Life (EoL) Deorbiting, Atmospheric Re-Entry Corridor &amp; Aerothermal Heating</h2>
+            <span>3-DOF Planar-Spherical Ballistic Entry RK4 &bull; Sutton-Graves Stagnation Heat Flux q&#775;<sub>stag</sub> &bull; Axial G-Loads &bull; ESA Zero-Debris Charter &amp; FCC 5-Year Rule</span>
+        </div>
+        <span class="badge" id="eolStatusBadge" style="color:var(--green); border-color:var(--green);">&#9851; ESA ZERO-DEBRIS CHARTER COMPLIANT (CONTROLLED DESTRUCTIVE RE-ENTRY)</span>
+    </div>
+
+    <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(255,171,0,0.14), rgba(255,82,82,0.12)); border-color: var(--amber);">
+        <div class="title-group">
+            <h3 id="eolBannerTitle" style="color:var(--amber);">END-OF-LIFE (EoL) ACTIVE DEORBIT DISPOSAL &amp; SUTTON-GRAVES AEROTHERMAL DEMISE</h3>
+            <p id="eolBannerSub">Active Deorbit &Delta;V: --- m/s (Fuel: --- kg) &bull; Entry Interface: h<sub>EI</sub> = 120 km, &gamma;<sub>EI</sub> = ---&deg; &bull; Effective Nose Radius R<sub>n</sub> = --- m</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="eolBannerHeat" style="color:var(--red);">Peak Stagnation Heat Flux: --- W/cm&sup2; | Peak Load: --- g</div>
+            <div class="sub-fuel" id="eolBannerSubMetrics">Structural Breakup / Demise Altitude: --- km | Passive Decay Without Burn: --- yrs</div>
+        </div>
+    </div>
+
+    <div class="datasheet-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+        <div class="data-card">
+            <h4 style="color:var(--cyan)">&#9851; Active Deorbit &amp; Sustainability</h4>
+            <div id="eolCardDeorbit"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--red)">&#128293; Sutton-Graves Aerothermal Heating</h4>
+            <div id="eolCardHeating"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--amber)">&#9889; Mechanical G-Load &amp; Dynamic Pressure</h4>
+            <div id="eolCardLoads"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--green)">&#128165; Structural Breakup &amp; Demise</h4>
+            <div id="eolCardDemise"></div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotReentryCorridor" class="plot-container-rdv"></div>
+        <div id="plotReentryHeating" class="plot-container-rdv"></div>
+    </div>
+</section>
+
 
 <!-- POPUP MODAL: MISSION INPUT CONFIGURATOR -->
 <div class="modal-overlay" id="inputModal">
@@ -986,6 +1032,23 @@
                 <div class="field">
                     <label>B-Plane 1&sigma; Uncertainty &sigma;<sub>&zeta;</sub> [m]</label>
                     <input type="number" id="camSigmaZetaM" value="175.0" min="20.0" max="1000.0" step="10.0">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--amber)">12. End-of-Life (EoL) Deorbit Disposal &amp; Atmospheric Re-Entry</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">3-DOF Ballistic Re-Entry from h<sub>EI</sub> = 120 km &amp; Sutton-Graves Stagnation Aerothermal Heating</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="field">
+                    <label>Entry Interface Flight-Path Angle &gamma;<sub>EI</sub> [deg]</label>
+                    <input type="number" id="eolFpaDeg" value="-1.5" min="-10.0" max="-0.4" step="0.1">
+                </div>
+                <div class="field">
+                    <label>Effective Nose / Blunt Bus Radius R<sub>n</sub> [m]</label>
+                    <input type="number" id="eolNoseRadiusM" value="0.50" min="0.10" max="3.00" step="0.05">
                 </div>
             </div>
         </div>
@@ -1429,6 +1492,11 @@
             if (cam.lead_orbits !== undefined)  document.getElementById('camLeadOrbits').value  = cam.lead_orbits;
             if (cam.hbr_m !== undefined)        document.getElementById('camHbrM').value        = cam.hbr_m;
             if (cam.sigma_zeta_m !== undefined) document.getElementById('camSigmaZetaM').value = cam.sigma_zeta_m;
+        }
+        if (data.eol_reentry_summary) {
+            const eol = data.eol_reentry_summary;
+            if (eol.entry_fpa_deg !== undefined) document.getElementById('eolFpaDeg').value      = eol.entry_fpa_deg;
+            if (eol.nose_radius_m !== undefined) document.getElementById('eolNoseRadiusM').value = eol.nose_radius_m;
         }
 
         validateModalOrbits(false);
@@ -3195,6 +3263,179 @@
             }],
             showlegend: true,
             legend: { font: { color: '#e2e8f0', size: 9.2 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.02, y: 0.52 }
+        }, { responsive: true, displaylogo: false });
+
+        // =========================================================================
+        // 14. END-OF-LIFE (EoL) DEORBITING, ATMOSPHERIC RE-ENTRY & SUTTON-GRAVES
+        // =========================================================================
+        let eolInfo = data.eol_reentry_summary;
+        let trajReentry = data.traj_reentry || [];
+        if (!eolInfo || trajReentry.length === 0) {
+            const fallbackEol = simulateEolDeorbitAndReentryJS(
+                data.target_report.sma_km || (R_EQ + data.target_report.alt_km),
+                data.target_report.decay_m_day || 4.5,
+                data.maneuver.final_mass_kg,
+                data.maneuver.isp_s,
+                -1.5, 0.50
+            );
+            eolInfo = fallbackEol.eol_reentry_summary;
+            trajReentry = fallbackEol.traj_reentry;
+            data.eol_reentry_summary = eolInfo;
+            data.traj_reentry        = trajReentry;
+        }
+
+        const eolBadgeEl = document.getElementById('eolStatusBadge');
+        eolBadgeEl.innerHTML = `&#9851; ${eolInfo.compliance_status}`;
+
+        document.getElementById('eolBannerTitle').innerHTML =
+            `CONTROLLED DEORBIT DISPOSAL (h<sub>p</sub> = ${eolInfo.deorbit_perigee_km} km) &amp; 3-DOF SUTTON-GRAVES ATMOSPHERIC RE-ENTRY`;
+        document.getElementById('eolBannerSub').innerHTML =
+            `Active Deorbit Burn: <b>&Delta;V<sub>deorbit</sub> = ${eolInfo.deorbit_dv_ms} m/s</b> (Fuel: <b>${eolInfo.deorbit_fuel_kg} kg</b>) &bull; Entry Interface: <b>h<sub>EI</sub> = ${eolInfo.entry_alt_km} km</b>, <b>&gamma;<sub>EI</sub> = ${eolInfo.entry_fpa_deg}&deg;</b> &bull; Nose Radius: <b>R<sub>n</sub> = ${eolInfo.nose_radius_m} m</b> &bull; Ballistic Coeff: <b>&beta; = ${eolInfo.ballistic_coeff_kgm2} kg/m&sup2;</b>`;
+        document.getElementById('eolBannerHeat').innerHTML =
+            `Peak Stagnation Heat Flux: ${eolInfo.peak_heat_flux_wcm2} W/cm&sup2; | Peak Load: ${eolInfo.peak_decel_g} g`;
+        document.getElementById('eolBannerSubMetrics').innerHTML =
+            `Catastrophic Breakup Altitude: <b style="color:#ffab00">${eolInfo.breakup_alt_km} km (V = ${eolInfo.breakup_vel_kms} km/s)</b> &bull; Unassisted Passive Decay: <b>${eolInfo.passive_decay_years} yrs</b> &bull; Downrange: <b>${eolInfo.total_downrange_km} km</b>`;
+
+        document.getElementById('eolCardDeorbit').innerHTML = `
+            <h3>Deorbit &amp; Zero-Debris</h3>
+            <div class="stat-line"><span class="stat-label">Active Deorbit &Delta;V:</span><span class="stat-val" style="color:#00e5ff">${eolInfo.deorbit_dv_ms} m/s</span></div>
+            <div class="stat-line"><span class="stat-label">Deorbit Propellant:</span><span class="stat-val" style="color:#00e676">${eolInfo.deorbit_fuel_kg} kg</span></div>
+            <div class="stat-line"><span class="stat-label">Capture Perigee h<sub>p</sub>:</span><span class="stat-val">${eolInfo.deorbit_perigee_km} km</span></div>
+            <div class="stat-line"><span class="stat-label">Natural Passive Decay:</span><span class="stat-val" style="color:${eolInfo.passive_decay_years > 25 ? '#ff5252' : '#ffab00'}">${eolInfo.passive_decay_years} yrs</span></div>
+        `;
+
+        document.getElementById('eolCardHeating').innerHTML = `
+            <h3>Sutton-Graves Heating</h3>
+            <div class="stat-line"><span class="stat-label">Peak Heat Flux q&#775;<sub>max</sub>:</span><span class="stat-val" style="color:#ff5252">${eolInfo.peak_heat_flux_wcm2} W/cm&sup2;</span></div>
+            <div class="stat-line"><span class="stat-label">Peak Heating Altitude:</span><span class="stat-val" style="color:#ffab00">${eolInfo.peak_heat_alt_km} km</span></div>
+            <div class="stat-line"><span class="stat-label">Total Heat Load Q:</span><span class="stat-val">${eolInfo.total_heat_load_jcm2} J/cm&sup2;</span></div>
+            <div class="stat-line"><span class="stat-label">Effective Nose R<sub>n</sub>:</span><span class="stat-val">${eolInfo.nose_radius_m} m</span></div>
+        `;
+
+        document.getElementById('eolCardLoads').innerHTML = `
+            <h3>Entry Mechanical Loads</h3>
+            <div class="stat-line"><span class="stat-label">Peak Axial Decel n<sub>g,max</sub>:</span><span class="stat-val" style="color:#ffab00">${eolInfo.peak_decel_g} g</span></div>
+            <div class="stat-line"><span class="stat-label">Peak Decel Altitude:</span><span class="stat-val">${eolInfo.peak_decel_alt_km} km</span></div>
+            <div class="stat-line"><span class="stat-label">Peak Dynamic Press q<sub>dyn</sub>:</span><span class="stat-val" style="color:#00e5ff">${eolInfo.peak_qdyn_kpa} kPa</span></div>
+            <div class="stat-line"><span class="stat-label">Ballistic Coeff &beta;:</span><span class="stat-val">${eolInfo.ballistic_coeff_kgm2} kg/m&sup2;</span></div>
+        `;
+
+        document.getElementById('eolCardDemise').innerHTML = `
+            <h3>Breakup &amp; Demise Corridor</h3>
+            <div class="stat-line"><span class="stat-label">Structural Breakup Alt:</span><span class="stat-val" style="color:#ff5252">${eolInfo.breakup_alt_km} km</span></div>
+            <div class="stat-line"><span class="stat-label">Speed at Breakup:</span><span class="stat-val">${eolInfo.breakup_vel_kms} km/s</span></div>
+            <div class="stat-line"><span class="stat-label">Entry Flight Time:</span><span class="stat-val" style="color:#00e5ff">${eolInfo.total_entry_time_sec} s (${(eolInfo.total_entry_time_sec / 60.0).toFixed(1)} min)</span></div>
+            <div class="stat-line"><span class="stat-label">Total Downrange:</span><span class="stat-val" style="color:#00e676">${eolInfo.total_downrange_km} km</span></div>
+        `;
+
+        const reTSec  = trajReentry.map(p => p.t_sec);
+        const reAltKm = trajReentry.map(p => p.alt_km);
+        const reVel   = trajReentry.map(p => p.vel_kms);
+        const reHeat  = trajReentry.map(p => p.heat_flux_wcm2);
+        const reDecel = trajReentry.map(p => p.decel_g);
+
+        // Find sample closest to peak heat flux for corridor marker
+        let pkHeatSample = trajReentry[0] || { vel_kms: 6.5, alt_km: eolInfo.peak_heat_alt_km };
+        let pkGLoadSample = trajReentry[0] || { vel_kms: 4.5, alt_km: eolInfo.peak_decel_alt_km };
+        trajReentry.forEach(p => {
+            if (Math.abs(p.alt_km - eolInfo.peak_heat_alt_km) < Math.abs(pkHeatSample.alt_km - eolInfo.peak_heat_alt_km)) pkHeatSample = p;
+            if (Math.abs(p.alt_km - eolInfo.peak_decel_alt_km) < Math.abs(pkGLoadSample.alt_km - eolInfo.peak_decel_alt_km)) pkGLoadSample = p;
+        });
+
+        // Plot Sinistro (14A): Velocity-Altitude Entry Corridor V(h) & Structural Breakup Zone
+        Plotly.react('plotReentryCorridor', [
+            {
+                x: reVel, y: reAltKm,
+                mode: 'lines',
+                name: '3-DOF Re-Entry Trajectory h(V)',
+                line: { color: '#00e5ff', width: 3.0 },
+                hovertemplate: 'V = %{x:.2f} km/s<br>Altitude h = %{y:.1f} km<extra></extra>'
+            },
+            {
+                x: [reVel[0] || 7.82], y: [eolInfo.entry_alt_km],
+                mode: 'markers+text',
+                name: `Entry Interface (120 km, γ = ${eolInfo.entry_fpa_deg}°)`,
+                marker: { size: 11, color: '#00e676', symbol: 'circle', line: { color: '#ffffff', width: 1.5 } },
+                text: ['Entry Interface (120 km)'],
+                textposition: 'bottom left',
+                textfont: { color: '#00e676', size: 10 },
+                hoverinfo: 'name'
+            },
+            {
+                x: [eolInfo.breakup_vel_kms], y: [eolInfo.breakup_alt_km],
+                mode: 'markers+text',
+                name: `Catastrophic Thermal Demise / Breakup (${eolInfo.breakup_alt_km} km)`,
+                marker: { size: 14, color: '#ff5252', symbol: 'star', line: { color: '#ffffff', width: 1.5 } },
+                text: [`Breakup / Demise (${eolInfo.breakup_alt_km} km)`],
+                textposition: 'top left',
+                textfont: { color: '#ff5252', size: 10.5 },
+                hoverinfo: 'name'
+            },
+            {
+                x: [pkHeatSample.vel_kms], y: [eolInfo.peak_heat_alt_km],
+                mode: 'markers+text',
+                name: `Peak Heating (${eolInfo.peak_heat_flux_wcm2} W/cm² @ ${eolInfo.peak_heat_alt_km} km)`,
+                marker: { size: 12, color: '#ffab00', symbol: 'diamond', line: { color: '#ffffff', width: 1.5 } },
+                text: [`Max q̇ (${eolInfo.peak_heat_flux_wcm2} W/cm²)`],
+                textposition: 'bottom right',
+                textfont: { color: '#ffab00', size: 10 },
+                hoverinfo: 'name'
+            },
+            {
+                x: [pkGLoadSample.vel_kms], y: [eolInfo.peak_decel_alt_km],
+                mode: 'markers+text',
+                name: `Peak Axial Deceleration (${eolInfo.peak_decel_g} g @ ${eolInfo.peak_decel_alt_km} km)`,
+                marker: { size: 11, color: '#d500f9', symbol: 'triangle-up', line: { color: '#ffffff', width: 1.5 } },
+                text: [`Max G-Load (${eolInfo.peak_decel_g} g)`],
+                textposition: 'top right',
+                textfont: { color: '#d500f9', size: 10 },
+                hoverinfo: 'name'
+            }
+        ], {
+            title: { text: `14A. Velocity-Altitude Entry Corridor V(h) & Catastrophic Demise Zone`, font: { color: '#e2e8f0', size: 12.5 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 58, r: 25, b: 48, t: 40 },
+            xaxis: { title: 'Atmosphere-Relative Velocity V [km/s]', color: '#e2e8f0', gridcolor: '#222d42', range: [0, 8.3] },
+            yaxis: { title: 'Geodetic Altitude h [km]', color: '#00e5ff', gridcolor: '#222d42', range: [0, 126] },
+            shapes: [{
+                type: 'rect',
+                x0: 0, x1: 8.3,
+                y0: Math.max(0, eolInfo.breakup_alt_km - 16.0), y1: eolInfo.breakup_alt_km,
+                fillcolor: 'rgba(255, 82, 82, 0.10)',
+                line: { color: 'rgba(255, 82, 82, 0.45)', width: 1, dash: 'dot' }
+            }],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.2 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.02, y: 0.98 }
+        }, { responsive: true, displaylogo: false });
+
+        // Plot Destro (14B): Sutton-Graves Stagnation Heat Flux [W/cm^2] & Axial G-Load vs. Entry Time [s]
+        Plotly.react('plotReentryHeating', [
+            {
+                x: reTSec, y: reHeat,
+                mode: 'lines',
+                name: 'Sutton-Graves Heat Flux q̇_stag(t) [W/cm²]',
+                line: { color: '#ff5252', width: 2.7 },
+                fill: 'tozeroy',
+                fillcolor: 'rgba(255, 82, 82, 0.11)',
+                hovertemplate: 't = %{x:.0f} s<br>Heat Flux q̇_stag = %{y:.2f} W/cm²<extra></extra>'
+            },
+            {
+                x: reTSec, y: reDecel,
+                yaxis: 'y2',
+                mode: 'lines',
+                name: 'Axial Aerodynamic Deceleration n_g(t) [g]',
+                line: { color: '#ffab00', width: 2.4, dash: 'dashdot' },
+                hovertemplate: 't = %{x:.0f} s<br>Axial Decel = %{y:.2f} g<extra></extra>'
+            }
+        ], {
+            title: { text: `14B. Sutton-Graves Stagnation Heat Flux [W/cm²] & Axial G-Load [g] vs. Entry Time`, font: { color: '#e2e8f0', size: 12.5 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 58, r: 58, b: 48, t: 40 },
+            xaxis: { title: 'Time from Entry Interface (h_EI = 120 km) [s]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Stagnation Heat Flux q̇_stag [W/cm²]', titlefont: { color: '#ff5252' }, tickfont: { color: '#ff5252' }, gridcolor: '#222d42', range: [0, Math.max(...reHeat, 30) * 1.18] },
+            yaxis2: { title: 'Axial Deceleration Load n_g [g]', titlefont: { color: '#ffab00' }, tickfont: { color: '#ffab00' }, overlaying: 'y', side: 'right', showgrid: false, range: [0, Math.max(...reDecel, 5) * 1.22] },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.5 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.02, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
         startAnimationLoop();
@@ -5283,6 +5524,206 @@
         };
     }
 
+    // =========================================================================
+    // SPRINT 20: IN-BROWSER 3-DOF ATMOSPHERIC RE-ENTRY & SUTTON-GRAVES ENGINE
+    // =========================================================================
+    function reentryAtmosphereDensityKgm3JS(altM) {
+        const hKm = Math.max(0.0, altM / 1000.0);
+        const layers = [
+            { h0:   0.0, rho0: 1.2250e+0, H: 7.249 },
+            { h0:  25.0, rho0: 3.8990e-2, H: 6.349 },
+            { h0:  30.0, rho0: 1.7740e-2, H: 6.682 },
+            { h0:  40.0, rho0: 3.9720e-3, H: 7.554 },
+            { h0:  50.0, rho0: 1.0570e-3, H: 8.382 },
+            { h0:  60.0, rho0: 3.2060e-4, H: 7.714 },
+            { h0:  70.0, rho0: 8.7700e-5, H: 6.549 },
+            { h0:  80.0, rho0: 1.9050e-5, H: 5.799 },
+            { h0:  90.0, rho0: 3.3960e-6, H: 5.382 },
+            { h0: 100.0, rho0: 5.2970e-7, H: 5.877 },
+            { h0: 110.0, rho0: 9.6610e-8, H: 7.263 },
+            { h0: 120.0, rho0: 2.4380e-8, H: 9.473 }
+        ];
+        let idx = 0;
+        for (let i = layers.length - 1; i >= 0; i--) {
+            if (hKm >= layers[i].h0) { idx = i; break; }
+        }
+        return layers[idx].rho0 * Math.exp(-(hKm - layers[idx].h0) / layers[idx].H);
+    }
+
+    function reentryOdeDerivJS(y, betaKgm2, muSi, reM) {
+        const rM  = reM + Math.max(0.0, y.h);
+        const gH  = muSi / (rM * rM);
+        const rho = reentryAtmosphereDensityKgm3JS(y.h);
+        const V   = Math.max(10.0, y.V);
+        const dragAccel = (0.5 * rho * V * V) / Math.max(5.0, betaKgm2);
+        return {
+            h:   V * Math.sin(y.gam),
+            V:   -dragAccel - gH * Math.sin(y.gam),
+            gam: ((V / rM) - (gH / V)) * Math.cos(y.gam),
+            s:   (reM / rM) * V * Math.cos(y.gam)
+        };
+    }
+
+    function simulateEolDeorbitAndReentryJS(aTargKm, smaDecayMDay, finalMassKg, ispS, entryFpaDeg, noseRadiusM) {
+        const fpaDeg = (entryFpaDeg > -0.3 || entryFpaDeg < -12.0 || isNaN(entryFpaDeg)) ? -1.5 : entryFpaDeg;
+        const rnM    = (noseRadiusM < 0.05 || noseRadiusM > 5.0 || isNaN(noseRadiusM)) ? 0.50 : noseRadiusM;
+        const entryAltKm = 120.0;
+        const deorbPerigeeKm = 80.0;
+
+        const rTargKm  = Math.max(R_EQ + 160.0, aTargKm || (R_EQ + 650.0));
+        const rCaptKm  = R_EQ + deorbPerigeeKm;
+        const aDeorbKm = 0.5 * (rTargKm + rCaptKm);
+
+        const vCircKms  = Math.sqrt(MU / rTargKm);
+        const vDeorbKms = Math.sqrt(MU * (2.0 / rTargKm - 1.0 / aDeorbKm));
+        const deorbitDvMs = Math.max(5.0, (vCircKms - vDeorbKms) * 1000.0);
+
+        const massEolKg = Math.max(80.0, finalMassKg || 464.0);
+        const ispVal    = Math.max(60.0, ispS || 316.0);
+        const deorbitFuelKg = massEolKg * (1.0 - Math.exp(-deorbitDvMs / (ispVal * G0)));
+
+        const altTargKm  = rTargKm - R_EQ;
+        const decayMDay  = Math.max(0.05, smaDecayMDay || 4.5);
+        const effScaleHM = (altTargKm > 500.0) ? 62000.0 : 48000.0;
+        const passiveYrs = Math.max(0.2, Math.min(250.0, (effScaleHM / decayMDay) / 365.25));
+
+        let complianceStatus = `ACTIVE DEORBIT MANDATORY (Passive ${Math.round(passiveYrs)} yr > 25 yr) -> COMPLIANT`;
+        if (passiveYrs <= 5.0) {
+            complianceStatus = 'PASSIVE < 5 YR (FCC & ESA ZERO-DEBRIS COMPLIANT)';
+        } else if (passiveYrs <= 25.0) {
+            complianceStatus = 'IADC 25-YR PASSIVE OK | ACTIVE DEORBIT -> ESA ZERO-DEBRIS';
+        }
+
+        const dryReentryMass = Math.max(60.0, massEolKg - deorbitFuelKg);
+        const betaKgm2 = dryReentryMass / (2.2 * 4.0);
+
+        const muSi = MU * 1e9;
+        const reM  = R_EQ * 1000.0;
+        const rEiKm = R_EQ + entryAltKm;
+        const vEiKms = Math.sqrt(MU * (2.0 / rEiKm - 1.0 / Math.max(rEiKm * 0.52, aDeorbKm)));
+        const vEiMs  = Math.max(7450.0, Math.min(7920.0, vEiKms * 1000.0));
+
+        let state = {
+            h: entryAltKm * 1000.0,
+            V: vEiMs,
+            gam: fpaDeg * DEG2RAD,
+            s: 0.0
+        };
+
+        const rawBuf = [];
+        const dt = 1.0;
+        let tCur = 0.0;
+        const kSGWcm2 = 1.7415e-8;
+
+        let peakHeatFluxWcm2 = 0.0, peakHeatAltKm = 80.0, totalHeatLoadJcm2 = 0.0;
+        let peakDecelG = 0.0, peakDecelAltKm = 55.0, peakQdynKpa = 0.0;
+        let breakupDetected = false, breakupAltKm = 78.0, breakupVelKms = 7.4;
+
+        for (let step = 0; step < 1800; step++) {
+            const rho = reentryAtmosphereDensityKgm3JS(state.h);
+            const qdynPa  = 0.5 * rho * state.V * state.V;
+            const qdynKpa = qdynPa / 1000.0;
+            const dragMs2 = qdynPa / betaKgm2;
+            const decelG  = dragMs2 / G0;
+            const qStagWcm2 = kSGWcm2 * Math.sqrt(rho / rnM) * (state.V * state.V * state.V);
+            const altKm = Math.max(0.0, state.h / 1000.0);
+            const velKms = state.V / 1000.0;
+
+            rawBuf.push({
+                t_sec: +tCur.toFixed(1),
+                alt_km: +altKm.toFixed(2),
+                vel_kms: +velKms.toFixed(3),
+                fpa_deg: +(state.gam * RAD2DEG).toFixed(2),
+                decel_g: +decelG.toFixed(2),
+                heat_flux_wcm2: +qStagWcm2.toFixed(2),
+                qdyn_kpa: +qdynKpa.toFixed(2),
+                downrange_km: +(state.s / 1000.0).toFixed(1)
+            });
+
+            if (qStagWcm2 > peakHeatFluxWcm2) {
+                peakHeatFluxWcm2 = qStagWcm2;
+                peakHeatAltKm    = altKm;
+            }
+            if (decelG > peakDecelG) {
+                peakDecelG    = decelG;
+                peakDecelAltKm = altKm;
+            }
+            if (qdynKpa > peakQdynKpa) peakQdynKpa = qdynKpa;
+            totalHeatLoadJcm2 += qStagWcm2 * dt;
+
+            if (!breakupDetected && altKm <= 82.0 && (totalHeatLoadJcm2 >= 950.0 || qStagWcm2 >= 45.0 || altKm <= 77.5)) {
+                breakupDetected = true;
+                breakupAltKm  = altKm;
+                breakupVelKms = velKms;
+            }
+
+            if (state.h <= 0.0) break;
+
+            const k1 = reentryOdeDerivJS(state, betaKgm2, muSi, reM);
+            const k2 = reentryOdeDerivJS({
+                h: state.h + 0.5 * dt * k1.h,
+                V: Math.max(10.0, state.V + 0.5 * dt * k1.V),
+                gam: state.gam + 0.5 * dt * k1.gam,
+                s: state.s + 0.5 * dt * k1.s
+            }, betaKgm2, muSi, reM);
+            const k3 = reentryOdeDerivJS({
+                h: state.h + 0.5 * dt * k2.h,
+                V: Math.max(10.0, state.V + 0.5 * dt * k2.V),
+                gam: state.gam + 0.5 * dt * k2.gam,
+                s: state.s + 0.5 * dt * k2.s
+            }, betaKgm2, muSi, reM);
+            const k4 = reentryOdeDerivJS({
+                h: state.h + dt * k3.h,
+                V: Math.max(10.0, state.V + dt * k3.V),
+                gam: state.gam + dt * k3.gam,
+                s: state.s + dt * k3.s
+            }, betaKgm2, muSi, reM);
+
+            state.h   += (dt / 6.0) * (k1.h + 2.0 * k2.h + 2.0 * k3.h + k4.h);
+            state.V   += (dt / 6.0) * (k1.V + 2.0 * k2.V + 2.0 * k3.V + k4.V);
+            state.gam += (dt / 6.0) * (k1.gam + 2.0 * k2.gam + 2.0 * k3.gam + k4.gam);
+            state.s   += (dt / 6.0) * (k1.s + 2.0 * k2.s + 2.0 * k3.s + k4.s);
+
+            state.V   = Math.max(15.0, state.V);
+            state.gam = Math.max(-89.5 * DEG2RAD, Math.min(-0.05 * DEG2RAD, state.gam));
+            if (state.h < 0.0) state.h = 0.0;
+            tCur += dt;
+        }
+
+        const outPts = Math.min(rawBuf.length, 140);
+        const trajReentry = [];
+        for (let i = 0; i < outPts; i++) {
+            const idx = Math.min(rawBuf.length - 1, Math.round(i * (rawBuf.length - 1) / Math.max(1, outPts - 1)));
+            trajReentry.push(rawBuf[idx]);
+        }
+
+        const lastPt = rawBuf[rawBuf.length - 1];
+        return {
+            eol_reentry_summary: {
+                entry_alt_km: entryAltKm,
+                entry_fpa_deg: +fpaDeg.toFixed(2),
+                nose_radius_m: +rnM.toFixed(2),
+                ballistic_coeff_kgm2: +betaKgm2.toFixed(2),
+                deorbit_perigee_km: deorbPerigeeKm,
+                deorbit_dv_ms: +deorbitDvMs.toFixed(2),
+                deorbit_fuel_kg: +deorbitFuelKg.toFixed(2),
+                passive_decay_years: +passiveYrs.toFixed(1),
+                compliance_status: complianceStatus,
+                peak_heat_flux_wcm2: +peakHeatFluxWcm2.toFixed(2),
+                peak_heat_alt_km: +peakHeatAltKm.toFixed(2),
+                total_heat_load_jcm2: +totalHeatLoadJcm2.toFixed(1),
+                peak_decel_g: +peakDecelG.toFixed(2),
+                peak_decel_alt_km: +peakDecelAltKm.toFixed(2),
+                peak_qdyn_kpa: +peakQdynKpa.toFixed(2),
+                breakup_alt_km: +breakupAltKm.toFixed(2),
+                breakup_vel_kms: +breakupVelKms.toFixed(2),
+                total_entry_time_sec: +lastPt.t_sec.toFixed(1),
+                total_downrange_km: +lastPt.downrange_km.toFixed(1)
+            },
+            traj_reentry: trajReentry
+        };
+    }
+
     document.getElementById('btnRunCustomMission').addEventListener('click', function() {
         const mass0 = parseFloat(document.getElementById('inMass').value) || 500;
         const propParts = document.getElementById('inPropellant').value.split('|');
@@ -5577,6 +6018,13 @@
             camMissDistM, camLeadOrbits, camHbrM, 85.0, camSigmaZetaM
         );
 
+        // Sprint 20: End-of-Life (EoL) Deorbit Disposal, 3-DOF Re-Entry & Sutton-Graves Heating
+        const eolFpaDeg      = Math.max(-10.0, Math.min(-0.4, parseFloat(document.getElementById('eolFpaDeg').value)      || -1.5));
+        const eolNoseRadiusM = Math.max(0.05,  Math.min(5.0,  parseFloat(document.getElementById('eolNoseRadiusM').value) || 0.50));
+        const eolRes         = simulateEolDeorbitAndReentryJS(
+            kepTarg.a, repTarget.decay_m_day, finalMass, isp, eolFpaDeg, eolNoseRadiusM
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -5603,6 +6051,7 @@
             systems_engineering: sysRes.systems_engineering,
             ekf_summary: ekfRes.ekf_summary,
             ssa_cam_summary: camRes.ssa_cam_summary,
+            eol_reentry_summary: eolRes.eol_reentry_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -5611,7 +6060,8 @@
             traj_thermal: tcsRes.traj_thermal,
             traj_telecom: rfRes.traj_telecom,
             traj_ekf: ekfRes.traj_ekf,
-            cam_tradeoff: camRes.cam_tradeoff
+            cam_tradeoff: camRes.cam_tradeoff,
+            traj_reentry: eolRes.traj_reentry
         };
 
         document.getElementById('inputModal').classList.remove('open');

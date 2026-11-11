@@ -263,6 +263,17 @@ static void write_cam_tradeoff_json_array(FILE *fp, CAMReport cam) {
     fprintf(fp, "  ]");
 }
 
+static void write_reentry_trajectory_json_array(FILE *fp, EndOfLifeReport eol) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < eol.num_samples; i++) {
+        ReentrySample s = eol.samples[i];
+        fprintf(fp, "    {\"t_sec\":%.1f,\"alt_km\":%.2f,\"vel_kms\":%.3f,\"fpa_deg\":%.2f,\"decel_g\":%.2f,\"heat_flux_wcm2\":%.2f,\"qdyn_kpa\":%.2f,\"downrange_km\":%.1f}%s\n",
+                s.t_sec, s.alt_km, s.vel_kms, s.fpa_deg, s.decel_g, s.heat_flux_wcm2, s.qdyn_kpa, s.downrange_km,
+                (i < eol.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
@@ -275,6 +286,7 @@ bool export_web_mission_json(const char *filename,
                              SystemEngineeringReport sys,
                              NavigationReport nav,
                              CAMReport cam,
+                             EndOfLifeReport eol,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -494,6 +506,23 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"post_pc\": %.4e, \"post_log10_pc\": %.3f, \"post_mahalanobis_d\": %.2f,\n", cam.post_pc, cam.post_log10_pc, cam.post_mahalanobis_d);
     fprintf(fp, "    \"alert_status\": \"%s\"\n  },\n", cam.alert_status);
 
+    fprintf(fp, "  \"eol_reentry_summary\": {\n");
+    fprintf(fp, "    \"entry_alt_km\": %.1f, \"entry_fpa_deg\": %.2f, \"nose_radius_m\": %.2f,\n",
+            eol.entry_alt_km, eol.entry_fpa_deg, eol.nose_radius_m);
+    fprintf(fp, "    \"ballistic_coeff_kgm2\": %.2f, \"deorbit_perigee_km\": %.1f,\n",
+            eol.ballistic_coeff_kgm2, eol.deorbit_perigee_km);
+    fprintf(fp, "    \"deorbit_dv_ms\": %.2f, \"deorbit_fuel_kg\": %.2f, \"passive_decay_years\": %.1f,\n",
+            eol.deorbit_dv_ms, eol.deorbit_fuel_kg, eol.passive_decay_years);
+    fprintf(fp, "    \"compliance_status\": \"%s\",\n", eol.compliance_status);
+    fprintf(fp, "    \"peak_heat_flux_wcm2\": %.2f, \"peak_heat_alt_km\": %.2f, \"total_heat_load_jcm2\": %.1f,\n",
+            eol.peak_heat_flux_wcm2, eol.peak_heat_alt_km, eol.total_heat_load_jcm2);
+    fprintf(fp, "    \"peak_decel_g\": %.2f, \"peak_decel_alt_km\": %.2f, \"peak_qdyn_kpa\": %.2f,\n",
+            eol.peak_decel_g, eol.peak_decel_alt_km, eol.peak_qdyn_kpa);
+    fprintf(fp, "    \"breakup_alt_km\": %.2f, \"breakup_vel_kms\": %.2f,\n",
+            eol.breakup_alt_km, eol.breakup_vel_kms);
+    fprintf(fp, "    \"total_entry_time_sec\": %.1f, \"total_downrange_km\": %.1f\n  },\n",
+            eol.total_entry_time_sec, eol.total_downrange_km);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -573,6 +602,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"cam_tradeoff\": ");
     write_cam_tradeoff_json_array(fp, cam);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_reentry\": ");
+    write_reentry_trajectory_json_array(fp, eol);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

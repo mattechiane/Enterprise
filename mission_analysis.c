@@ -2473,3 +2473,231 @@ CAMReport evaluate_debris_conjunction_and_cam(KeplerianElements orb_target,
 
     return cam;
 }
+
+// =========================================================================
+// 12. SPRINT 20: END-OF-LIFE (EoL) DEORBIT, 3-DOF RE-ENTRY & SUTTON-GRAVES
+// =========================================================================
+static double reentry_atmosphere_density_kgm3(double alt_m) {
+    double h_km = fmax(0.0, alt_m / 1000.0);
+    // Modello atmosferico esponenziale multistrato US Standard Atmosphere 1976 (0 - 125 km)
+    typedef struct { double h0_km; double rho0; double H_km; } AtmoLayer;
+    static const AtmoLayer layers[] = {
+        {   0.0, 1.2250e+0, 7.249 },
+        {  25.0, 3.8990e-2, 6.349 },
+        {  30.0, 1.7740e-2, 6.682 },
+        {  40.0, 3.9720e-3, 7.554 },
+        {  50.0, 1.0570e-3, 8.382 },
+        {  60.0, 3.2060e-4, 7.714 },
+        {  70.0, 8.7700e-5, 6.549 },
+        {  80.0, 1.9050e-5, 5.799 },
+        {  90.0, 3.3960e-6, 5.382 },
+        { 100.0, 5.2970e-7, 5.877 },
+        { 110.0, 9.6610e-8, 7.263 },
+        { 120.0, 2.4380e-8, 9.473 }
+    };
+    int n_layers = (int)(sizeof(layers) / sizeof(layers[0]));
+    int idx = 0;
+    for (int i = n_layers - 1; i >= 0; i--) {
+        if (h_km >= layers[i].h0_km) {
+            idx = i;
+            break;
+        }
+    }
+    return layers[idx].rho0 * exp(-(h_km - layers[idx].h0_km) / layers[idx].H_km);
+}
+
+typedef struct {
+    double h_m;     // Quota [m]
+    double V_ms;    // Velocità atmosferica relativa [m/s]
+    double gam_rad; // Flight-Path Angle gamma [rad]
+    double s_m;     // Downrange a terra [m]
+} ReentryState3DOF;
+
+static ReentryState3DOF reentry_ode_deriv(ReentryState3DOF y, double beta_kgm2, double mu_si, double re_m) {
+    ReentryState3DOF dy;
+    double r_m = re_m + fmax(0.0, y.h_m);
+    double g_h = mu_si / (r_m * r_m);
+    double rho = reentry_atmosphere_density_kgm3(y.h_m);
+    double V   = fmax(10.0, y.V_ms);
+    double drag_accel = (0.5 * rho * V * V) / fmax(5.0, beta_kgm2);
+
+    dy.h_m     = V * sin(y.gam_rad);
+    dy.V_ms    = -drag_accel - g_h * sin(y.gam_rad);
+    dy.gam_rad = ((V / r_m) - (g_h / V)) * cos(y.gam_rad);
+    dy.s_m     = (re_m / r_m) * V * cos(y.gam_rad);
+    return dy;
+}
+
+EndOfLifeReport simulate_eol_deorbit_and_reentry(KeplerianElements orb_target,
+                                                 OrbitReport rep_target,
+                                                 OptimalTransferPlan plan,
+                                                 double entry_fpa_deg,
+                                                 double nose_radius_m,
+                                                 const SpacecraftConfig *sc,
+                                                 double mu) {
+    EndOfLifeReport eol;
+    memset(&eol, 0, sizeof(EndOfLifeReport));
+
+    if (entry_fpa_deg > -0.3 || entry_fpa_deg < -12.0) entry_fpa_deg = -1.5;
+    if (nose_radius_m < 0.05 || nose_radius_m > 5.0)   nose_radius_m = 0.50;
+
+    eol.entry_alt_km      = 120.0;
+    eol.entry_fpa_deg     = entry_fpa_deg;
+    eol.nose_radius_m     = nose_radius_m;
+    eol.deorbit_perigee_km = 80.0;
+
+    // 1. DEORBIT BURN BUDGET (Manovra retrograda all'apogeo dell'orbita target verso perigeo h_p = 80 km)
+    double r_targ_km = fmax(EARTH_RADIUS + 160.0, orb_target.a);
+    double r_capt_km = EARTH_RADIUS + eol.deorbit_perigee_km;
+    double a_deorb_km = 0.5 * (r_targ_km + r_capt_km);
+
+    double v_circ_kms  = sqrt(mu / r_targ_km);
+    double v_deorb_kms = sqrt(mu * (2.0 / r_targ_km - 1.0 / a_deorb_km));
+    eol.deorbit_dv_ms  = fmax(5.0, (v_circ_kms - v_deorb_kms) * 1000.0);
+
+    double mass_eol_kg = fmax(80.0, plan.final_mass);
+    double isp_s       = fmax(60.0, plan.prop_info.isp);
+    eol.deorbit_fuel_kg = mass_eol_kg * (1.0 - exp(-eol.deorbit_dv_ms / (isp_s * G0)));
+
+    // Stima del tempo di decadimento orbitale passivo naturale (senza manovra di deorbit)
+    double alt_targ_km   = r_targ_km - EARTH_RADIUS;
+    double decay_m_day   = fmax(0.05, rep_target.sma_decay_m_per_day);
+    double eff_scale_h_m = (alt_targ_km > 500.0) ? 62000.0 : 48000.0;
+    double passive_days  = eff_scale_h_m / decay_m_day;
+    eol.passive_decay_years = adcs_clamp(passive_days / 365.25, 0.2, 250.0);
+
+    if (eol.passive_decay_years <= 5.0) {
+        snprintf(eol.compliance_status, sizeof(eol.compliance_status),
+                 "PASSIVE < 5 YR (FCC & ESA ZERO-DEBRIS COMPLIANT)");
+    } else if (eol.passive_decay_years <= 25.0) {
+        snprintf(eol.compliance_status, sizeof(eol.compliance_status),
+                 "IADC 25-YR PASSIVE OK | ACTIVE DEORBIT -> ESA ZERO-DEBRIS");
+    } else {
+        snprintf(eol.compliance_status, sizeof(eol.compliance_status),
+                 "ACTIVE DEORBIT MANDATORY (Passive %.0f yr > 25 yr) -> COMPLIANT",
+                 eol.passive_decay_years);
+    }
+
+    // Coefficiente balistico beta = m / (C_D * A) [kg/m^2]
+    double cd_area = (sc != NULL && sc->drag_coeff * sc->drag_area > 0.5)
+                     ? (sc->drag_coeff * sc->drag_area) : (2.2 * 4.0);
+    double dry_reentry_mass = fmax(60.0, mass_eol_kg - eol.deorbit_fuel_kg);
+    eol.ballistic_coeff_kgm2 = dry_reentry_mass / cd_area;
+
+    // 2. INTEGRAZIONE RK4 3-DOF DELLA TRAIETTORIA DI RIENTRO ATMOSFERICO (da h_EI = 120 km a 0 km)
+    double mu_si = mu * 1e9;             // m^3/s^2
+    double re_m  = EARTH_RADIUS * 1000.0; // m
+    double r_ei_km = EARTH_RADIUS + eol.entry_alt_km;
+    double v_ei_kms = sqrt(mu * (2.0 / r_ei_km - 1.0 / fmax(r_ei_km * 0.52, a_deorb_km)));
+    double v_ei_ms  = adcs_clamp(v_ei_kms * 1000.0, 7450.0, 7920.0);
+
+    // Pre-simulazione ad alta risoluzione (dt = 1.0 s) per trovare la durata esatta fino a h = 0 km
+    ReentryState3DOF state = {
+        .h_m     = eol.entry_alt_km * 1000.0,
+        .V_ms    = v_ei_ms,
+        .gam_rad = eol.entry_fpa_deg * DEG2RAD,
+        .s_m     = 0.0
+    };
+
+    ReentrySample raw_buf[1800];
+    int raw_count = 0;
+    double dt = 1.0;
+    double t_cur = 0.0;
+    bool breakup_detected = false;
+
+    // Costante di Sutton-Graves terrestre k_SG = 1.7415e-4 [W / m^2 / (kg/m^3)^0.5 * m^0.5 / (m/s)^3]
+    // Convertita direttamente in [W/cm^2]: k_SG_wcm2 = 1.7415e-8
+    const double k_SG_wcm2 = 1.7415e-8;
+
+    while (raw_count < 1800) {
+        double rho = reentry_atmosphere_density_kgm3(state.h_m);
+        double qdyn_pa = 0.5 * rho * state.V_ms * state.V_ms;
+        double qdyn_kpa = qdyn_pa / 1000.0;
+        double drag_ms2 = qdyn_pa / eol.ballistic_coeff_kgm2;
+        double decel_g  = drag_ms2 / G0;
+        double q_stag_wcm2 = k_SG_wcm2 * sqrt(rho / eol.nose_radius_m) *
+                             (state.V_ms * state.V_ms * state.V_ms);
+
+        raw_buf[raw_count].t_sec          = t_cur;
+        raw_buf[raw_count].alt_km         = fmax(0.0, state.h_m / 1000.0);
+        raw_buf[raw_count].vel_kms        = state.V_ms / 1000.0;
+        raw_buf[raw_count].fpa_deg        = state.gam_rad * RAD2DEG;
+        raw_buf[raw_count].decel_g        = decel_g;
+        raw_buf[raw_count].heat_flux_wcm2 = q_stag_wcm2;
+        raw_buf[raw_count].qdyn_kpa       = qdyn_kpa;
+        raw_buf[raw_count].downrange_km   = state.s_m / 1000.0;
+
+        if (q_stag_wcm2 > eol.peak_heat_flux_wcm2) {
+            eol.peak_heat_flux_wcm2 = q_stag_wcm2;
+            eol.peak_heat_alt_km    = raw_buf[raw_count].alt_km;
+        }
+        if (decel_g > eol.peak_decel_g) {
+            eol.peak_decel_g      = decel_g;
+            eol.peak_decel_alt_km = raw_buf[raw_count].alt_km;
+        }
+        if (qdyn_kpa > eol.peak_qdyn_kpa) {
+            eol.peak_qdyn_kpa = qdyn_kpa;
+        }
+        eol.total_heat_load_jcm2 += q_stag_wcm2 * dt;
+
+        // Rilevamento Demise / Breakup strutturale del bus in lega di Alluminio non schermato
+        // (soglia aerotermica tipica ESA DRAMA/DAS: h ~ 75-82 km quando Q_int >= 950 J/cm^2 e q_dot >= 42 W/cm^2)
+        if (!breakup_detected && raw_buf[raw_count].alt_km <= 82.0 &&
+            (eol.total_heat_load_jcm2 >= 950.0 || q_stag_wcm2 >= 45.0 || raw_buf[raw_count].alt_km <= 77.5)) {
+            breakup_detected    = true;
+            eol.breakup_alt_km  = raw_buf[raw_count].alt_km;
+            eol.breakup_vel_kms = raw_buf[raw_count].vel_kms;
+        }
+
+        raw_count++;
+        if (state.h_m <= 0.0) break;
+
+        // Passo RK4 3-DOF
+        ReentryState3DOF k1 = reentry_ode_deriv(state, eol.ballistic_coeff_kgm2, mu_si, re_m);
+        ReentryState3DOF s2 = {
+            state.h_m + 0.5 * dt * k1.h_m,
+            fmax(10.0, state.V_ms + 0.5 * dt * k1.V_ms),
+            state.gam_rad + 0.5 * dt * k1.gam_rad,
+            state.s_m + 0.5 * dt * k1.s_m
+        };
+        ReentryState3DOF k2 = reentry_ode_deriv(s2, eol.ballistic_coeff_kgm2, mu_si, re_m);
+        ReentryState3DOF s3 = {
+            state.h_m + 0.5 * dt * k2.h_m,
+            fmax(10.0, state.V_ms + 0.5 * dt * k2.V_ms),
+            state.gam_rad + 0.5 * dt * k2.gam_rad,
+            state.s_m + 0.5 * dt * k2.s_m
+        };
+        ReentryState3DOF k3 = reentry_ode_deriv(s3, eol.ballistic_coeff_kgm2, mu_si, re_m);
+        ReentryState3DOF s4 = {
+            state.h_m + dt * k3.h_m,
+            fmax(10.0, state.V_ms + dt * k3.V_ms),
+            state.gam_rad + dt * k3.gam_rad,
+            state.s_m + dt * k3.s_m
+        };
+        ReentryState3DOF k4 = reentry_ode_deriv(s4, eol.ballistic_coeff_kgm2, mu_si, re_m);
+
+        state.h_m     += (dt / 6.0) * (k1.h_m + 2.0 * k2.h_m + 2.0 * k3.h_m + k4.h_m);
+        state.V_ms    += (dt / 6.0) * (k1.V_ms + 2.0 * k2.V_ms + 2.0 * k3.V_ms + k4.V_ms);
+        state.gam_rad += (dt / 6.0) * (k1.gam_rad + 2.0 * k2.gam_rad + 2.0 * k3.gam_rad + k4.gam_rad);
+        state.s_m     += (dt / 6.0) * (k1.s_m + 2.0 * k2.s_m + 2.0 * k3.s_m + k4.s_m);
+
+        state.V_ms    = fmax(15.0, state.V_ms);
+        state.gam_rad = adcs_clamp(state.gam_rad, -89.5 * DEG2RAD, -0.05 * DEG2RAD);
+        if (state.h_m < 0.0) state.h_m = 0.0;
+        t_cur += dt;
+    }
+
+    eol.total_entry_time_sec = raw_buf[raw_count - 1].t_sec;
+    eol.total_downrange_km   = raw_buf[raw_count - 1].downrange_km;
+
+    // Ricampionamento uniforme in MAX_REENTRY_SAMPLES (140 punti) per esportazione JSON
+    int out_pts = (raw_count < 140) ? raw_count : 140;
+    eol.num_samples = out_pts;
+    for (int i = 0; i < out_pts; i++) {
+        int src_idx = (int)((double)i * (double)(raw_count - 1) / (double)(out_pts - 1) + 0.5);
+        if (src_idx >= raw_count) src_idx = raw_count - 1;
+        eol.samples[i] = raw_buf[src_idx];
+    }
+
+    return eol;
+}

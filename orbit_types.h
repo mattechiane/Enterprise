@@ -537,6 +537,46 @@ typedef struct {
     BPlaneSample samples[MAX_CAM_SAMPLES];
 } CAMReport;
 
+// ==========================================
+// 5I. SPRINT 20: END-OF-LIFE (EoL) DEORBIT, ATMOSPHERIC RE-ENTRY & SUTTON-GRAVES HEATING
+// ==========================================
+#define MAX_REENTRY_SAMPLES 160
+
+typedef struct {
+    double t_sec;               // Tempo trascorso dall'Entry Interface (h_EI = 120 km) [s]
+    double alt_km;              // Quota sopra l'ellissoide terrestre h(t) [km]
+    double vel_kms;             // Velocità relativa atmosferica V(t) [km/s]
+    double fpa_deg;             // Angolo di rampa di volo (Flight-Path Angle) gamma(t) [deg]
+    double decel_g;             // Fattore di carico assiale aerodinamico n_g(t) = D / (m * g0) [g]
+    double heat_flux_wcm2;      // Flusso termico convettivo di ristagno di Sutton-Graves q_dot(t) [W/cm^2]
+    double qdyn_kpa;            // Pressione dinamica q_dyn(t) = 0.5 * rho(h) * V^2 [kPa]
+    double downrange_km;        // Distanza percorsa lungo traccia a terra (Downrange) s(t) [km]
+} ReentrySample;
+
+typedef struct {
+    double entry_alt_km;            // Quota di Entry Interface h_EI [km] (120.0 km)
+    double entry_fpa_deg;           // Flight-Path Angle all'Entry Interface gamma_EI [deg] (default -1.5 deg)
+    double nose_radius_m;           // Raggio di curvatura effettivo del muso/bus R_n [m] (default 0.50 m)
+    double ballistic_coeff_kgm2;    // Coefficiente balistico beta = m / (C_D * A) [kg/m^2]
+    double deorbit_perigee_km;      // Quota del perigeo di cattura atmosferica h_p [km] (80.0 km)
+    double deorbit_dv_ms;           // Impulso retrogrado di deorbiting attivo Delta-V_deorbit [m/s]
+    double deorbit_fuel_kg;         // Propellente richiesto per la manovra di fine vita m_fuel,EoL [kg]
+    double passive_decay_years;     // Tempo stimato di decadimento orbitale passivo naturale [anni]
+    char   compliance_status[64];   // Conformità ESA Zero-Debris / FCC 5-Year / IADC 25-Year Rule
+    double peak_heat_flux_wcm2;     // Picco di flusso termico di ristagno q_dot_max [W/cm^2]
+    double peak_heat_alt_km;        // Quota del picco termico aerotermodinamico [km]
+    double total_heat_load_jcm2;    // Carico termico integrale totale Q = int(q_dot dt) [J/cm^2]
+    double peak_decel_g;            // Decelerazione assiale massima n_g,max [g]
+    double peak_decel_alt_km;       // Quota del picco di decelerazione meccanica [km]
+    double peak_qdyn_kpa;           // Pressione dinamica massima q_dyn,max [kPa]
+    double breakup_alt_km;          // Quota di Demise / Breakup strutturale e ablazione catastale [km]
+    double breakup_vel_kms;         // Velocità al momento del Breakup strutturale [km/s]
+    double total_entry_time_sec;    // Durata complessiva della discesa atmosferica da 120 km a 0 km [s]
+    double total_downrange_km;      // Downrange complessivo dall'Entry Interface all'impatto/demise [km]
+    int    num_samples;             // Numero di campioni temporali della traiettoria 3-DOF
+    ReentrySample samples[MAX_REENTRY_SAMPLES];
+} EndOfLifeReport;
+
 typedef struct {
     KeplerianElements initial_kep;
     double period_min;

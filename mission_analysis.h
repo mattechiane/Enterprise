@@ -129,4 +129,13 @@ CAMReport evaluate_debris_conjunction_and_cam(KeplerianElements orb_target,
                                               ConjunctionEvent event,
                                               double mu);
 
+// Sprint 20: End-of-Life (EoL) Deorbit Disposal, Atmospheric Re-Entry Dynamics & Sutton-Graves Aerothermal Heating
+EndOfLifeReport simulate_eol_deorbit_and_reentry(KeplerianElements orb_target,
+                                                 OrbitReport rep_target,
+                                                 OptimalTransferPlan plan,
+                                                 double entry_fpa_deg,
+                                                 double nose_radius_m,
+                                                 const SpacecraftConfig *sc,
+                                                 double mu);
+
 #endif // MISSION_ANALYSIS_H

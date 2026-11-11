@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 19: SSA, B-PLANE CONJUNCTION & CAM     \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 20: EoL DEORBIT & ATMOSPHERIC RE-ENTRY \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -115,6 +115,12 @@ int main(void) {
     };
     CAMReport cam = evaluate_debris_conjunction_and_cam(orb_target, rep_target, plan, deb_event, EARTH_MU);
 
+    // 12. SPRINT 20: END-OF-LIFE (EoL) DEORBIT, 3-DOF RE-ENTRY & SUTTON-GRAVES HEATING
+    double entry_fpa_deg = -1.5; // Angolo di rampa all'Entry Interface (h_EI = 120 km) [deg]
+    double nose_radius_m = 0.50; // Raggio di curvatura effettivo R_n [m]
+    EndOfLifeReport eol = simulate_eol_deorbit_and_reentry(orb_target, rep_target, plan,
+                                                           entry_fpa_deg, nose_radius_m, &sc, EARTH_MU);
+
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -217,10 +223,21 @@ int main(void) {
     printf("  * Post-CAM Safe State   : Separation = %.1f m (%.1f sigma) | Post-CAM P_c = %.2e (< 1e-7 SAFE)\n\n",
            cam.post_miss_m, cam.post_mahalanobis_d, cam.post_pc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with SSA B-Plane Conjunction, CAM & All Subsystems!\n");
+    printf("[END-OF-LIFE (EoL) DEORBIT, ATMOSPHERIC RE-ENTRY & SUTTON-GRAVES HEATING]\n");
+    printf("  * Deorbit Burn Budget   : dV_deorbit = %.2f m/s (to h_p = %.0f km) | Fuel = %.2f kg | Passive Decay = %.1f yrs\n",
+           eol.deorbit_dv_ms, eol.deorbit_perigee_km, eol.deorbit_fuel_kg, eol.passive_decay_years);
+    printf("  * Sustainability Status : %s\n", eol.compliance_status);
+    printf("  * Entry Interface (EI)  : h_EI = %.0f km | gamma_EI = %.2f deg | R_n = %.2f m | beta = %.1f kg/m^2\n",
+           eol.entry_alt_km, eol.entry_fpa_deg, eol.nose_radius_m, eol.ballistic_coeff_kgm2);
+    printf("  * Aerothermal & G-Loads : Peak Sutton-Graves = %.1f W/cm^2 (at %.1f km) | Peak Decel = %.2f g (at %.1f km)\n",
+           eol.peak_heat_flux_wcm2, eol.peak_heat_alt_km, eol.peak_decel_g, eol.peak_decel_alt_km);
+    printf("  * Structural Demise     : Breakup Altitude = %.1f km (V = %.2f km/s) | Entry Time = %.0f s | Downrange = %.0f km\n\n",
+           eol.breakup_alt_km, eol.breakup_vel_kms, eol.total_entry_time_sec, eol.total_downrange_km);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with EoL Re-Entry, Sutton-Graves Heating & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;
