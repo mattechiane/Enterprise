@@ -607,6 +607,52 @@
     </div>
 </section>
 
+<!-- 13. THIRTEENTH OUTPUT BLOCK: SPACE SITUATIONAL AWARENESS (SSA), B-PLANE CONJUNCTION & COLLISION AVOIDANCE (CAM) -->
+<section class="section-block">
+    <div class="section-header">
+        <div>
+            <h2>13. Space Situational Awareness (SSA), B-Plane Conjunction &amp; Collision Avoidance (CAM)</h2>
+            <span>2D Encounter B-Plane (&xi;, &zeta;) Projection &bull; Foster/Alfriend 2D Collision Probability P<sub>c</sub> &bull; In-Track Phasing Burn &Delta;V<sub>CAM</sub> &bull; ESA Space Debris Office Standard</span>
+        </div>
+        <span class="badge" id="camStatusBadge" style="color:var(--red); border-color:var(--red);">&#9888; RED CONJUNCTION ALERT (P<sub>c</sub> &gt; 10<sup>-4</sup> &mdash; CAM MANDATORY)</span>
+    </div>
+
+    <div class="maneuver-banner" id="camBannerBox" style="background: linear-gradient(90deg, rgba(255,82,82,0.14), rgba(0,229,255,0.11)); border-color: var(--red);">
+        <div class="title-group">
+            <h3 id="camBannerTitle" style="color:var(--red);">CLOSE APPROACH CONJUNCTION ASSESSMENT &amp; OPTIMAL PHASING CAM</h3>
+            <p id="camBannerSub">Secondary Object: --- &bull; Relative Velocity v<sub>rel</sub>: --- km/s &bull; Combined Hard-Body Radius R<sub>HBR</sub>: --- m</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="camBannerPc" style="color:var(--red);">Pre-CAM P<sub>c</sub>: --- | Req. CAM &Delta;V: --- cm/s</div>
+            <div class="sub-fuel" id="camBannerSubMetrics">Post-CAM Safe Separation: --- m (&ge; 5&sigma;) | Post-CAM P<sub>c</sub>: --- (&lt; 10<sup>-7</sup> SAFE)</div>
+        </div>
+    </div>
+
+    <div class="datasheet-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+        <div class="data-card">
+            <h4 style="color:var(--red)">&#9888; Conjunction Threat &amp; Pre-CAM P<sub>c</sub></h4>
+            <div id="camCardThreat"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--amber)">&#127919; 2D B-Plane Geometry (&xi;, &zeta;)</h4>
+            <div id="camCardBplane"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--cyan)">&#128640; In-Track Phasing CAM Burn</h4>
+            <div id="camCardManeuver"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--green)">&#128737; Post-CAM Safe Separation</h4>
+            <div id="camCardPost"></div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotBPlane2D" class="plot-container-rdv"></div>
+        <div id="plotCamTradeoff" class="plot-container-rdv"></div>
+    </div>
+</section>
+
 
 <!-- POPUP MODAL: MISSION INPUT CONFIGURATOR -->
 <div class="modal-overlay" id="inputModal">
@@ -915,6 +961,31 @@
                 <div class="field">
                     <label>Process Noise q<sub>a</sub> [m/s&sup2;]</label>
                     <input type="number" id="ekfProcNoiseMs2" value="0.0038" min="0.0001" max="0.10" step="0.0005">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--red)">11. Space Situational Awareness (SSA), Space Debris &amp; CAM Planning</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">B-Plane (&xi;, &zeta;) Foster 2D P<sub>c</sub> &amp; Tangential In-Track Phasing Collision Avoidance Maneuver</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="field">
+                    <label>Predicted Debris Miss Distance at TCA [m]</label>
+                    <input type="number" id="camMissDistM" value="180.0" min="5.0" max="5000.0" step="10.0">
+                </div>
+                <div class="field">
+                    <label>CAM Lead Time before TCA [Orbits]</label>
+                    <input type="number" id="camLeadOrbits" value="1.5" min="0.5" max="10.0" step="0.5">
+                </div>
+                <div class="field">
+                    <label>Combined Hard-Body Radius R<sub>HBR</sub> [m]</label>
+                    <input type="number" id="camHbrM" value="5.0" min="0.5" max="50.0" step="0.5">
+                </div>
+                <div class="field">
+                    <label>B-Plane 1&sigma; Uncertainty &sigma;<sub>&zeta;</sub> [m]</label>
+                    <input type="number" id="camSigmaZetaM" value="175.0" min="20.0" max="1000.0" step="10.0">
                 </div>
             </div>
         </div>
@@ -1351,6 +1422,13 @@
             if (ekf.gps_sigma_vel_ms !== undefined)     document.getElementById('ekfGpsSigmaVelMs').value = ekf.gps_sigma_vel_ms;
             if (ekf.init_sigma_pos_m !== undefined)     document.getElementById('ekfInitSigmaPosM').value = ekf.init_sigma_pos_m;
             if (ekf.proc_noise_accel_ms2 !== undefined) document.getElementById('ekfProcNoiseMs2').value  = ekf.proc_noise_accel_ms2;
+        }
+        if (data.ssa_cam_summary) {
+            const cam = data.ssa_cam_summary;
+            if (cam.pre_miss_m !== undefined)   document.getElementById('camMissDistM').value   = cam.pre_miss_m;
+            if (cam.lead_orbits !== undefined)  document.getElementById('camLeadOrbits').value  = cam.lead_orbits;
+            if (cam.hbr_m !== undefined)        document.getElementById('camHbrM').value        = cam.hbr_m;
+            if (cam.sigma_zeta_m !== undefined) document.getElementById('camSigmaZetaM').value = cam.sigma_zeta_m;
         }
 
         validateModalOrbits(false);
@@ -2906,6 +2984,217 @@
             yaxis2: { title: 'Kalman Gain Norm ||K_k|| [-]', titlefont: { color: '#d500f9' }, tickfont: { color: '#d500f9' }, overlaying: 'y', side: 'right', showgrid: false, range: [0, Math.max(...ekfGainNorm, 0.5) * 1.15] },
             showlegend: true,
             legend: { font: { color: '#e2e8f0', size: 9.5 }, bgcolor: 'rgba(17,22,34,0.82)', x: 0.32, y: 0.98 }
+        }, { responsive: true, displaylogo: false });
+
+        // =========================================================================
+        // 13. SPACE SITUATIONAL AWARENESS (SSA), B-PLANE CONJUNCTION & CAM
+        // =========================================================================
+        let camInfo = data.ssa_cam_summary;
+        let camTradeoff = data.cam_tradeoff || [];
+        if (!camInfo || camTradeoff.length === 0) {
+            const fallbackCam = evaluateDebrisConjunctionAndCamJS(
+                data.target_report.sma_km || (R_EQ + data.target_report.alt_km),
+                data.target_report.period_min,
+                data.maneuver.final_mass_kg,
+                data.maneuver.isp_s,
+                180.0, 1.5, 5.0, 85.0, 175.0
+            );
+            camInfo = fallbackCam.ssa_cam_summary;
+            camTradeoff = fallbackCam.cam_tradeoff;
+            data.ssa_cam_summary = camInfo;
+            data.cam_tradeoff    = camTradeoff;
+        }
+
+        const isRedAlert    = camInfo.pre_pc >= 1e-4;
+        const isYellowAlert = !isRedAlert && camInfo.pre_pc >= 1e-5;
+        const alertColor    = isRedAlert ? '#ff5252' : (isYellowAlert ? '#ffab00' : '#00e676');
+        const camBadgeEl    = document.getElementById('camStatusBadge');
+        const camBannerBox  = document.getElementById('camBannerBox');
+
+        camBadgeEl.innerHTML = isRedAlert
+            ? `&#9888; RED CONJUNCTION ALERT (P<sub>c</sub> = ${camInfo.pre_pc.toExponential(2)} &gt; 10<sup>-4</sup> &mdash; CAM MANDATORY)`
+            : (isYellowAlert
+                ? `&#9888; YELLOW CONJUNCTION ADVISORY (P<sub>c</sub> = ${camInfo.pre_pc.toExponential(2)} &gt; 10<sup>-5</sup>)`
+                : `&#9989; GREEN SAFE CONJUNCTION (P<sub>c</sub> = ${camInfo.pre_pc.toExponential(2)} &lt; 10<sup>-5</sup>)`);
+        camBadgeEl.style.color       = alertColor;
+        camBadgeEl.style.borderColor = alertColor;
+        camBannerBox.style.borderColor = alertColor;
+
+        document.getElementById('camBannerTitle').style.color = alertColor;
+        document.getElementById('camBannerTitle').innerHTML =
+            `B-PLANE CONJUNCTION ASSESSMENT (<span style="color:#e2e8f0">${camInfo.debris_id}</span>) &mdash; ${camInfo.alert_status}`;
+        document.getElementById('camBannerSub').innerHTML =
+            `Encounter Relative Velocity: <b>v<sub>rel</sub> = ${camInfo.rel_vel_kms} km/s</b> &bull; Pre-CAM Miss Distance: <b>d<sub>miss</sub> = ${camInfo.pre_miss_m} m</b> (${camInfo.pre_mahalanobis_d}&sigma;) &bull; Hard-Body Radius: <b>R<sub>HBR</sub> = ${camInfo.hbr_m} m</b> &bull; Lead Time: <b>-${camInfo.lead_orbits} Orbits (-${camInfo.tca_lead_time_min} min)</b>`;
+        document.getElementById('camBannerPc').style.color = alertColor;
+        document.getElementById('camBannerPc').innerHTML =
+            `Pre-CAM P<sub>c</sub>: ${camInfo.pre_pc.toExponential(2)} | Req. CAM &Delta;V: ${camInfo.req_dv_cam_cms} cm/s`;
+        document.getElementById('camBannerSubMetrics').innerHTML =
+            `Post-CAM Safe Separation: <b style="color:#00e676">${camInfo.post_miss_m} m (${camInfo.post_mahalanobis_d}&sigma;)</b> &bull; Post-CAM P<sub>c</sub>: <b style="color:#00e676">${camInfo.post_pc.toExponential(2)} (&lt; 10<sup>-7</sup> SAFE)</b> &bull; Fuel: <b>${camInfo.cam_fuel_g} g</b>`;
+
+        document.getElementById('camCardThreat').innerHTML = `
+            <h3>Close Approach Threat</h3>
+            <div class="stat-line"><span class="stat-label">Secondary Object:</span><span class="stat-val" style="color:#ffab00">${camInfo.debris_id.split('[')[0].trim()}</span></div>
+            <div class="stat-line"><span class="stat-label">Relative Velocity v<sub>rel</sub>:</span><span class="stat-val" style="color:#00e5ff">${camInfo.rel_vel_kms} km/s</span></div>
+            <div class="stat-line"><span class="stat-label">Pre-CAM Miss Distance:</span><span class="stat-val" style="color:${alertColor}">${camInfo.pre_miss_m} m</span></div>
+            <div class="stat-line"><span class="stat-label">Pre-CAM Foster P<sub>c</sub>:</span><span class="stat-val" style="color:${alertColor}">${camInfo.pre_pc.toExponential(2)} (10<sup>${camInfo.pre_log10_pc}</sup>)</span></div>
+        `;
+
+        document.getElementById('camCardBplane').innerHTML = `
+            <h3>2D Encounter B-Plane (&xi;, &zeta;)</h3>
+            <div class="stat-line"><span class="stat-label">Pre-CAM (&xi;<sub>0</sub>, &zeta;<sub>0</sub>):</span><span class="stat-val">[+${camInfo.pre_xi_m}, +${camInfo.pre_zeta_m}] m</span></div>
+            <div class="stat-line"><span class="stat-label">1&sigma; Covariance (&sigma;<sub>&xi;</sub>, &sigma;<sub>&zeta;</sub>):</span><span class="stat-val">[${camInfo.sigma_xi_m}, ${camInfo.sigma_zeta_m}] m</span></div>
+            <div class="stat-line"><span class="stat-label">Hard-Body Radius R<sub>HBR</sub>:</span><span class="stat-val">${camInfo.hbr_m} m</span></div>
+            <div class="stat-line"><span class="stat-label">Pre-CAM Mahalanobis:</span><span class="stat-val" style="color:${alertColor}">${camInfo.pre_mahalanobis_d} &sigma;</span></div>
+        `;
+
+        document.getElementById('camCardManeuver').innerHTML = `
+            <h3>Optimal Phasing CAM</h3>
+            <div class="stat-line"><span class="stat-label">Execution Lead Time:</span><span class="stat-val" style="color:#00e5ff">-${camInfo.lead_orbits} rev (-${camInfo.tca_lead_time_min} min)</span></div>
+            <div class="stat-line"><span class="stat-label">Required &Delta;V<sub>CAM</sub>:</span><span class="stat-val" style="color:#00e676">${camInfo.req_dv_cam_cms} cm/s (${camInfo.req_dv_cam_ms} m/s)</span></div>
+            <div class="stat-line"><span class="stat-label">SMA Raise &Delta;a:</span><span class="stat-val">+${camInfo.delta_a_m} m</span></div>
+            <div class="stat-line"><span class="stat-label">CAM Propellant Mass:</span><span class="stat-val" style="color:#00e676">${camInfo.cam_fuel_g} g</span></div>
+        `;
+
+        document.getElementById('camCardPost').innerHTML = `
+            <h3>Post-CAM Mitigation</h3>
+            <div class="stat-line"><span class="stat-label">Post-CAM (&xi;, &zeta;):</span><span class="stat-val">[+${camInfo.post_xi_m}, +${camInfo.post_zeta_m}] m</span></div>
+            <div class="stat-line"><span class="stat-label">Post-CAM Safe Miss:</span><span class="stat-val" style="color:#00e676">${camInfo.post_miss_m} m</span></div>
+            <div class="stat-line"><span class="stat-label">Post-CAM Mahalanobis:</span><span class="stat-val" style="color:#00e676">${camInfo.post_mahalanobis_d} &sigma; (&gt; 5&sigma;)</span></div>
+            <div class="stat-line"><span class="stat-label">Post-CAM Foster P<sub>c</sub>:</span><span class="stat-val" style="color:#00e676">${camInfo.post_pc.toExponential(2)} (SAFE)</span></div>
+        `;
+
+        // Generazione ellissi 1-sigma, 2-sigma, 3-sigma nel B-Plane attorno all'origine (Detrito in [0, 0])
+        const makeEllipseTrace = (scaleSigma, name, color, dashStyle, fillCol) => {
+            const xs = [], zs = [];
+            for (let deg = 0; deg <= 360; deg += 4) {
+                const rad = deg * DEG2RAD;
+                xs.push(+(scaleSigma * camInfo.sigma_xi_m * Math.cos(rad)).toFixed(2));
+                zs.push(+(scaleSigma * camInfo.sigma_zeta_m * Math.sin(rad)).toFixed(2));
+            }
+            return {
+                x: xs, y: zs,
+                mode: 'lines',
+                name: name,
+                line: { color: color, width: 1.8, dash: dashStyle },
+                fill: fillCol ? 'toself' : 'none',
+                fillcolor: fillCol || 'rgba(0,0,0,0)',
+                hoverinfo: 'name'
+            };
+        };
+
+        const ell1 = makeEllipseTrace(1.0, '1σ Combined Covariance Ellipse', '#ff5252', 'solid', 'rgba(255, 82, 82, 0.14)');
+        const ell2 = makeEllipseTrace(2.0, '2σ Combined Covariance Ellipse', '#ffab00', 'dash',  'rgba(255, 171, 0, 0.06)');
+        const ell3 = makeEllipseTrace(3.0, '3σ Combined Covariance Shell (99.7%)', '#eab308', 'dot', null);
+
+        // Plot Sinistro (13A): 2D Encounter B-Plane Projection (xi vs. zeta [m])
+        Plotly.react('plotBPlane2D', [
+            ell3, ell2, ell1,
+            {
+                x: [0], y: [0],
+                mode: 'markers+text',
+                name: `Secondary Debris (${camInfo.debris_id.split('[')[0].trim()})`,
+                marker: { size: 13, color: '#ffffff', symbol: 'x', line: { color: '#ff5252', width: 2 } },
+                text: ['DEBRIS [0, 0]'],
+                textposition: 'bottom center',
+                textfont: { color: '#cbd5e1', size: 10 },
+                hovertemplate: 'Secondary Debris at B-Plane Origin [0, 0] m<br>R_HBR = ' + camInfo.hbr_m + ' m<extra></extra>'
+            },
+            {
+                x: [camInfo.pre_xi_m, camInfo.post_xi_m],
+                y: [camInfo.pre_zeta_m, camInfo.post_zeta_m],
+                mode: 'lines',
+                name: `CAM Phasing Shift Vector (ΔV = ${camInfo.req_dv_cam_cms} cm/s)`,
+                line: { color: '#00e5ff', width: 2.8, dash: 'dashdot' },
+                hoverinfo: 'name'
+            },
+            {
+                x: [camInfo.pre_xi_m], y: [camInfo.pre_zeta_m],
+                mode: 'markers+text',
+                name: `Pre-CAM NominalTCA (d = ${camInfo.pre_miss_m} m, Pc = ${camInfo.pre_pc.toExponential(1)})`,
+                marker: { size: 13, color: '#ff5252', symbol: 'diamond', line: { color: '#ffffff', width: 1.5 } },
+                text: [`Pre-CAM (${camInfo.pre_miss_m} m)`],
+                textposition: 'top right',
+                textfont: { color: '#ff5252', size: 10.5 },
+                hovertemplate: '<b>Pre-CAM Nominal Encounter</b><br>ξ₀ = %{x:.1f} m, ζ₀ = %{y:.1f} m<br>Miss = ' + camInfo.pre_miss_m + ' m<br>Foster Pc = ' + camInfo.pre_pc.toExponential(2) + '<extra></extra>'
+            },
+            {
+                x: [camInfo.post_xi_m], y: [camInfo.post_zeta_m],
+                mode: 'markers+text',
+                name: `Post-CAM Safe Point (d = ${camInfo.post_miss_m} m, ${camInfo.post_mahalanobis_d}σ)`,
+                marker: { size: 14, color: '#00e676', symbol: 'star', line: { color: '#ffffff', width: 1.2 } },
+                text: [`Post-CAM Safe (${camInfo.post_miss_m} m, ${camInfo.post_mahalanobis_d}σ)`],
+                textposition: 'bottom left',
+                textfont: { color: '#00e676', size: 10.5 },
+                hovertemplate: '<b>Post-CAM Safe Encounter</b><br>ξ = %{x:.1f} m, ζ = %{y:.1f} m<br>Safe Separation = ' + camInfo.post_miss_m + ' m<br>Post-CAM Pc = ' + camInfo.post_pc.toExponential(2) + '<extra></extra>'
+            }
+        ], {
+            title: { text: `13A. 2D Encounter B-Plane Projection (ξ, ζ) & Covariance Ellipses (1σ, 2σ, 3σ)`, font: { color: '#e2e8f0', size: 12.5 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 58, r: 25, b: 48, t: 40 },
+            xaxis: { title: 'B-Plane Cross-Track Axis ξ [m]', color: '#e2e8f0', gridcolor: '#222d42', zerolinecolor: '#334155' },
+            yaxis: { title: 'B-Plane In-Track Projected Axis ζ [m]', color: '#e2e8f0', gridcolor: '#222d42', zerolinecolor: '#334155' },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.2 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // Plot Destro (13B): Collision Probability log10(Pc) & Miss Distance vs. CAM Delta-V [cm/s]
+        const camDvCms  = camTradeoff.map(s => s.dv_cam_cms);
+        const camLogPc  = camTradeoff.map(s => s.log10_pc);
+        const camMissM  = camTradeoff.map(s => s.miss_dist_m);
+        const maxDvPlot = camDvCms.length ? camDvCms[camDvCms.length - 1] : 25.0;
+
+        Plotly.react('plotCamTradeoff', [
+            {
+                x: camDvCms, y: camLogPc,
+                mode: 'lines',
+                name: 'Foster Collision Probability log₁₀(P_c)',
+                line: { color: '#ff5252', width: 2.8 },
+                hovertemplate: 'ΔV_CAM = %{x:.2f} cm/s<br>log₁₀(P_c) = %{y:.2f}<extra></extra>'
+            },
+            {
+                x: [0, maxDvPlot], y: [-4.0, -4.0],
+                mode: 'lines',
+                name: 'ESA/NASA Red Threshold (P_c = 10⁻⁴)',
+                line: { color: '#ff5252', width: 1.6, dash: 'dash' },
+                hoverinfo: 'name'
+            },
+            {
+                x: [0, maxDvPlot], y: [-5.0, -5.0],
+                mode: 'lines',
+                name: 'ESA Yellow Advisory Threshold (P_c = 10⁻⁵)',
+                line: { color: '#ffab00', width: 1.5, dash: 'dot' },
+                hoverinfo: 'name'
+            },
+            {
+                x: [camInfo.req_dv_cam_cms], y: [Math.max(-15.0, camInfo.post_log10_pc)],
+                mode: 'markers',
+                name: `Selected CAM Operating Point (${camInfo.req_dv_cam_cms} cm/s)`,
+                marker: { size: 12, color: '#00e676', symbol: 'circle', line: { color: '#ffffff', width: 2 } },
+                hovertemplate: 'Selected ΔV_CAM = %{x:.2f} cm/s<br>Post-CAM log₁₀(P_c) = %{y:.2f}<extra></extra>'
+            },
+            {
+                x: camDvCms, y: camMissM,
+                yaxis: 'y2',
+                mode: 'lines',
+                name: 'B-Plane Separation Distance d_miss [m]',
+                line: { color: '#00e5ff', width: 2.3, dash: 'dashdot' },
+                hovertemplate: 'ΔV_CAM = %{x:.2f} cm/s<br>B-Plane Separation = %{y:.0f} m<extra></extra>'
+            }
+        ], {
+            title: { text: `13B. Collision Probability log₁₀(P_c) & B-Plane Miss Distance vs. CAM Impulse ΔV [cm/s]`, font: { color: '#e2e8f0', size: 12.5 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 58, r: 58, b: 48, t: 40 },
+            xaxis: { title: 'Tangential Phasing CAM Impulse ΔV_CAM [cm/s]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Collision Probability log₁₀(P_c) [-]', titlefont: { color: '#ff5252' }, tickfont: { color: '#ff5252' }, gridcolor: '#222d42', range: [-15.2, -2.5] },
+            yaxis2: { title: 'B-Plane Separation Distance [m]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, overlaying: 'y', side: 'right', showgrid: false, range: [0, Math.max(...camMissM, 3000) * 1.1] },
+            shapes: [{
+                type: 'line',
+                x0: camInfo.req_dv_cam_cms, x1: camInfo.req_dv_cam_cms,
+                y0: -15.2, y1: -2.5,
+                line: { color: '#00e676', width: 1.5, dash: 'dot' }
+            }],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.2 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.02, y: 0.52 }
         }, { responsive: true, displaylogo: false });
 
         startAnimationLoop();
@@ -4858,6 +5147,142 @@
         };
     }
 
+    // =========================================================================
+    // SPRINT 19: IN-BROWSER SSA B-PLANE CONJUNCTION & CAM ENGINE
+    // =========================================================================
+    function computeFosterPc2DJS(xiM, zetaM, sigmaXiM, sigmaZetaM, hbrM) {
+        const sx = Math.max(1.0, sigmaXiM);
+        const sz = Math.max(1.0, sigmaZetaM);
+        const mah2 = (xiM * xiM) / (sx * sx) + (zetaM * zetaM) / (sz * sz);
+        const coeff = (hbrM * hbrM) / (2.0 * sx * sz);
+        const pc = coeff * Math.exp(-0.5 * mah2);
+        return Math.max(1e-18, Math.min(0.9999, pc));
+    }
+
+    function evaluateDebrisConjunctionAndCamJS(aTargKm, periodTargMin, finalMassKg, ispS, nominalMissM, leadOrbits, hbrM, sigmaXiM, sigmaZetaM) {
+        const debrisId = 'COSMOS-2251 DEB [NORAD #34454]';
+        const miss0 = Math.max(1.0, nominalMissM || 180.0);
+        const nRev  = Math.max(0.25, leadOrbits || 1.5);
+        const hbr   = Math.max(0.5, hbrM || 5.0);
+        const sx    = Math.max(10.0, sigmaXiM || 85.0);
+        const sz    = Math.max(20.0, sigmaZetaM || (160.0 + 10.0 * nRev));
+
+        const aKm = Math.max(R_EQ + 160.0, aTargKm || (R_EQ + 650.0));
+        const aM  = aKm * 1000.0;
+        const vOrbKms = Math.sqrt(MU / aKm);
+        const vOrbMs  = vOrbKms * 1000.0;
+
+        const psiEncRad = 114.0 * DEG2RAD;
+        const relVelKms = Math.max(3.0, Math.min(15.8, 2.0 * vOrbKms * Math.sin(0.5 * psiEncRad)));
+        const sinHalfPsi = Math.max(0.35, Math.min(0.98, relVelKms / Math.max(1.0, 2.0 * vOrbKms)));
+
+        const tcaLeadMin = nRev * (periodTargMin || 97.7);
+
+        const phi0Rad = 55.0 * DEG2RAD;
+        const preXiM   = miss0 * Math.cos(phi0Rad);
+        const preZetaM = miss0 * Math.sin(phi0Rad);
+        const prePc    = computeFosterPc2DJS(preXiM, preZetaM, sx, sz, hbr);
+        const preLog10 = Math.log10(prePc);
+        const preMahD  = Math.sqrt((preXiM * preXiM) / (sx * sx) + (preZetaM * preZetaM) / (sz * sz));
+
+        let alertStatus = 'GREEN NOMINAL (Pc < 1e-5) - MONITOR ONLY';
+        if (prePc >= 1e-4) {
+            alertStatus = 'RED ALERT (Pc > 1e-4) - CAM MANDATORY';
+        } else if (prePc >= 1e-5) {
+            alertStatus = 'YELLOW ADVISORY (Pc > 1e-5) - CAM RECOMMENDED';
+        }
+
+        const daPerDvMs = (2.0 * aM) / vOrbMs;
+        const dsIntrackPerDvMs = 3.0 * Math.PI * nRev * daPerDvMs;
+        const bplaneShiftPerDvMs = dsIntrackPerDvMs * sinHalfPsi;
+
+        const camDirAngle = 78.0 * DEG2RAD;
+        const ux = Math.cos(camDirAngle);
+        const uz = Math.sin(camDirAngle);
+
+        const targetSafeDistM = Math.max(2500.0, 5.4 * sz);
+        const reqShiftM = Math.max(300.0, targetSafeDistM - miss0);
+        let reqDvMs = reqShiftM / Math.max(100.0, bplaneShiftPerDvMs);
+
+        for (let iter = 0; iter < 40; iter++) {
+            const shiftM = reqDvMs * bplaneShiftPerDvMs;
+            const xiT = preXiM + shiftM * ux;
+            const zetaT = preZetaM + shiftM * uz;
+            const distT = Math.sqrt(xiT * xiT + zetaT * zetaT);
+            const pcT = computeFosterPc2DJS(xiT, zetaT, sx, sz, hbr);
+            const mahT = Math.sqrt((xiT * xiT) / (sx * sx) + (zetaT * zetaT) / (sz * sz));
+            if (distT >= 2500.0 && pcT < 1e-8 && mahT >= 5.0) break;
+            reqDvMs *= 1.06;
+        }
+
+        const reqDvCms = reqDvMs * 100.0;
+        const deltaAM  = daPerDvMs * reqDvMs;
+        const postShiftM = reqDvMs * bplaneShiftPerDvMs;
+        const postXiM   = preXiM + postShiftM * ux;
+        const postZetaM = preZetaM + postShiftM * uz;
+        const postMissM = Math.sqrt(postXiM * postXiM + postZetaM * postZetaM);
+        const postPc    = computeFosterPc2DJS(postXiM, postZetaM, sx, sz, hbr);
+        const postLog10 = Math.log10(postPc);
+        const postMahD  = Math.sqrt((postXiM * postXiM) / (sx * sx) + (postZetaM * postZetaM) / (sz * sz));
+
+        const scMass = Math.max(50.0, finalMassKg || 464.0);
+        const ispVal = Math.max(60.0, ispS || 316.0);
+        const camFuelG = scMass * (1.0 - Math.exp(-reqDvMs / (ispVal * G0))) * 1000.0;
+
+        const numPts = 50;
+        const maxDvCms = Math.max(25.0, reqDvCms * 1.65);
+        const camTradeoff = [];
+        for (let i = 0; i < numPts; i++) {
+            const frac = i / (numPts - 1);
+            const dvCms = frac * maxDvCms;
+            const dvMs  = dvCms / 100.0;
+            const sM    = dvMs * bplaneShiftPerDvMs;
+            const xiS   = preXiM + sM * ux;
+            const zetaS = preZetaM + sM * uz;
+            const missS = Math.sqrt(xiS * xiS + zetaS * zetaS);
+            const pcS   = computeFosterPc2DJS(xiS, zetaS, sx, sz, hbr);
+            camTradeoff.push({
+                dv_cam_cms: +dvCms.toFixed(2),
+                dv_cam_ms: +dvMs.toFixed(4),
+                xi_m: +xiS.toFixed(2),
+                zeta_m: +zetaS.toFixed(2),
+                miss_dist_m: +missS.toFixed(2),
+                pc: pcS,
+                log10_pc: +Math.max(-15.0, Math.log10(pcS)).toFixed(3)
+            });
+        }
+
+        return {
+            ssa_cam_summary: {
+                debris_id: debrisId,
+                rel_vel_kms: +relVelKms.toFixed(2),
+                hbr_m: +hbr.toFixed(2),
+                sigma_xi_m: +sx.toFixed(2),
+                sigma_zeta_m: +sz.toFixed(2),
+                lead_orbits: +nRev.toFixed(2),
+                tca_lead_time_min: +tcaLeadMin.toFixed(2),
+                pre_xi_m: +preXiM.toFixed(2),
+                pre_zeta_m: +preZetaM.toFixed(2),
+                pre_miss_m: +miss0.toFixed(2),
+                pre_pc: prePc,
+                pre_log10_pc: +preLog10.toFixed(3),
+                pre_mahalanobis_d: +preMahD.toFixed(2),
+                req_dv_cam_ms: +reqDvMs.toFixed(4),
+                req_dv_cam_cms: +reqDvCms.toFixed(2),
+                cam_fuel_g: +camFuelG.toFixed(2),
+                delta_a_m: +deltaAM.toFixed(2),
+                post_xi_m: +postXiM.toFixed(2),
+                post_zeta_m: +postZetaM.toFixed(2),
+                post_miss_m: +postMissM.toFixed(2),
+                post_pc: postPc,
+                post_log10_pc: +postLog10.toFixed(3),
+                post_mahalanobis_d: +postMahD.toFixed(2),
+                alert_status: alertStatus
+            },
+            cam_tradeoff: camTradeoff
+        };
+    }
+
     document.getElementById('btnRunCustomMission').addEventListener('click', function() {
         const mass0 = parseFloat(document.getElementById('inMass').value) || 500;
         const propParts = document.getElementById('inPropellant').value.split('|');
@@ -5142,6 +5567,16 @@
             ekfSigmaPosM, ekfSigmaVelMs, ekfInitSigM, ekfProcNoise
         );
 
+        // Sprint 19: Space Situational Awareness (SSA), B-Plane Conjunction & CAM
+        const camMissDistM  = Math.max(5.0,  Math.min(5000.0, parseFloat(document.getElementById('camMissDistM').value)   || 180.0));
+        const camLeadOrbits = Math.max(0.25, Math.min(15.0,   parseFloat(document.getElementById('camLeadOrbits').value)  || 1.5));
+        const camHbrM       = Math.max(0.5,  Math.min(50.0,   parseFloat(document.getElementById('camHbrM').value)        || 5.0));
+        const camSigmaZetaM = Math.max(20.0, Math.min(1500.0, parseFloat(document.getElementById('camSigmaZetaM').value) || 175.0));
+        const camRes        = evaluateDebrisConjunctionAndCamJS(
+            kepTarg.a, repTarget.period_min, finalMass, isp,
+            camMissDistM, camLeadOrbits, camHbrM, 85.0, camSigmaZetaM
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -5167,6 +5602,7 @@
             telecom_summary: rfRes.telecom_summary,
             systems_engineering: sysRes.systems_engineering,
             ekf_summary: ekfRes.ekf_summary,
+            ssa_cam_summary: camRes.ssa_cam_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -5174,7 +5610,8 @@
             traj_adcs: adcsRes.traj_adcs,
             traj_thermal: tcsRes.traj_thermal,
             traj_telecom: rfRes.traj_telecom,
-            traj_ekf: ekfRes.traj_ekf
+            traj_ekf: ekfRes.traj_ekf,
+            cam_tradeoff: camRes.cam_tradeoff
         };
 
         document.getElementById('inputModal').classList.remove('open');

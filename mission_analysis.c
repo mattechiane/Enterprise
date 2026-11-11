@@ -2324,3 +2324,152 @@ NavigationReport run_onboard_ekf_navigation(KeplerianElements orb_init,
 
     return nav;
 }
+
+// =========================================================================
+// 11. SPRINT 19: SPACE SITUATIONAL AWARENESS (SSA), B-PLANE CONJUNCTION & CAM
+// =========================================================================
+static double compute_foster_pc_2d(double xi_m, double zeta_m, double sigma_xi_m, double sigma_zeta_m, double hbr_m) {
+    double sx = fmax(1.0, sigma_xi_m);
+    double sz = fmax(1.0, sigma_zeta_m);
+    double mah2 = (xi_m * xi_m) / (sx * sx) + (zeta_m * zeta_m) / (sz * sz);
+    double coeff = (hbr_m * hbr_m) / (2.0 * sx * sz);
+    double pc = coeff * exp(-0.5 * mah2);
+    return adcs_clamp(pc, 1e-18, 0.9999);
+}
+
+CAMReport evaluate_debris_conjunction_and_cam(KeplerianElements orb_target,
+                                              OrbitReport rep_target,
+                                              OptimalTransferPlan plan,
+                                              ConjunctionEvent event,
+                                              double mu) {
+    CAMReport cam;
+    memset(&cam, 0, sizeof(CAMReport));
+
+    // Normalizzazione parametri evento di congiunzione al TCA (Time of Closest Approach)
+    if (event.debris_id[0] == '\0') {
+        snprintf(event.debris_id, sizeof(event.debris_id), "COSMOS-2251 DEB [NORAD #34454]");
+    }
+    if (event.nominal_miss_m < 1.0) event.nominal_miss_m = 180.0;
+    if (event.hbr_m <= 0.1)         event.hbr_m = 5.0;
+    if (event.lead_orbits < 0.25)   event.lead_orbits = 1.5;
+
+    double a_km = fmax(EARTH_RADIUS + 160.0, orb_target.a);
+    double a_m  = a_km * 1000.0;
+    double v_orb_kms = sqrt(mu / a_km);
+    double v_orb_ms  = v_orb_kms * 1000.0;
+
+    // Velocità relativa d'incontro LEO con detrito retrogrado/quasi-polare (i_deb ~ 74-98 deg)
+    // v_rel = 2 * v_orb * sin(psi_enc / 2) ~ 11.5 - 14.2 km/s in LEO
+    double psi_enc_rad = 114.0 * DEG2RAD;
+    if (event.rel_vel_kms <= 0.5) {
+        event.rel_vel_kms = adcs_clamp(2.0 * v_orb_kms * sin(0.5 * psi_enc_rad), 3.0, 15.8);
+    }
+    double sin_half_psi = adcs_clamp(event.rel_vel_kms / fmax(1.0, 2.0 * v_orb_kms), 0.35, 0.98);
+
+    // Semiasse ellisse di covarianza combinata 2D nel B-Plane (xi = cross-track, zeta = in-track projected)
+    if (event.sigma_xi_m <= 1.0)   event.sigma_xi_m   = 85.0;
+    if (event.sigma_zeta_m <= 1.0) event.sigma_zeta_m = 160.0 + 10.0 * event.lead_orbits;
+
+    cam.event = event;
+    cam.tca_lead_time_min = event.lead_orbits * rep_target.period_min;
+
+    // Geometria nominale Pre-CAM nel B-Plane (azimut phi_0 = 55 deg nel primo quadrante)
+    double phi0_rad = 55.0 * DEG2RAD;
+    cam.pre_xi_m   = event.nominal_miss_m * cos(phi0_rad);
+    cam.pre_zeta_m = event.nominal_miss_m * sin(phi0_rad);
+    cam.pre_miss_m = event.nominal_miss_m;
+
+    cam.pre_pc            = compute_foster_pc_2d(cam.pre_xi_m, cam.pre_zeta_m, event.sigma_xi_m, event.sigma_zeta_m, event.hbr_m);
+    cam.pre_log10_pc      = log10(cam.pre_pc);
+    cam.pre_mahalanobis_d = sqrt((cam.pre_xi_m * cam.pre_xi_m) / (event.sigma_xi_m * event.sigma_xi_m) +
+                                 (cam.pre_zeta_m * cam.pre_zeta_m) / (event.sigma_zeta_m * event.sigma_zeta_m));
+
+    if (cam.pre_pc >= 1e-4) {
+        snprintf(cam.alert_status, sizeof(cam.alert_status), "RED ALERT (Pc > 1e-4) - CAM MANDATORY");
+    } else if (cam.pre_pc >= 1e-5) {
+        snprintf(cam.alert_status, sizeof(cam.alert_status), "YELLOW ADVISORY (Pc > 1e-5) - CAM RECOMMENDED");
+    } else {
+        snprintf(cam.alert_status, sizeof(cam.alert_status), "GREEN NOMINAL (Pc < 1e-5) - MONITOR ONLY");
+    }
+
+    // Dinamica di Phasing In-Track per Collision Avoidance Maneuver (CAM):
+    // Delta_a = (2 * a / v_orb) * Delta_V_CAM  [m]
+    // Shift secolare lungo traccia dopo N_rev orbite: |delta_s| = 3 * pi * N_rev * Delta_a [m]
+    // Proiezione sul B-Plane (ortogonale a v_rel): |delta_B| = |delta_s| * sin(psi_enc / 2)
+    double da_per_dv_ms = (2.0 * a_m) / v_orb_ms; // [m per m/s]
+    double ds_intrack_per_dv_ms = 3.0 * PI * event.lead_orbits * da_per_dv_ms; // [m per m/s]
+    double bplane_shift_per_dv_ms = ds_intrack_per_dv_ms * sin_half_psi;
+
+    // Direzione di deflessione nel B-Plane (prevalentemente lungo l'asse zeta di phasing + componente xi)
+    double cam_dir_angle = 78.0 * DEG2RAD;
+    double ux = cos(cam_dir_angle);
+    double uz = sin(cam_dir_angle);
+
+    // Calcolo di Delta-V_CAM necessario per garantire contemporaneamente:
+    // 1) Distanza post-manovra d_safe >= 2500 m
+    // 2) Distanza di Mahalanobis >= 5.2 sigma (fuori dall'ellissoide 5-sigma)
+    // 3) Probabilità di collisione post-CAM P_c <= 1e-8 (< 1e-7 requisito ESA)
+    double target_safe_dist_m = fmax(2500.0, 5.4 * event.sigma_zeta_m);
+    double req_shift_m = fmax(300.0, target_safe_dist_m - cam.pre_miss_m);
+    double req_dv_ms = req_shift_m / fmax(100.0, bplane_shift_per_dv_ms);
+
+    // Verifica analitica e raffinamento su P_c < 1e-8 e d_safe >= 2500 m
+    for (int iter = 0; iter < 40; iter++) {
+        double shift_m = req_dv_ms * bplane_shift_per_dv_ms;
+        double xi_test   = cam.pre_xi_m   + shift_m * ux;
+        double zeta_test = cam.pre_zeta_m + shift_m * uz;
+        double dist_test = sqrt(xi_test * xi_test + zeta_test * zeta_test);
+        double pc_test   = compute_foster_pc_2d(xi_test, zeta_test, event.sigma_xi_m, event.sigma_zeta_m, event.hbr_m);
+        double mah_test  = sqrt((xi_test * xi_test) / (event.sigma_xi_m * event.sigma_xi_m) +
+                                (zeta_test * zeta_test) / (event.sigma_zeta_m * event.sigma_zeta_m));
+        if (dist_test >= 2500.0 && pc_test < 1e-8 && mah_test >= 5.0) {
+            break;
+        }
+        req_dv_ms *= 1.06;
+    }
+
+    cam.req_dv_cam_ms  = req_dv_ms;
+    cam.req_dv_cam_cms = req_dv_ms * 100.0;
+    cam.delta_a_m      = da_per_dv_ms * req_dv_ms;
+
+    double post_shift_m = req_dv_ms * bplane_shift_per_dv_ms;
+    cam.post_xi_m   = cam.pre_xi_m   + post_shift_m * ux;
+    cam.post_zeta_m = cam.pre_zeta_m + post_shift_m * uz;
+    cam.post_miss_m = sqrt(cam.post_xi_m * cam.post_xi_m + cam.post_zeta_m * cam.post_zeta_m);
+    cam.post_pc     = compute_foster_pc_2d(cam.post_xi_m, cam.post_zeta_m, event.sigma_xi_m, event.sigma_zeta_m, event.hbr_m);
+    cam.post_log10_pc = log10(cam.post_pc);
+    cam.post_mahalanobis_d = sqrt((cam.post_xi_m * cam.post_xi_m) / (event.sigma_xi_m * event.sigma_xi_m) +
+                                  (cam.post_zeta_m * cam.post_zeta_m) / (event.sigma_zeta_m * event.sigma_zeta_m));
+
+    // Consumo propellente in grammi (equazione di Tsiolkovsky per piccolo impulso sulla massa in orbita target)
+    double sc_mass_kg = fmax(50.0, plan.final_mass);
+    double isp_s      = fmax(60.0, plan.prop_info.isp);
+    cam.cam_fuel_g    = sc_mass_kg * (1.0 - exp(-req_dv_ms / (isp_s * G0))) * 1000.0;
+
+    // Generazione curva parametrica di Trade-Off CAM (50 campioni da 0 a 1.65 * req_dv_cam_cms)
+    int num_pts = 50;
+    cam.num_samples = num_pts;
+    double max_dv_cms = fmax(25.0, cam.req_dv_cam_cms * 1.65);
+
+    for (int i = 0; i < num_pts; i++) {
+        double frac = (double)i / (double)(num_pts - 1);
+        double dv_cms = frac * max_dv_cms;
+        double dv_ms  = dv_cms / 100.0;
+        double shift_m = dv_ms * bplane_shift_per_dv_ms;
+
+        double xi_s   = cam.pre_xi_m   + shift_m * ux;
+        double zeta_s = cam.pre_zeta_m + shift_m * uz;
+        double miss_s = sqrt(xi_s * xi_s + zeta_s * zeta_s);
+        double pc_s   = compute_foster_pc_2d(xi_s, zeta_s, event.sigma_xi_m, event.sigma_zeta_m, event.hbr_m);
+
+        cam.samples[i].dv_cam_cms  = dv_cms;
+        cam.samples[i].dv_cam_ms   = dv_ms;
+        cam.samples[i].xi_m        = xi_s;
+        cam.samples[i].zeta_m      = zeta_s;
+        cam.samples[i].miss_dist_m = miss_s;
+        cam.samples[i].pc          = pc_s;
+        cam.samples[i].log10_pc    = fmax(-15.0, log10(pc_s));
+    }
+
+    return cam;
+}

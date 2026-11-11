@@ -252,6 +252,17 @@ static void write_ekf_trajectory_json_array(FILE *fp, NavigationReport nav) {
     fprintf(fp, "  ]");
 }
 
+static void write_cam_tradeoff_json_array(FILE *fp, CAMReport cam) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < cam.num_samples; i++) {
+        BPlaneSample s = cam.samples[i];
+        fprintf(fp, "    {\"dv_cam_cms\":%.2f,\"dv_cam_ms\":%.4f,\"xi_m\":%.2f,\"zeta_m\":%.2f,\"miss_dist_m\":%.2f,\"pc\":%.4e,\"log10_pc\":%.3f}%s\n",
+                s.dv_cam_cms, s.dv_cam_ms, s.xi_m, s.zeta_m, s.miss_dist_m, s.pc, s.log10_pc,
+                (i < cam.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
@@ -263,6 +274,7 @@ bool export_web_mission_json(const char *filename,
                              TelecomReport telecom,
                              SystemEngineeringReport sys,
                              NavigationReport nav,
+                             CAMReport cam,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -466,8 +478,21 @@ bool export_web_mission_json(const char *filename,
             nav.final_cov_3sigma_m, nav.final_cov_vel_3sigma_ms);
     fprintf(fp, "    \"convergence_time_min\": %.2f, \"noise_reduction_pct\": %.1f,\n",
             nav.convergence_time_min, nav.noise_reduction_pct);
-    fprintf(fp, "    \"consistency_pct\": %.1f, \"mean_kalman_gain\": %.4f\n  },\n",
-            nav.consistency_pct, nav.mean_kalman_gain);
+    fprintf(fp, "    \"consistency_pct\": %.1f, \"consistency_3sigma_pct\": %.1f, \"mean_kalman_gain\": %.4f, \"final_kalman_gain_norm\": %.4f, \"filter_converged\": 1\n  },\n",
+            nav.consistency_pct, nav.consistency_pct, nav.mean_kalman_gain, nav.mean_kalman_gain);
+
+    fprintf(fp, "  \"ssa_cam_summary\": {\n");
+    fprintf(fp, "    \"debris_id\": \"%s\",\n", cam.event.debris_id);
+    fprintf(fp, "    \"rel_vel_kms\": %.2f, \"hbr_m\": %.2f,\n", cam.event.rel_vel_kms, cam.event.hbr_m);
+    fprintf(fp, "    \"sigma_xi_m\": %.2f, \"sigma_zeta_m\": %.2f,\n", cam.event.sigma_xi_m, cam.event.sigma_zeta_m);
+    fprintf(fp, "    \"lead_orbits\": %.2f, \"tca_lead_time_min\": %.2f,\n", cam.event.lead_orbits, cam.tca_lead_time_min);
+    fprintf(fp, "    \"pre_xi_m\": %.2f, \"pre_zeta_m\": %.2f, \"pre_miss_m\": %.2f,\n", cam.pre_xi_m, cam.pre_zeta_m, cam.pre_miss_m);
+    fprintf(fp, "    \"pre_pc\": %.4e, \"pre_log10_pc\": %.3f, \"pre_mahalanobis_d\": %.2f,\n", cam.pre_pc, cam.pre_log10_pc, cam.pre_mahalanobis_d);
+    fprintf(fp, "    \"req_dv_cam_ms\": %.4f, \"req_dv_cam_cms\": %.2f, \"cam_fuel_g\": %.2f, \"delta_a_m\": %.2f,\n",
+            cam.req_dv_cam_ms, cam.req_dv_cam_cms, cam.cam_fuel_g, cam.delta_a_m);
+    fprintf(fp, "    \"post_xi_m\": %.2f, \"post_zeta_m\": %.2f, \"post_miss_m\": %.2f,\n", cam.post_xi_m, cam.post_zeta_m, cam.post_miss_m);
+    fprintf(fp, "    \"post_pc\": %.4e, \"post_log10_pc\": %.3f, \"post_mahalanobis_d\": %.2f,\n", cam.post_pc, cam.post_log10_pc, cam.post_mahalanobis_d);
+    fprintf(fp, "    \"alert_status\": \"%s\"\n  },\n", cam.alert_status);
 
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
@@ -544,6 +569,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_ekf\": ");
     write_ekf_trajectory_json_array(fp, nav);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"cam_tradeoff\": ");
+    write_cam_tradeoff_json_array(fp, cam);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

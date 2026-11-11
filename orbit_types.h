@@ -488,6 +488,55 @@ typedef struct {
     EKFSample samples[MAX_EKF_SAMPLES];
 } NavigationReport;
 
+// ==========================================
+// 5H. SPRINT 19: SPACE SITUATIONAL AWARENESS (SSA), B-PLANE CONJUNCTION & CAM
+// ==========================================
+#define MAX_CAM_SAMPLES 60
+
+typedef struct {
+    char   debris_id[64];       // Identificativo oggetto catalogato NORAD/DISCOS (es. "COSMOS-2251 DEB [NORAD #34454]")
+    double nominal_miss_m;      // Nominal Miss Distance pre-manovra al TCA [m] (default 180.0 m)
+    double rel_vel_kms;         // Velocità relativa d'incontro al TCA v_rel [km/s]
+    double hbr_m;               // Combined Hard-Body Radius R_HBR = R_sat + R_debris [m] (default 5.0 m)
+    double sigma_xi_m;          // Semiasse 1-sigma covarianza combinata B-Plane asse xi [m]
+    double sigma_zeta_m;        // Semiasse 1-sigma covarianza combinata B-Plane asse zeta [m]
+    double lead_orbits;         // Anticipo esecuzione manovra CAM prima del TCA [orbite] (default 1.5 orbite)
+} ConjunctionEvent;
+
+typedef struct {
+    double dv_cam_cms;          // Impulso tangenziale CAM Delta-V [cm/s]
+    double dv_cam_ms;           // Impulso tangenziale CAM Delta-V [m/s]
+    double xi_m;                // Coordinata B-Plane xi al TCA [m]
+    double zeta_m;              // Coordinata B-Plane zeta al TCA [m]
+    double miss_dist_m;         // Distanza di separazione risultante nel B-Plane [m]
+    double pc;                  // Probabilità di collisione 2D di Foster/Alfriend P_c [-]
+    double log10_pc;            // Logaritmo in base 10 della probabilità di collisione log10(P_c)
+} BPlaneSample;
+
+typedef struct {
+    ConjunctionEvent event;
+    double tca_lead_time_min;   // Tempo di anticipo manovra prima del TCA [min]
+    double pre_xi_m;            // Coordinata nominale pre-CAM xi_0 nel B-Plane [m]
+    double pre_zeta_m;          // Coordinata nominale pre-CAM zeta_0 nel B-Plane [m]
+    double pre_miss_m;          // Miss Distance pre-CAM d_miss [m]
+    double pre_pc;              // Probabilità di collisione pre-CAM P_c [-]
+    double pre_log10_pc;        // log10(P_c) pre-CAM
+    double pre_mahalanobis_d;   // Distanza di Mahalanobis 2D pre-CAM [sigma]
+    double req_dv_cam_ms;       // Impulso tangenziale richiesto Delta-V_CAM [m/s]
+    double req_dv_cam_cms;      // Impulso tangenziale richiesto Delta-V_CAM [cm/s]
+    double cam_fuel_g;          // Propellente consumato per la CAM [grammi]
+    double delta_a_m;           // Variazione semiasse maggiore indotta dal phasing burn [m]
+    double post_xi_m;           // Coordinata post-CAM xi nel B-Plane [m]
+    double post_zeta_m;         // Coordinata post-CAM zeta nel B-Plane [m]
+    double post_miss_m;         // Distanza di sicurezza post-CAM nel B-Plane [m] (>= 2500 m)
+    double post_pc;             // Probabilità di collisione post-CAM P_c (< 1e-7)
+    double post_log10_pc;       // log10(P_c) post-CAM
+    double post_mahalanobis_d;  // Distanza di Mahalanobis 2D post-CAM [sigma] (>= 5 sigma)
+    char   alert_status[48];    // Stato allarme ESA/NASA ("RED ALERT", "YELLOW ADVISORY", "GREEN SAFE")
+    int    num_samples;         // Numero di campioni della curva di trade-off CAM
+    BPlaneSample samples[MAX_CAM_SAMPLES];
+} CAMReport;
+
 typedef struct {
     KeplerianElements initial_kep;
     double period_min;

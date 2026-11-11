@@ -122,4 +122,11 @@ NavigationReport run_onboard_ekf_navigation(KeplerianElements orb_init,
                                             const SpacecraftConfig *sc,
                                             double mu);
 
+// Sprint 19: Space Situational Awareness (SSA), B-Plane Conjunction Analysis & Collision Avoidance Maneuver (CAM)
+CAMReport evaluate_debris_conjunction_and_cam(KeplerianElements orb_target,
+                                              OrbitReport rep_target,
+                                              OptimalTransferPlan plan,
+                                              ConjunctionEvent event,
+                                              double mu);
+
 #endif // MISSION_ANALYSIS_H

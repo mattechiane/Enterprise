@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 18: ONBOARD GNSS & 6-DOF EKF FILTER    \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 19: SSA, B-PLANE CONJUNCTION & CAM     \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -103,6 +103,18 @@ int main(void) {
     };
     NavigationReport nav = run_onboard_ekf_navigation(orb_initial, orb_target, plan, ekf_spec, &sc, EARTH_MU);
 
+    // 11. SPRINT 19: SPACE SITUATIONAL AWARENESS (SSA), B-PLANE CONJUNCTION & CAM
+    ConjunctionEvent deb_event = {
+        .debris_id      = "COSMOS-2251 DEB [NORAD #34454]",
+        .nominal_miss_m = 180.0,  // Nominal Miss Distance pre-CAM al TCA [m]
+        .rel_vel_kms    = 0.0,    // Calcolato dinamicamente dalla velocità orbitale LEO (~12.4 km/s)
+        .hbr_m          = 5.0,    // Hard-Body Radius combinato R_sat + R_debris [m]
+        .sigma_xi_m     = 85.0,   // Semiasse 1-sigma B-Plane cross-track [m]
+        .sigma_zeta_m   = 175.0,  // Semiasse 1-sigma B-Plane along-track projected [m]
+        .lead_orbits    = 1.5     // Anticipo manovra di evitamento prima del TCA [orbite]
+    };
+    CAMReport cam = evaluate_debris_conjunction_and_cam(orb_target, rep_target, plan, deb_event, EARTH_MU);
+
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -193,10 +205,22 @@ int main(void) {
     printf("  * Filter Performance    : Noise Reduction = %.1f%% | Convergence = %.1f min | 3-Sigma Bound = %.1f%% (Final 3s = %.2f m)\n\n",
            nav.noise_reduction_pct, nav.convergence_time_min, nav.consistency_pct, nav.final_cov_3sigma_m);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Onboard EKF Navigation, Walker Constellation & All Subsystems!\n");
+    printf("[SPACE SITUATIONAL AWARENESS (SSA), B-PLANE CONJUNCTION & CAM]\n");
+    printf("  * Cataloged Secondary   : %s | v_rel = %.2f km/s | R_HBR = %.1f m\n",
+           cam.event.debris_id, cam.event.rel_vel_kms, cam.event.hbr_m);
+    printf("  * Pre-CAM B-Plane State : Miss = %.1f m (xi = %+.1f m, zeta = %+.1f m) | P_c = %.2e (log10 = %.2f)\n",
+           cam.pre_miss_m, cam.pre_xi_m, cam.pre_zeta_m, cam.pre_pc, cam.pre_log10_pc);
+    printf("  * ESA/NASA Alert Status : %s (Mahalanobis = %.2f sigma)\n",
+           cam.alert_status, cam.pre_mahalanobis_d);
+    printf("  * Optimal Phasing CAM   : dV_CAM = %.2f cm/s (%.4f m/s) at -%.1f orbits (-%.1f min) | Fuel = %.2f g\n",
+           cam.req_dv_cam_cms, cam.req_dv_cam_ms, cam.event.lead_orbits, cam.tca_lead_time_min, cam.cam_fuel_g);
+    printf("  * Post-CAM Safe State   : Separation = %.1f m (%.1f sigma) | Post-CAM P_c = %.2e (< 1e-7 SAFE)\n\n",
+           cam.post_miss_m, cam.post_mahalanobis_d, cam.post_pc);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with SSA B-Plane Conjunction, CAM & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;
