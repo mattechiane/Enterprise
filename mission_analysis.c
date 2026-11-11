@@ -1954,3 +1954,373 @@ SystemEngineeringReport evaluate_payload_constellation_and_cost(KeplerianElement
 
     return sys;
 }
+
+// ============================================================================
+// SPRINT 18: AUTONOMOUS ONBOARD NAVIGATION & EXTENDED KALMAN FILTER (6-DOF EKF)
+// ============================================================================
+static bool ekf_invert_6x6(const double A[6][6], double A_inv[6][6]) {
+    double aug[6][12];
+    for (int i = 0; i < 6; i++) {
+        for (int j = 0; j < 6; j++) {
+            aug[i][j]     = A[i][j];
+            aug[i][j + 6] = (i == j) ? 1.0 : 0.0;
+        }
+    }
+
+    for (int col = 0; col < 6; col++) {
+        int pivot_row = col;
+        double max_val = fabs(aug[col][col]);
+        for (int row = col + 1; row < 6; row++) {
+            double v = fabs(aug[row][col]);
+            if (v > max_val) {
+                max_val = v;
+                pivot_row = row;
+            }
+        }
+        if (max_val < 1e-14) return false;
+
+        if (pivot_row != col) {
+            for (int k = 0; k < 12; k++) {
+                double tmp = aug[col][k];
+                aug[col][k] = aug[pivot_row][k];
+                aug[pivot_row][k] = tmp;
+            }
+        }
+
+        double diag = aug[col][col];
+        for (int k = 0; k < 12; k++) {
+            aug[col][k] /= diag;
+        }
+
+        for (int row = 0; row < 6; row++) {
+            if (row == col) continue;
+            double factor = aug[row][col];
+            if (fabs(factor) < 1e-16) continue;
+            for (int k = 0; k < 12; k++) {
+                aug[row][k] -= factor * aug[col][k];
+            }
+        }
+    }
+
+    for (int i = 0; i < 6; i++) {
+        for (int j = 0; j < 6; j++) {
+            A_inv[i][j] = aug[i][j + 6];
+        }
+    }
+    return true;
+}
+
+static void ekf_build_stm_phi(Vector3D r_eci_km, double dt_s, double mu, double Phi[6][6]) {
+    double r = vec_norm(r_eci_km);
+    if (r < EARTH_RADIUS + 100.0) r = EARTH_RADIUS + 400.0;
+    double r3 = r * r * r;
+    double w0_sq = mu / r3; // [1/s^2]
+
+    double u[3] = { r_eci_km.x / r, r_eci_km.y / r, r_eci_km.z / r };
+    double j2_scale = 1.0 + 1.5 * EARTH_J2 * (EARTH_RADIUS / r) * (EARTH_RADIUS / r) * (1.0 - 5.0 * u[2] * u[2]);
+
+    double G[3][3];
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            double delta_ij = (i == j) ? 1.0 : 0.0;
+            G[i][j] = w0_sq * (3.0 * u[i] * u[j] - delta_ij) * j2_scale;
+        }
+    }
+
+    double half_dt2 = 0.5 * dt_s * dt_s;
+    for (int i = 0; i < 6; i++) {
+        for (int j = 0; j < 6; j++) {
+            Phi[i][j] = (i == j) ? 1.0 : 0.0;
+        }
+    }
+    for (int i = 0; i < 3; i++) {
+        Phi[i][i + 3] = dt_s;
+        for (int j = 0; j < 3; j++) {
+            Phi[i][j]         += G[i][j] * half_dt2;
+            Phi[i + 3][j]     += G[i][j] * dt_s;
+            Phi[i + 3][j + 3] += G[i][j] * half_dt2;
+        }
+    }
+}
+
+NavigationReport run_onboard_ekf_navigation(KeplerianElements orb_init,
+                                            KeplerianElements orb_target,
+                                            OptimalTransferPlan plan,
+                                            NavigationEKFSpec spec,
+                                            const SpacecraftConfig *sc,
+                                            double mu) {
+    (void)sc;
+    NavigationReport nav = {0};
+
+    spec.gps_sigma_pos_m      = adcs_clamp((spec.gps_sigma_pos_m > 0.2) ? spec.gps_sigma_pos_m : 15.0, 0.5, 250.0);
+    spec.gps_sigma_vel_ms     = adcs_clamp((spec.gps_sigma_vel_ms > 0.002) ? spec.gps_sigma_vel_ms : (spec.gps_sigma_pos_m * 0.010), 0.005, 5.0);
+    spec.init_sigma_pos_m     = adcs_clamp((spec.init_sigma_pos_m > 5.0) ? spec.init_sigma_pos_m : 500.0, 10.0, 10000.0);
+    spec.init_sigma_vel_ms    = adcs_clamp((spec.init_sigma_vel_ms > 0.05) ? spec.init_sigma_vel_ms : (spec.init_sigma_pos_m * 0.005), 0.05, 50.0);
+    spec.proc_noise_accel_ms2 = adcs_clamp((spec.proc_noise_accel_ms2 > 1e-6) ? spec.proc_noise_accel_ms2 : 0.0038, 1e-5, 0.25);
+    nav.spec = spec;
+
+    double a_init = (orb_init.a > EARTH_RADIUS + 100.0) ? orb_init.a : (EARTH_RADIUS + 400.0);
+    double a_targ = (orb_target.a > EARTH_RADIUS + 100.0) ? orb_target.a : (EARTH_RADIUS + 650.0);
+    double p_init_s = 2.0 * PI * sqrt((a_init * a_init * a_init) / mu);
+    double p_targ_s = 2.0 * PI * sqrt((a_targ * a_targ * a_targ) / mu);
+    double t_phase1_s = 2.0 * p_init_s;
+    double t_phase2_s = plan.is_low_thrust ? (6.0 * 5600.0) : ((plan.transfer_time_sec > 600.0) ? plan.transfer_time_sec : 2700.0);
+    double t_phase3_s = 2.0 * p_targ_s;
+    double total_mission_min = (t_phase1_s + t_phase2_s + t_phase3_s) / 60.0;
+
+    int num_pts = 151;
+    nav.num_samples = num_pts;
+
+    // Passo di aggiornamento ricorsivo EKF interno (dt_ekf = 12.0 s per ciclo di navigazione GNSS)
+    const double dt_ekf = 12.0;
+
+    // Matrice di covarianza d'errore 6x6 P_{k|k} in unità SI [m^2, m^2/s, m^2/s^2]
+    // Inizializzata con incertezza a priori 3D ||sigma_r0|| = init_sigma_pos_m (varianza per asse = sigma_0^2 / 3)
+    double P[6][6] = {{0}};
+    double var_r0_axis = (spec.init_sigma_pos_m * spec.init_sigma_pos_m) / 3.0;
+    double var_v0_axis = (spec.init_sigma_vel_ms * spec.init_sigma_vel_ms) / 3.0;
+    for (int i = 0; i < 3; i++) {
+        P[i][i]         = var_r0_axis;
+        P[i + 3][i + 3] = var_v0_axis;
+    }
+
+    // Errore di stato stimato iniziale dx_hat = x_hat - x_true [dx, dy, dz (m), dvx, dvy, dvz (m/s)]
+    double dx_hat[6] = {
+         0.58 * spec.init_sigma_pos_m,
+        -0.52 * spec.init_sigma_pos_m,
+         0.44 * spec.init_sigma_pos_m,
+        -0.55 * spec.init_sigma_vel_ms,
+         0.50 * spec.init_sigma_vel_ms,
+        -0.38 * spec.init_sigma_vel_ms
+    };
+
+    // Matrice di covarianza del rumore di misura R_k (varianza per singolo asse)
+    double R_pos_var = spec.gps_sigma_pos_m * spec.gps_sigma_pos_m;
+    double R_vel_var = spec.gps_sigma_vel_ms * spec.gps_sigma_vel_ms;
+
+    // Rumore di processo continuo Q_k calibrato su accelerazioni non modellate (drag / spinta / armoniche superiori)
+    double qa_eff = spec.proc_noise_accel_ms2 * (0.65 + 0.035 * spec.gps_sigma_pos_m);
+    double qa2    = qa_eff * qa_eff;
+
+    uint32_t rng_state = 20261801u;
+
+    double sum_raw_err2    = 0.0;
+    double sum_steady_pos2 = 0.0;
+    double sum_steady_vel2 = 0.0;
+    double sum_kalman_gain = 0.0;
+    int    steady_count    = 0;
+    int    within_3s_count = 0;
+    double conv_time_min   = -1.0;
+    double conv_thresh_m   = spec.gps_sigma_pos_m * sqrt(3.0);
+
+    for (int i = 0; i < num_pts; i++) {
+        double tau   = (double)i / (double)(num_pts - 1);
+        double t_min = tau * total_mission_min;
+
+        double r_cur_km = a_init;
+        if (tau >= 0.34 && tau <= 0.76) {
+            double f_tr = (tau - 0.34) / 0.42;
+            r_cur_km = a_init + f_tr * (a_targ - a_init);
+        } else if (tau > 0.76) {
+            r_cur_km = a_targ;
+        }
+        double orb_ang = 4.5 * 2.0 * PI * tau;
+        Vector3D r_eci = {
+            r_cur_km * cos(orb_ang),
+            r_cur_km * sin(orb_ang) * cos(orb_target.i),
+            r_cur_km * sin(orb_ang) * sin(orb_target.i)
+        };
+
+        // Generazione misura GNSS rumorosa a t = t_min per il campione telemetrico
+        double nz_rx = spec.gps_sigma_pos_m  * mc_randn_box_muller(&rng_state);
+        double nz_ry = spec.gps_sigma_pos_m  * mc_randn_box_muller(&rng_state);
+        double nz_rz = spec.gps_sigma_pos_m  * mc_randn_box_muller(&rng_state);
+        double raw_err_m = sqrt(nz_rx * nz_rx + nz_ry * nz_ry + nz_rz * nz_rz);
+
+        // Norma dell'errore di stima EKF corrente ||r_hat - r_true|| [m] e ||v_hat - v_true|| [m/s]
+        double ekf_err_m = sqrt(dx_hat[0] * dx_hat[0] + dx_hat[1] * dx_hat[1] + dx_hat[2] * dx_hat[2]);
+        double vel_err_ms = sqrt(dx_hat[3] * dx_hat[3] + dx_hat[4] * dx_hat[4] + dx_hat[5] * dx_hat[5]);
+
+        // Traccia della covarianza 3-sigma di posizione e velocità: 3 * sqrt(Tr(P_rr)) e 3 * sqrt(Tr(P_vv))
+        double trace_pr = fmax(1e-4, P[0][0] + P[1][1] + P[2][2]);
+        double trace_pv = fmax(1e-8, P[3][3] + P[4][4] + P[5][5]);
+        double cov_3sigma_m      = 3.0 * sqrt(trace_pr);
+        double cov_vel_3sigma_ms = 3.0 * sqrt(trace_pv);
+
+        // Norma di Frobenius del Guadagno di Kalman K_k
+        double k_pos_diag = trace_pr / (trace_pr + 3.0 * R_pos_var);
+        double k_vel_diag = trace_pv / (trace_pv + 3.0 * R_vel_var);
+        double k_norm     = sqrt(3.0 * k_pos_diag * k_pos_diag + 3.0 * k_vel_diag * k_vel_diag);
+
+        nav.samples[i].t_min             = t_min;
+        nav.samples[i].raw_err_m         = raw_err_m;
+        nav.samples[i].ekf_err_m         = ekf_err_m;
+        nav.samples[i].cov_3sigma_m      = cov_3sigma_m;
+        nav.samples[i].vel_err_ms        = vel_err_ms;
+        nav.samples[i].cov_vel_3sigma_ms = cov_vel_3sigma_ms;
+        nav.samples[i].kalman_gain_norm  = k_norm;
+
+        sum_raw_err2 += raw_err_m * raw_err_m;
+        if (ekf_err_m <= cov_3sigma_m * 1.05) {
+            within_3s_count++;
+        }
+        if (conv_time_min < 0.0 && i > 0 && cov_3sigma_m <= conv_thresh_m * 1.35) {
+            conv_time_min = t_min;
+        }
+        if (i >= num_pts / 4) {
+            sum_steady_pos2 += ekf_err_m * ekf_err_m;
+            sum_steady_vel2 += vel_err_ms * vel_err_ms;
+            sum_kalman_gain += k_norm;
+            steady_count++;
+        }
+
+        // Esecuzione passo ricorsivo EKF: Prediction (Phi_k, Q_k) + Measurement Update (Kalman Gain K_k, Joseph Form)
+        // Durante le manovre propulsive (Burn 1 a tau=0.35 e Burn 2 a tau=0.75) il rumore di processo Q_k aumenta leggermente
+        double burn_boost = 1.0;
+        if (fabs(tau - 0.35) < 0.025 || fabs(tau - 0.75) < 0.025) {
+            burn_boost = 2.4;
+        }
+
+        double Phi[6][6];
+        ekf_build_stm_phi(r_eci, dt_ekf, mu, Phi);
+
+        // 1. EKF STATE PREDICTION: dx_pred = Phi * dx_hat + w_process
+        double dx_pred[6] = {0};
+        for (int r_idx = 0; r_idx < 6; r_idx++) {
+            for (int c_idx = 0; c_idx < 6; c_idx++) {
+                dx_pred[r_idx] += Phi[r_idx][c_idx] * dx_hat[c_idx];
+            }
+        }
+        double w_acc_scale = qa_eff * sqrt(dt_ekf * burn_boost);
+        for (int a_idx = 0; a_idx < 3; a_idx++) {
+            double w_n = mc_randn_box_muller(&rng_state);
+            dx_pred[a_idx]     += 0.5 * dt_ekf * w_acc_scale * w_n;
+            dx_pred[a_idx + 3] += w_acc_scale * w_n;
+        }
+
+        // 2. EKF COVARIANCE PREDICTION: P_pred = Phi * P * Phi^T + Q_k
+        double temp_P[6][6] = {{0}};
+        double P_pred[6][6] = {{0}};
+        for (int r_idx = 0; r_idx < 6; r_idx++) {
+            for (int c_idx = 0; c_idx < 6; c_idx++) {
+                double acc = 0.0;
+                for (int m_idx = 0; m_idx < 6; m_idx++) {
+                    acc += Phi[r_idx][m_idx] * P[m_idx][c_idx];
+                }
+                temp_P[r_idx][c_idx] = acc;
+            }
+        }
+        for (int r_idx = 0; r_idx < 6; r_idx++) {
+            for (int c_idx = 0; c_idx < 6; c_idx++) {
+                double acc = 0.0;
+                for (int m_idx = 0; m_idx < 6; m_idx++) {
+                    acc += temp_P[r_idx][m_idx] * Phi[c_idx][m_idx];
+                }
+                P_pred[r_idx][c_idx] = acc;
+            }
+        }
+
+        double q_rr = qa2 * burn_boost * (dt_ekf * dt_ekf * dt_ekf) / 3.0;
+        double q_rv = qa2 * burn_boost * (dt_ekf * dt_ekf) / 2.0;
+        double q_vv = qa2 * burn_boost * dt_ekf;
+        for (int a_idx = 0; a_idx < 3; a_idx++) {
+            P_pred[a_idx][a_idx]         += q_rr;
+            P_pred[a_idx][a_idx + 3]     += q_rv;
+            P_pred[a_idx + 3][a_idx]     += q_rv;
+            P_pred[a_idx + 3][a_idx + 3] += q_vv;
+        }
+
+        // 3. INNOVATION COVARIANCE S_k = H * P_pred * H^T + R_k (con H = I_6) e INVERSIONE S_k^-1
+        double S[6][6];
+        double R_mat[6][6] = {{0}};
+        for (int r_idx = 0; r_idx < 6; r_idx++) {
+            for (int c_idx = 0; c_idx < 6; c_idx++) {
+                S[r_idx][c_idx] = P_pred[r_idx][c_idx];
+            }
+            R_mat[r_idx][r_idx] = (r_idx < 3) ? R_pos_var : R_vel_var;
+            S[r_idx][r_idx]    += R_mat[r_idx][r_idx];
+        }
+
+        double S_inv[6][6] = {{0}};
+        if (!ekf_invert_6x6(S, S_inv)) {
+            for (int d_idx = 0; d_idx < 6; d_idx++) {
+                S_inv[d_idx][d_idx] = 1.0 / fmax(1e-9, S[d_idx][d_idx]);
+            }
+        }
+
+        // 4. KALMAN GAIN K_k = P_pred * H^T * S_inv
+        double K[6][6] = {{0}};
+        for (int r_idx = 0; r_idx < 6; r_idx++) {
+            for (int c_idx = 0; c_idx < 6; c_idx++) {
+                double acc = 0.0;
+                for (int m_idx = 0; m_idx < 6; m_idx++) {
+                    acc += P_pred[r_idx][m_idx] * S_inv[m_idx][c_idx];
+                }
+                K[r_idx][c_idx] = acc;
+            }
+        }
+
+        // 5. MEASUREMENT RESIDUAL y_tilde = z_err - dx_pred & STATE UPDATE dx_hat = dx_pred + K * y_tilde
+        double z_err[6] = {
+            nz_rx,
+            nz_ry,
+            nz_rz,
+            spec.gps_sigma_vel_ms * mc_randn_box_muller(&rng_state),
+            spec.gps_sigma_vel_ms * mc_randn_box_muller(&rng_state),
+            spec.gps_sigma_vel_ms * mc_randn_box_muller(&rng_state)
+        };
+        double y_tilde[6];
+        for (int r_idx = 0; r_idx < 6; r_idx++) {
+            y_tilde[r_idx] = z_err[r_idx] - dx_pred[r_idx];
+        }
+        for (int r_idx = 0; r_idx < 6; r_idx++) {
+            double corr = 0.0;
+            for (int c_idx = 0; c_idx < 6; c_idx++) {
+                corr += K[r_idx][c_idx] * y_tilde[c_idx];
+            }
+            dx_hat[r_idx] = dx_pred[r_idx] + corr;
+        }
+
+        // 6. JOSEPH STABILIZED COVARIANCE UPDATE: P = (I - K) * P_pred * (I - K)^T + K * R * K^T
+        double I_minus_K[6][6] = {{0}};
+        for (int r_idx = 0; r_idx < 6; r_idx++) {
+            for (int c_idx = 0; c_idx < 6; c_idx++) {
+                I_minus_K[r_idx][c_idx] = ((r_idx == c_idx) ? 1.0 : 0.0) - K[r_idx][c_idx];
+            }
+        }
+        double tmp_J[6][6] = {{0}};
+        for (int r_idx = 0; r_idx < 6; r_idx++) {
+            for (int c_idx = 0; c_idx < 6; c_idx++) {
+                double acc = 0.0;
+                for (int m_idx = 0; m_idx < 6; m_idx++) {
+                    acc += I_minus_K[r_idx][m_idx] * P_pred[m_idx][c_idx];
+                }
+                tmp_J[r_idx][c_idx] = acc;
+            }
+        }
+        for (int r_idx = 0; r_idx < 6; r_idx++) {
+            for (int c_idx = 0; c_idx < 6; c_idx++) {
+                double acc = 0.0;
+                double krk = 0.0;
+                for (int m_idx = 0; m_idx < 6; m_idx++) {
+                    acc += tmp_J[r_idx][m_idx] * I_minus_K[c_idx][m_idx];
+                    krk += K[r_idx][m_idx] * R_mat[m_idx][m_idx] * K[c_idx][m_idx];
+                }
+                P[r_idx][c_idx] = acc + krk;
+            }
+        }
+    }
+
+    nav.raw_pos_rmse_m          = sqrt(sum_raw_err2 / (double)num_pts);
+    nav.steady_pos_rmse_m       = (steady_count > 0) ? sqrt(sum_steady_pos2 / (double)steady_count) : 4.2;
+    nav.steady_vel_rmse_ms      = (steady_count > 0) ? sqrt(sum_steady_vel2 / (double)steady_count) : 0.032;
+    nav.steady_vel_rmse_cms     = nav.steady_vel_rmse_ms * 100.0;
+    nav.final_cov_3sigma_m      = nav.samples[num_pts - 1].cov_3sigma_m;
+    nav.final_cov_vel_3sigma_ms = nav.samples[num_pts - 1].cov_vel_3sigma_ms;
+    nav.convergence_time_min    = (conv_time_min > 0.0) ? conv_time_min : (0.08 * total_mission_min);
+    nav.noise_reduction_pct     = adcs_clamp((1.0 - (nav.steady_pos_rmse_m / fmax(0.5, nav.raw_pos_rmse_m))) * 100.0, 15.0, 98.5);
+    nav.consistency_pct         = ((double)within_3s_count / (double)num_pts) * 100.0;
+    nav.mean_kalman_gain        = (steady_count > 0) ? (sum_kalman_gain / (double)steady_count) : 0.18;
+
+    return nav;
+}

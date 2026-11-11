@@ -449,6 +449,45 @@ typedef struct {
     double constellation_cost_meur;  // Costo Stimato Costellazione Completa Walker (con curva di Wright) [M€]
 } SystemEngineeringReport;
 
+// ==========================================
+// 5G. SPRINT 18: AUTONOMOUS ONBOARD NAVIGATION & EXTENDED KALMAN FILTER (EKF)
+// ==========================================
+#define MAX_EKF_SAMPLES 160
+
+typedef struct {
+    double gps_sigma_pos_m;      // Rumore di misura GNSS 1-sigma sulla posizione [m] (default 15.0 m)
+    double gps_sigma_vel_ms;     // Rumore di misura GNSS 1-sigma sulla velocità [m/s] (default 0.15 m/s)
+    double init_sigma_pos_m;     // Incertezza iniziale a priori 1-sigma sulla posizione sigma_(r,0) [m] (default 500.0 m)
+    double init_sigma_vel_ms;    // Incertezza iniziale a priori 1-sigma sulla velocità sigma_(v,0) [m/s] (default 2.50 m/s)
+    double proc_noise_accel_ms2; // Densità rumore di processo dinamico q_a (drag / J3..J4 non modellati) [m/s^2]
+} NavigationEKFSpec;
+
+typedef struct {
+    double t_min;              // Tempo di missione cumulativo [min]
+    double raw_err_m;          // Errore istantaneo della misura GNSS grezza ||z_r - r_true|| [m]
+    double ekf_err_m;          // Errore reale di posizione stimata dall'EKF ||r_hat - r_true|| [m]
+    double cov_3sigma_m;       // Inviluppo teorico 3-sigma di posizione 3 * sqrt(P_xx + P_yy + P_zz) [m]
+    double vel_err_ms;         // Errore reale di velocità stimata dall'EKF ||v_hat - v_true|| [m/s]
+    double cov_vel_3sigma_ms;  // Inviluppo teorico 3-sigma di velocità 3 * sqrt(P_vx + P_vy + P_vz) [m/s]
+    double kalman_gain_norm;   // Norma di Frobenius del Guadagno di Kalman ||K_k||
+} EKFSample;
+
+typedef struct {
+    NavigationEKFSpec spec;
+    double raw_pos_rmse_m;          // RMSE di posizione delle misure GNSS non filtrate [m]
+    double steady_pos_rmse_m;       // RMSE di posizione EKF a regime (Steady-State) [m]
+    double steady_vel_rmse_ms;      // RMSE di velocità EKF a regime (Steady-State) [m/s]
+    double steady_vel_rmse_cms;     // RMSE di velocità EKF a regime convertito in [cm/s]
+    double final_cov_3sigma_m;      // Limite teorico 3-sigma di posizione a fine missione [m]
+    double final_cov_vel_3sigma_ms; // Limite teorico 3-sigma di velocità a fine missione [m/s]
+    double convergence_time_min;    // Tempo di convergenza del filtro sotto la soglia 1-sigma GNSS [min]
+    double noise_reduction_pct;     // Fattore di attenuazione del rumore GNSS (1 - RMSE_ekf / RMSE_raw) [%]
+    double consistency_pct;         // Percentuale di campioni contenuti nell'inviluppo teorico 3-sigma [%]
+    double mean_kalman_gain;        // Norma media del Guadagno di Kalman a regime ||K_k||
+    int    num_samples;             // Numero di campioni temporali esportati nel profilo EKF
+    EKFSample samples[MAX_EKF_SAMPLES];
+} NavigationReport;
+
 typedef struct {
     KeplerianElements initial_kep;
     double period_min;

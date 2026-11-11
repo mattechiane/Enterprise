@@ -240,6 +240,18 @@ static void write_telecom_trajectory_json_array(FILE *fp, TelecomReport telecom)
     fprintf(fp, "  ]");
 }
 
+static void write_ekf_trajectory_json_array(FILE *fp, NavigationReport nav) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < nav.num_samples; i++) {
+        EKFSample s = nav.samples[i];
+        fprintf(fp, "    {\"t_min\":%.2f,\"raw_err_m\":%.2f,\"ekf_err_m\":%.2f,\"cov_3sigma_m\":%.2f,\"vel_err_ms\":%.4f,\"cov_vel_3sigma_ms\":%.4f,\"kalman_gain\":%.4f}%s\n",
+                s.t_min, s.raw_err_m, s.ekf_err_m, s.cov_3sigma_m,
+                s.vel_err_ms, s.cov_vel_3sigma_ms, s.kalman_gain_norm,
+                (i < nav.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
@@ -250,6 +262,7 @@ bool export_web_mission_json(const char *filename,
                              ThermalReport tcs,
                              TelecomReport telecom,
                              SystemEngineeringReport sys,
+                             NavigationReport nav,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -440,6 +453,22 @@ bool export_web_mission_json(const char *filename,
     }
     fprintf(fp, "    ]\n  },\n");
 
+    fprintf(fp, "  \"ekf_summary\": {\n");
+    fprintf(fp, "    \"gps_sigma_pos_m\": %.2f, \"gps_sigma_vel_ms\": %.3f,\n",
+            nav.spec.gps_sigma_pos_m, nav.spec.gps_sigma_vel_ms);
+    fprintf(fp, "    \"init_sigma_pos_m\": %.1f, \"init_sigma_vel_ms\": %.2f, \"proc_noise_accel_ms2\": %.5f,\n",
+            nav.spec.init_sigma_pos_m, nav.spec.init_sigma_vel_ms, nav.spec.proc_noise_accel_ms2);
+    fprintf(fp, "    \"raw_pos_rmse_m\": %.2f, \"steady_pos_rmse_m\": %.2f,\n",
+            nav.raw_pos_rmse_m, nav.steady_pos_rmse_m);
+    fprintf(fp, "    \"steady_vel_rmse_ms\": %.4f, \"steady_vel_rmse_cms\": %.2f,\n",
+            nav.steady_vel_rmse_ms, nav.steady_vel_rmse_cms);
+    fprintf(fp, "    \"final_cov_3sigma_m\": %.2f, \"final_cov_vel_3sigma_ms\": %.4f,\n",
+            nav.final_cov_3sigma_m, nav.final_cov_vel_3sigma_ms);
+    fprintf(fp, "    \"convergence_time_min\": %.2f, \"noise_reduction_pct\": %.1f,\n",
+            nav.convergence_time_min, nav.noise_reduction_pct);
+    fprintf(fp, "    \"consistency_pct\": %.1f, \"mean_kalman_gain\": %.4f\n  },\n",
+            nav.consistency_pct, nav.mean_kalman_gain);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -511,6 +540,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_telecom\": ");
     write_telecom_trajectory_json_array(fp, telecom);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_ekf\": ");
+    write_ekf_trajectory_json_array(fp, nav);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

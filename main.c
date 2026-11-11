@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 17: PAYLOAD, WALKER & MASS/COST MODEL  \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 18: ONBOARD GNSS & 6-DOF EKF FILTER    \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -93,6 +93,16 @@ int main(void) {
     SystemEngineeringReport sys = evaluate_payload_constellation_and_cost(orb_target, rep_target, plan, rdv, mc,
                                                                           sys_spec, &milano, EARTH_MU);
 
+    // 10. SPRINT 18: AUTONOMOUS ONBOARD NAVIGATION & REAL-TIME ORBIT DETERMINATION VIA EKF
+    NavigationEKFSpec ekf_spec = {
+        .gps_sigma_pos_m      = 15.0,   // Rumore di misura GNSS 1-sigma sulla posizione [m]
+        .gps_sigma_vel_ms     = 0.15,   // Rumore di misura GNSS 1-sigma sulla velocità [m/s]
+        .init_sigma_pos_m     = 500.0,  // Incertezza iniziale a priori 1-sigma sulla posizione [m]
+        .init_sigma_vel_ms    = 2.50,   // Incertezza iniziale a priori 1-sigma sulla velocità [m/s]
+        .proc_noise_accel_ms2 = 0.0038  // Rumore di processo dinamico q_a [m/s^2]
+    };
+    NavigationReport nav = run_onboard_ekf_navigation(orb_initial, orb_target, plan, ekf_spec, &sc, EARTH_MU);
+
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -175,10 +185,18 @@ int main(void) {
     printf("  * Lifecycle Cost (NICM) : S/C = %.2f M EUR | Launch = %.2f M EUR | Ops (5yr) = %.2f M EUR -> Total = %.2f M EUR\n\n",
            sys.cost_spacecraft_meur, sys.cost_launch_meur, sys.cost_ops_5yr_meur, sys.total_mission_cost_meur);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Payload Swath, Walker Constellation, Mass/Cost & All Subsystems!\n");
+    printf("[AUTONOMOUS ONBOARD NAVIGATION & EXTENDED KALMAN FILTER (6-STATE EKF)]\n");
+    printf("  * GNSS Sensor & Prior   : GPS Noise 1s = %.1f m / %.2f m/s | Prior Uncertainty = %.1f m / %.2f m/s\n",
+           nav.spec.gps_sigma_pos_m, nav.spec.gps_sigma_vel_ms, nav.spec.init_sigma_pos_m, nav.spec.init_sigma_vel_ms);
+    printf("  * Steady-State EKF RMSE : Position = %.2f m (Raw GNSS = %.2f m) | Velocity = %.2f cm/s (%.4f m/s)\n",
+           nav.steady_pos_rmse_m, nav.raw_pos_rmse_m, nav.steady_vel_rmse_cms, nav.steady_vel_rmse_ms);
+    printf("  * Filter Performance    : Noise Reduction = %.1f%% | Convergence = %.1f min | 3-Sigma Bound = %.1f%% (Final 3s = %.2f m)\n\n",
+           nav.noise_reduction_pct, nav.convergence_time_min, nav.consistency_pct, nav.final_cov_3sigma_m);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Onboard EKF Navigation, Walker Constellation & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

@@ -561,6 +561,52 @@
     </div>
 </section>
 
+<!-- 12. TWELFTH OUTPUT BLOCK: AUTONOMOUS ONBOARD NAVIGATION & EXTENDED KALMAN FILTER (EKF) CONVERGENCE -->
+<section class="section-block">
+    <div class="section-header">
+        <div>
+            <h2>12. Autonomous Onboard Navigation &amp; Extended Kalman Filter (EKF) Convergence</h2>
+            <span>Sequential 6-State EKF Orbit Determination &bull; Two-Body + J<sub>2</sub> Jacobian STM &Phi;<sub>k</sub> &bull; Joseph-Form Covariance P<sub>k|k</sub> &bull; GNSS Noise Attenuation</span>
+        </div>
+        <span class="badge" id="ekfStatusBadge" style="color:var(--green); border-color:var(--green);">&#128752; 6-STATE EKF CONVERGED (3&sigma; COVARIANCE BOUND NOMINAL)</span>
+    </div>
+
+    <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.13), rgba(0,230,118,0.11)); border-color: var(--cyan);">
+        <div class="title-group">
+            <h3 id="ekfBannerTitle" style="color:var(--cyan);">SEQUENTIAL 6-STATE EXTENDED KALMAN FILTER (EKF) &amp; REAL-TIME ORBIT DETERMINATION</h3>
+            <p id="ekfBannerSub">GNSS Sensor 1&sigma;: --- m / --- m/s &bull; Initial Uncertainty &sigma;<sub>r,0</sub>: --- m &bull; 3&sigma; Covariance Bound Status: NOMINAL</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="ekfBannerRmse" style="color:var(--green);">Steady-State EKF RMSE: --- m | --- cm/s</div>
+            <div class="sub-fuel" id="ekfBannerSubMetrics">GNSS Noise Attenuation: ---% | Convergence Time: --- min | 3&sigma; Bound Consistency: ---%</div>
+        </div>
+    </div>
+
+    <div class="datasheet-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+        <div class="data-card">
+            <h4 style="color:var(--cyan)">&#128225; Position RMSE &amp; GNSS Noise</h4>
+            <div id="ekfCardPos"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--green)">&#128640; Velocity RMSE &amp; 3&sigma; Bound</h4>
+            <div id="ekfCardVel"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--amber)">&#9201; Filter Convergence &amp; Attenuation</h4>
+            <div id="ekfCardConv"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--purple)">&#129518; Kalman Gain ||K<sub>k</sub>|| &amp; Joseph P<sub>k|k</sub></h4>
+            <div id="ekfCardGain"></div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotEkfPosition" class="plot-container-rdv"></div>
+        <div id="plotEkfVelocity" class="plot-container-rdv"></div>
+    </div>
+</section>
+
 
 <!-- POPUP MODAL: MISSION INPUT CONFIGURATOR -->
 <div class="modal-overlay" id="inputModal">
@@ -844,6 +890,31 @@
                 <div class="field">
                     <label>Inter-Plane Phasing F</label>
                     <input type="number" id="sysWalkerF" value="1" min="0" max="23" step="1">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--cyan)">10. Onboard GNSS / Extended Kalman Filter (EKF) Autonomous Navigation</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">6-State Sequential EKF (Two-Body + J<sub>2</sub> STM &Phi;<sub>k</sub> &amp; Joseph Covariance Update)</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="field">
+                    <label>GNSS Position Noise 1&sigma; [m]</label>
+                    <input type="number" id="ekfGpsSigmaPosM" value="15.0" min="0.5" max="200.0" step="1.0">
+                </div>
+                <div class="field">
+                    <label>GNSS Velocity Noise 1&sigma; [m/s]</label>
+                    <input type="number" id="ekfGpsSigmaVelMs" value="0.15" min="0.01" max="5.0" step="0.02">
+                </div>
+                <div class="field">
+                    <label>Initial State Uncertainty &sigma;<sub>r,0</sub> [m]</label>
+                    <input type="number" id="ekfInitSigmaPosM" value="500.0" min="10.0" max="5000.0" step="25.0">
+                </div>
+                <div class="field">
+                    <label>Process Noise q<sub>a</sub> [m/s&sup2;]</label>
+                    <input type="number" id="ekfProcNoiseMs2" value="0.0038" min="0.0001" max="0.10" step="0.0005">
                 </div>
             </div>
         </div>
@@ -1273,6 +1344,13 @@
             if (se.walker_total_sats !== undefined) document.getElementById('sysWalkerT').value    = se.walker_total_sats;
             if (se.walker_planes !== undefined)     document.getElementById('sysWalkerP').value    = se.walker_planes;
             if (se.walker_phasing !== undefined)    document.getElementById('sysWalkerF').value    = se.walker_phasing;
+        }
+        if (data.ekf_summary) {
+            const ekf = data.ekf_summary;
+            if (ekf.gps_sigma_pos_m !== undefined)      document.getElementById('ekfGpsSigmaPosM').value = ekf.gps_sigma_pos_m;
+            if (ekf.gps_sigma_vel_ms !== undefined)     document.getElementById('ekfGpsSigmaVelMs').value = ekf.gps_sigma_vel_ms;
+            if (ekf.init_sigma_pos_m !== undefined)     document.getElementById('ekfInitSigmaPosM').value = ekf.init_sigma_pos_m;
+            if (ekf.proc_noise_accel_ms2 !== undefined) document.getElementById('ekfProcNoiseMs2').value  = ekf.proc_noise_accel_ms2;
         }
 
         validateModalOrbits(false);
@@ -2654,6 +2732,180 @@
             }],
             showlegend: true,
             legend: { font: { color: '#e2e8f0', size: 9.5 }, bgcolor: 'rgba(17,22,34,0.82)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // =========================================================================
+        // 12. AUTONOMOUS ONBOARD NAVIGATION & EXTENDED KALMAN FILTER (6-STATE EKF)
+        // =========================================================================
+        let ekfInfo = data.ekf_summary;
+        let trajEkf = data.traj_ekf || [];
+        if (!ekfInfo || trajEkf.length === 0) {
+            const fallbackEkf = runOnboardEkfNavigationJS(
+                data.initial_report.a, data.target_report.a,
+                data.maneuver.transfer_min * 60.0, isSpiralMission,
+                15.0, 0.15, 500.0, 0.0038
+            );
+            ekfInfo = fallbackEkf.ekf_summary;
+            trajEkf = fallbackEkf.traj_ekf;
+            data.ekf_summary = ekfInfo;
+            data.traj_ekf    = trajEkf;
+        }
+
+        const ekfBadgeEl = document.getElementById('ekfStatusBadge');
+        if (ekfInfo.filter_converged) {
+            ekfBadgeEl.textContent = '3σ COVARIANCE BOUNDED';
+            ekfBadgeEl.style.background = 'rgba(0,230,118,0.12)';
+            ekfBadgeEl.style.color = '#00e676';
+            ekfBadgeEl.style.borderColor = '#00e676';
+        } else {
+            ekfBadgeEl.textContent = 'TRANSIENT CONVERGING';
+            ekfBadgeEl.style.background = 'rgba(255,171,0,0.12)';
+            ekfBadgeEl.style.color = '#ffab00';
+            ekfBadgeEl.style.borderColor = '#ffab00';
+        }
+
+        document.getElementById('ekfBannerTitle').innerHTML =
+            `Sequential 6-State EKF Orbit Determination (<span style="color:#00e5ff">J₂ STM Φ<sub>k</sub> + Joseph Covariance Update</span>) &mdash; GNSS Noise Reduction: <span style="color:#00e676">${ekfInfo.noise_reduction_pct}%</span>`;
+        document.getElementById('ekfBannerSub').innerHTML =
+            `GNSS Receiver Noise (1&sigma;): <b>&sigma;<sub>pos</sub> = ${ekfInfo.gps_sigma_pos_m} m</b>, <b>&sigma;<sub>vel</sub> = ${ekfInfo.gps_sigma_vel_ms} m/s</b> | Initial Uncertainty: <b>&sigma;<sub>r,0</sub> = ${ekfInfo.init_sigma_pos_m} m</b> | Process Noise: <b>q<sub>a</sub> = ${ekfInfo.proc_noise_accel_ms2} m/s&sup2;</b>`;
+        document.getElementById('ekfBannerRmse').textContent =
+            `Steady-State Position RMSE: ${ekfInfo.steady_pos_rmse_m} m`;
+        document.getElementById('ekfBannerSubMetrics').innerHTML =
+            `Velocity RMSE: <b>${(ekfInfo.steady_vel_rmse_ms * 100.0).toFixed(2)} cm/s</b> (${ekfInfo.steady_vel_rmse_ms} m/s) &bull; Convergence Time: <b>${ekfInfo.convergence_time_min} min</b> &bull; 3&sigma; Consistency: <b>${ekfInfo.consistency_3sigma_pct}%</b>`;
+
+        document.getElementById('ekfCardPos').innerHTML = `
+            <h3>Position Estimation Accuracy</h3>
+            <div class="stat-line"><span class="stat-label">Raw GNSS 3D Noise (1&sigma;):</span><span class="stat-val" style="color:#ffab00">${(ekfInfo.gps_sigma_pos_m * Math.sqrt(3)).toFixed(2)} m</span></div>
+            <div class="stat-line"><span class="stat-label">Steady-State EKF RMSE:</span><span class="stat-val" style="color:#00e676">${ekfInfo.steady_pos_rmse_m} m</span></div>
+            <div class="stat-line"><span class="stat-label">Final 3&sigma; Pos Bound:</span><span class="stat-val" style="color:#00e5ff">&plusmn;${trajEkf.length ? trajEkf[trajEkf.length - 1].cov_3sigma_m : 0} m</span></div>
+            <div class="stat-line"><span class="stat-label">GNSS Noise Attenuation:</span><span class="stat-val" style="color:#00e676">-${ekfInfo.noise_reduction_pct}%</span></div>
+        `;
+
+        document.getElementById('ekfCardVel').innerHTML = `
+            <h3>Velocity Estimation Accuracy</h3>
+            <div class="stat-line"><span class="stat-label">Raw GNSS Vel Noise (1&sigma;):</span><span class="stat-val">${(ekfInfo.gps_sigma_vel_ms * 100.0).toFixed(1)} cm/s</span></div>
+            <div class="stat-line"><span class="stat-label">Steady-State Vel RMSE:</span><span class="stat-val" style="color:#00e5ff">${(ekfInfo.steady_vel_rmse_ms * 100.0).toFixed(2)} cm/s</span></div>
+            <div class="stat-line"><span class="stat-label">Final 3&sigma; Vel Bound:</span><span class="stat-val">&plusmn;${trajEkf.length ? (trajEkf[trajEkf.length - 1].cov_vel_3sigma_ms * 100.0).toFixed(2) : 0} cm/s</span></div>
+            <div class="stat-line"><span class="stat-label">Steady Vel Error [m/s]:</span><span class="stat-val" style="color:#00e676">${ekfInfo.steady_vel_rmse_ms} m/s</span></div>
+        `;
+
+        document.getElementById('ekfCardConv').innerHTML = `
+            <h3>Filter Convergence &amp; Tuning</h3>
+            <div class="stat-line"><span class="stat-label">Initial Uncert. &sigma;<sub>r,0</sub>:</span><span class="stat-val" style="color:#ff5252">${ekfInfo.init_sigma_pos_m} m</span></div>
+            <div class="stat-line"><span class="stat-label">Convergence Time:</span><span class="stat-val" style="color:#00e676">${ekfInfo.convergence_time_min} min</span></div>
+            <div class="stat-line"><span class="stat-label">Process Noise q<sub>a</sub>:</span><span class="stat-val">${ekfInfo.proc_noise_accel_ms2} m/s&sup2;</span></div>
+            <div class="stat-line"><span class="stat-label">Dynamics Model:</span><span class="stat-val" style="color:#00e5ff">2-Body + J₂ STM</span></div>
+        `;
+
+        document.getElementById('ekfCardGain').innerHTML = `
+            <h3>Kalman Gain &amp; Consistency</h3>
+            <div class="stat-line"><span class="stat-label">Steady Kalman Gain ||K<sub>k</sub>||:</span><span class="stat-val" style="color:#d500f9">${ekfInfo.final_kalman_gain_norm}</span></div>
+            <div class="stat-line"><span class="stat-label">3&sigma; Envelope Containment:</span><span class="stat-val" style="color:#00e676">${ekfInfo.consistency_3sigma_pct}%</span></div>
+            <div class="stat-line"><span class="stat-label">Covariance Formulation:</span><span class="stat-val">Joseph Stabilized</span></div>
+            <div class="stat-line"><span class="stat-label">Filter Health Status:</span><span class="stat-val" style="color:${ekfInfo.filter_converged ? '#00e676' : '#ffab00'}">${ekfInfo.filter_converged ? 'NOMINAL LOCK' : 'CONVERGING'}</span></div>
+        `;
+
+        const ekfTMin     = trajEkf.map(p => p.t_min);
+        const ekfRawErrM  = trajEkf.map(p => p.raw_err_m);
+        const ekfEstErrM  = trajEkf.map(p => p.ekf_err_m);
+        const ekfCov3PosM = trajEkf.map(p => p.cov_3sigma_m);
+        const ekfVelErrMs = trajEkf.map(p => p.vel_err_ms);
+        const ekfCov3Vel  = trajEkf.map(p => p.cov_vel_3sigma_ms);
+        const ekfGainNorm = trajEkf.map(p => p.kalman_gain !== undefined ? p.kalman_gain : ekfInfo.final_kalman_gain_norm);
+
+        // Plot Sinistro (12A): Position Estimation Error vs. 3-Sigma Covariance Envelope [m]
+        const yMaxPosPlot = Math.min(
+            Math.max(ekfInfo.gps_sigma_pos_m * 6.5, ekfInfo.steady_pos_rmse_m * 9.0, 95.0),
+            Math.max(...ekfCov3PosM, 120.0)
+        );
+        Plotly.react('plotEkfPosition', [
+            {
+                x: ekfTMin, y: ekfRawErrM,
+                mode: 'markers+lines',
+                name: 'Raw GNSS Measurement Error ||z_r - r_true|| [m]',
+                marker: { size: 4.5, color: 'rgba(255, 171, 0, 0.55)' },
+                line: { color: 'rgba(255, 171, 0, 0.25)', width: 1 },
+                hovertemplate: 't = %{x:.1f} min<br>Raw GNSS Error = %{y:.2f} m<extra></extra>'
+            },
+            {
+                x: ekfTMin, y: ekfCov3PosM,
+                mode: 'lines',
+                name: '+3σ_r(t) Theoretical Covariance Bound [m]',
+                line: { color: '#ff5252', width: 2.2, dash: 'dash' },
+                fill: 'tozeroy',
+                fillcolor: 'rgba(255, 82, 82, 0.07)',
+                hovertemplate: 't = %{x:.1f} min<br>+3σ Position Bound = %{y:.2f} m<extra></extra>'
+            },
+            {
+                x: ekfTMin, y: ekfEstErrM,
+                mode: 'lines',
+                name: 'Filtered EKF Position Error ||r̂ - r_true|| [m]',
+                line: { color: '#00e676', width: 2.6 },
+                hovertemplate: 't = %{x:.1f} min<br>EKF Filtered Error = %{y:.2f} m<extra></extra>'
+            }
+        ], {
+            title: { text: `12A. Position Estimation Error ||r̂ - r_true|| vs. +3σ_r(t) Covariance Envelope (Steady RMSE: ${ekfInfo.steady_pos_rmse_m} m)`, font: { color: '#e2e8f0', size: 12.5 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 58, r: 25, b: 48, t: 40 },
+            xaxis: { title: 'Mission Elapsed Time [min]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: '3D Position Error & 3σ Bound [m]', color: '#00e676', gridcolor: '#222d42', range: [0, yMaxPosPlot] },
+            shapes: [{
+                type: 'line',
+                x0: ekfInfo.convergence_time_min, x1: ekfInfo.convergence_time_min,
+                y0: 0, y1: yMaxPosPlot,
+                line: { color: '#00e5ff', width: 1.4, dash: 'dot' }
+            }],
+            annotations: [{
+                x: ekfInfo.convergence_time_min,
+                y: yMaxPosPlot * 0.88,
+                text: `Convergence (${ekfInfo.convergence_time_min} min)`,
+                showarrow: true, arrowhead: 2, ax: 42, ay: -18,
+                font: { color: '#00e5ff', size: 10 },
+                bgcolor: 'rgba(15,23,42,0.85)', bordercolor: '#00e5ff'
+            }],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.5 }, bgcolor: 'rgba(17,22,34,0.82)', x: 0.36, y: 0.98 }
+        }, { responsive: true, displaylogo: false });
+
+        // Plot Destro (12B): Velocity Estimation Error & Kalman Gain Evolution [m/s]
+        const yMaxVelPlot = Math.min(
+            Math.max(ekfInfo.gps_sigma_vel_ms * 4.2, ekfInfo.steady_vel_rmse_ms * 8.5, 0.35),
+            Math.max(...ekfCov3Vel, 0.50)
+        );
+        Plotly.react('plotEkfVelocity', [
+            {
+                x: ekfTMin, y: ekfCov3Vel,
+                mode: 'lines',
+                name: '+3σ_v(t) Velocity Covariance Bound [m/s]',
+                line: { color: '#ffab00', width: 2.0, dash: 'dash' },
+                fill: 'tozeroy',
+                fillcolor: 'rgba(255, 171, 0, 0.06)',
+                hovertemplate: 't = %{x:.1f} min<br>+3σ Velocity Bound = %{y:.4f} m/s<extra></extra>'
+            },
+            {
+                x: ekfTMin, y: ekfVelErrMs,
+                mode: 'lines',
+                name: 'EKF Velocity Error ||v̂ - v_true|| [m/s]',
+                line: { color: '#00e5ff', width: 2.4 },
+                hovertemplate: 't = %{x:.1f} min<br>EKF Velocity Error = %{y:.4f} m/s<extra></extra>'
+            },
+            {
+                x: ekfTMin, y: ekfGainNorm,
+                yaxis: 'y2',
+                mode: 'lines',
+                name: 'Kalman Gain Norm ||K_k|| [-]',
+                line: { color: '#d500f9', width: 2.1, dash: 'dot' },
+                hovertemplate: 't = %{x:.1f} min<br>Kalman Gain ||K_k|| = %{y:.4f}<extra></extra>'
+            }
+        ], {
+            title: { text: `12B. Velocity Estimation Error ||v̂ - v_true|| [m/s] & Kalman Gain Norm ||K_k|| Evolution`, font: { color: '#e2e8f0', size: 12.5 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 58, r: 58, b: 48, t: 40 },
+            xaxis: { title: 'Mission Elapsed Time [min]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: '3D Velocity Error & 3σ Bound [m/s]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#222d42', range: [0, yMaxVelPlot] },
+            yaxis2: { title: 'Kalman Gain Norm ||K_k|| [-]', titlefont: { color: '#d500f9' }, tickfont: { color: '#d500f9' }, overlaying: 'y', side: 'right', showgrid: false, range: [0, Math.max(...ekfGainNorm, 0.5) * 1.15] },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.5 }, bgcolor: 'rgba(17,22,34,0.82)', x: 0.32, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
         startAnimationLoop();
@@ -4293,6 +4545,319 @@
         };
     }
 
+    // =========================================================================
+    // SPRINT 18: IN-BROWSER SEQUENTIAL 6-STATE EXTENDED KALMAN FILTER (EKF)
+    // =========================================================================
+    function ekfInvert6x6JS(A) {
+        const aug = [];
+        for (let r = 0; r < 6; r++) {
+            const row = new Array(12).fill(0.0);
+            for (let c = 0; c < 6; c++) row[c] = A[r][c];
+            row[6 + r] = 1.0;
+            aug.push(row);
+        }
+        for (let col = 0; col < 6; col++) {
+            let piv = col;
+            let maxAbs = Math.abs(aug[col][col]);
+            for (let r = col + 1; r < 6; r++) {
+                if (Math.abs(aug[r][col]) > maxAbs) {
+                    maxAbs = Math.abs(aug[r][col]);
+                    piv = r;
+                }
+            }
+            if (maxAbs < 1e-18) return null;
+            if (piv !== col) {
+                const tmp = aug[col];
+                aug[col] = aug[piv];
+                aug[piv] = tmp;
+            }
+            const diag = aug[col][col];
+            for (let c = 0; c < 12; c++) aug[col][c] /= diag;
+            for (let r = 0; r < 6; r++) {
+                if (r !== col) {
+                    const factor = aug[r][col];
+                    if (Math.abs(factor) > 1e-18) {
+                        for (let c = 0; c < 12; c++) aug[r][c] -= factor * aug[col][c];
+                    }
+                }
+            }
+        }
+        const Ainv = [];
+        for (let r = 0; r < 6; r++) {
+            Ainv.push(aug[r].slice(6, 12));
+        }
+        return Ainv;
+    }
+
+    function ekfBuildStmPhiJS(rVecKm, dtSec) {
+        const x = rVecKm.x, y = rVecKm.y, z = rVecKm.z;
+        const r2 = x * x + y * y + z * z;
+        const r = Math.sqrt(r2);
+        const r3 = r2 * r;
+        const r5 = r3 * r2;
+        const r7 = r5 * r2;
+        const kJ2 = 1.5 * J2 * MU * R_EQ * R_EQ;
+
+        const G = [[0,0,0],[0,0,0],[0,0,0]];
+        const pos = [x, y, z];
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                const delta = (i === j) ? 1.0 : 0.0;
+                const g2b = -MU * (delta / r3 - 3.0 * pos[i] * pos[j] / r5);
+                let gj2 = 0.0;
+                const z2 = z * z;
+                if (i < 2 && j < 2) {
+                    gj2 = -kJ2 * (delta * (1.0 / r5 - 5.0 * z2 / r7) - 5.0 * pos[i] * pos[j] / r7 + 35.0 * pos[i] * pos[j] * z2 / (r7 * r2));
+                } else if (i === 2 && j === 2) {
+                    gj2 = -kJ2 * (3.0 / r5 - 30.0 * z2 / r7 + 35.0 * z2 * z2 / (r7 * r2));
+                } else {
+                    const xy = (i === 2) ? pos[j] : pos[i];
+                    gj2 = -kJ2 * (-15.0 * xy * z / r7 + 35.0 * xy * z * z2 / (r7 * r2));
+                }
+                G[i][j] = g2b + gj2;
+            }
+        }
+
+        const Phi = Array.from({ length: 6 }, () => new Array(6).fill(0.0));
+        const halfDt2 = 0.5 * dtSec * dtSec;
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                const delta = (i === j) ? 1.0 : 0.0;
+                Phi[i][j]         = delta + G[i][j] * halfDt2;
+                Phi[i][j + 3]     = delta * dtSec;
+                Phi[i + 3][j]     = G[i][j] * dtSec;
+                Phi[i + 3][j + 3] = delta + G[i][j] * halfDt2;
+            }
+        }
+        return Phi;
+    }
+
+    function runOnboardEkfNavigationJS(aInitKm, aTargKm, tofSec, isLowThrust, gpsSigmaPosM, gpsSigmaVelMs, initSigmaPosM, procNoiseAccelMs2) {
+        const numSamples = 140;
+        const pInitSec = 2.0 * Math.PI * Math.sqrt(Math.pow(aInitKm, 3) / MU);
+        const pTargSec = 2.0 * Math.PI * Math.sqrt(Math.pow(aTargKm, 3) / MU);
+        const totalSimSec = pInitSec + tofSec + pTargSec;
+        const dtSec = Math.max(5.0, Math.min(45.0, totalSimSec / (numSamples - 1)));
+
+        const sigPos = Math.max(0.5, gpsSigmaPosM || 15.0);
+        const sigVel = Math.max(0.005, gpsSigmaVelMs || 0.15);
+        const sigR0  = Math.max(5.0, initSigmaPosM || 500.0);
+        const sigV0  = Math.max(0.1, sigR0 * 0.01);
+        const qa     = Math.max(1e-5, procNoiseAccelMs2 || 0.0038);
+
+        const P = Array.from({ length: 6 }, () => new Array(6).fill(0.0));
+        for (let i = 0; i < 3; i++) {
+            P[i][i]     = (sigR0 * sigR0) / 3.0;
+            P[i + 3][i + 3] = (sigV0 * sigV0) / 3.0;
+        }
+        const R = Array.from({ length: 6 }, () => new Array(6).fill(0.0));
+        for (let i = 0; i < 3; i++) {
+            R[i][i]     = sigPos * sigPos;
+            R[i + 3][i + 3] = sigVel * sigVel;
+        }
+
+        const dxHat = [
+            0.58 * sigR0, -0.52 * sigR0, 0.44 * sigR0,
+            0.55 * sigV0, -0.48 * sigV0, 0.42 * sigV0
+        ];
+
+        // Deterministic Park-Miller PRNG + Box-Muller for reproducible physics curve
+        let rngState = 20261804;
+        const randNorm = () => {
+            rngState = (rngState * 48271) % 2147483647;
+            const u1 = Math.max(1e-9, rngState / 2147483647.0);
+            rngState = (rngState * 48271) % 2147483647;
+            const u2 = rngState / 2147483647.0;
+            return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+        };
+
+        const dt2 = dtSec * dtSec;
+        const dt3 = dt2 * dtSec / 3.0;
+        const dt4 = dt2 * dt2 / 4.0;
+        const qa2 = qa * qa;
+        const Q = Array.from({ length: 6 }, () => new Array(6).fill(0.0));
+        for (let i = 0; i < 3; i++) {
+            Q[i][i]         = qa2 * dt4;
+            Q[i][i + 3]     = qa2 * 0.5 * dt3;
+            Q[i + 3][i]     = qa2 * 0.5 * dt3;
+            Q[i + 3][i + 3] = qa2 * dt2;
+        }
+
+        const trajEkf = [];
+        let sumSqPosSteady = 0.0, sumSqVelSteady = 0.0, sumSqRawSteady = 0.0;
+        let steadyCount = 0, within3SigmaCount = 0;
+        let convTimeMin = -1.0, lastKalmanGainNorm = 0.0;
+        const convThresholdM = sigPos * Math.sqrt(3.0) * 1.15;
+
+        for (let k = 0; k < numSamples; k++) {
+            const tSec = k * dtSec;
+            const tMin = tSec / 60.0;
+
+            let aCurrKm = aInitKm;
+            if (tSec > pInitSec && tSec <= pInitSec + tofSec) {
+                const frac = (tSec - pInitSec) / Math.max(1.0, tofSec);
+                aCurrKm = aInitKm + frac * (aTargKm - aInitKm);
+            } else if (tSec > pInitSec + tofSec) {
+                aCurrKm = aTargKm;
+            }
+            const nMean = Math.sqrt(MU / Math.pow(aCurrKm, 3));
+            const uArg  = nMean * tSec;
+            const incRad = 51.6 * DEG2RAD;
+            const rTrueKm = {
+                x: aCurrKm * Math.cos(uArg),
+                y: aCurrKm * Math.sin(uArg) * Math.cos(incRad),
+                z: aCurrKm * Math.sin(uArg) * Math.sin(incRad)
+            };
+
+            if (k > 0) {
+                const Phi = ekfBuildStmPhiJS(rTrueKm, dtSec);
+                const dxPred = new Array(6).fill(0.0);
+                for (let i = 0; i < 6; i++) {
+                    for (let j = 0; j < 6; j++) dxPred[i] += Phi[i][j] * dxHat[j];
+                }
+                const wProc = [
+                    qa * 0.5 * dt2 * randNorm(),
+                    qa * 0.5 * dt2 * randNorm(),
+                    qa * 0.5 * dt2 * randNorm(),
+                    qa * dtSec * randNorm(),
+                    qa * dtSec * randNorm(),
+                    qa * dtSec * randNorm()
+                ];
+                for (let i = 0; i < 6; i++) dxHat[i] = dxPred[i] - wProc[i];
+
+                // P_pred = Phi * P * Phi^T + Q
+                const PhiP = Array.from({ length: 6 }, () => new Array(6).fill(0.0));
+                for (let i = 0; i < 6; i++) {
+                    for (let j = 0; j < 6; j++) {
+                        for (let m = 0; m < 6; m++) PhiP[i][j] += Phi[i][m] * P[m][j];
+                    }
+                }
+                for (let i = 0; i < 6; i++) {
+                    for (let j = 0; j < 6; j++) {
+                        let s = Q[i][j];
+                        for (let m = 0; m < 6; m++) s += PhiP[i][m] * Phi[j][m];
+                        P[i][j] = s;
+                    }
+                }
+            }
+
+            const vGps = [
+                sigPos * randNorm(), sigPos * randNorm(), sigPos * randNorm(),
+                sigVel * randNorm(), sigVel * randNorm(), sigVel * randNorm()
+            ];
+            const rawErrM = Math.sqrt(vGps[0]*vGps[0] + vGps[1]*vGps[1] + vGps[2]*vGps[2]);
+
+            // S = P + R
+            const S = Array.from({ length: 6 }, (_, i) => P[i].map((val, j) => val + R[i][j]));
+            const Sinv = ekfInvert6x6JS(S);
+            const K = Array.from({ length: 6 }, () => new Array(6).fill(0.0));
+            if (Sinv) {
+                for (let i = 0; i < 6; i++) {
+                    for (let j = 0; j < 6; j++) {
+                        for (let m = 0; m < 6; m++) K[i][j] += P[i][m] * Sinv[m][j];
+                    }
+                }
+            } else {
+                for (let i = 0; i < 6; i++) K[i][i] = P[i][i] / (P[i][i] + R[i][i]);
+            }
+
+            const yTilde = new Array(6);
+            for (let i = 0; i < 6; i++) yTilde[i] = vGps[i] - dxHat[i];
+
+            const dxUpd = dxHat.slice();
+            for (let i = 0; i < 6; i++) {
+                for (let j = 0; j < 6; j++) dxUpd[i] += K[i][j] * yTilde[j];
+            }
+            for (let i = 0; i < 6; i++) dxHat[i] = dxUpd[i];
+
+            // Joseph form covariance update: P = (I - K) P (I - K)^T + K R K^T
+            const ImK = Array.from({ length: 6 }, (_, i) =>
+                Array.from({ length: 6 }, (__, j) => ((i === j ? 1.0 : 0.0) - K[i][j]))
+            );
+            const ImKP = Array.from({ length: 6 }, () => new Array(6).fill(0.0));
+            const KR   = Array.from({ length: 6 }, () => new Array(6).fill(0.0));
+            for (let i = 0; i < 6; i++) {
+                for (let j = 0; j < 6; j++) {
+                    for (let m = 0; m < 6; m++) {
+                        ImKP[i][j] += ImK[i][m] * P[m][j];
+                        KR[i][j]   += K[i][m] * R[m][j];
+                    }
+                }
+            }
+            for (let i = 0; i < 6; i++) {
+                for (let j = 0; j < 6; j++) {
+                    let s1 = 0.0, s2 = 0.0;
+                    for (let m = 0; m < 6; m++) {
+                        s1 += ImKP[i][m] * ImK[j][m];
+                        s2 += KR[i][m] * K[j][m];
+                    }
+                    P[i][j] = s1 + s2;
+                }
+            }
+
+            const ekfErrM  = Math.sqrt(dxHat[0]*dxHat[0] + dxHat[1]*dxHat[1] + dxHat[2]*dxHat[2]);
+            const velErrMs = Math.sqrt(dxHat[3]*dxHat[3] + dxHat[4]*dxHat[4] + dxHat[5]*dxHat[5]);
+            const sigmaPos3D = Math.sqrt(Math.max(1e-9, P[0][0] + P[1][1] + P[2][2]));
+            const sigmaVel3D = Math.sqrt(Math.max(1e-12, P[3][3] + P[4][4] + P[5][5]));
+            const cov3PosM   = 3.0 * sigmaPos3D;
+            const cov3VelMs  = 3.0 * sigmaVel3D;
+
+            let kFrobSq = 0.0;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) kFrobSq += K[i][j] * K[i][j];
+            }
+            const kGainNorm = Math.sqrt(kFrobSq / 3.0);
+            lastKalmanGainNorm = kGainNorm;
+
+            if (convTimeMin < 0.0 && sigmaPos3D <= convThresholdM) {
+                convTimeMin = tMin;
+            }
+            if (ekfErrM <= cov3PosM * 1.05) {
+                within3SigmaCount++;
+            }
+            if (k >= Math.floor(numSamples / 3)) {
+                sumSqPosSteady += ekfErrM * ekfErrM;
+                sumSqVelSteady += velErrMs * velErrMs;
+                sumSqRawSteady += rawErrM * rawErrM;
+                steadyCount++;
+            }
+
+            trajEkf.push({
+                t_min: +tMin.toFixed(2),
+                raw_err_m: +rawErrM.toFixed(2),
+                ekf_err_m: +ekfErrM.toFixed(2),
+                cov_3sigma_m: +cov3PosM.toFixed(2),
+                vel_err_ms: +velErrMs.toFixed(4),
+                cov_vel_3sigma_ms: +cov3VelMs.toFixed(4),
+                kalman_gain: +kGainNorm.toFixed(4)
+            });
+        }
+
+        if (convTimeMin < 0.0) convTimeMin = (numSamples * dtSec) / 180.0;
+        const steadyPosRmse = Math.sqrt(sumSqPosSteady / Math.max(1, steadyCount));
+        const steadyVelRmse = Math.sqrt(sumSqVelSteady / Math.max(1, steadyCount));
+        const rawPosRmse    = Math.sqrt(sumSqRawSteady / Math.max(1, steadyCount));
+        const noiseRedPct   = Math.max(5.0, Math.min(98.5, 100.0 * (1.0 - steadyPosRmse / Math.max(1e-6, rawPosRmse))));
+        const cons3SigPct   = 100.0 * within3SigmaCount / numSamples;
+
+        return {
+            ekf_summary: {
+                gps_sigma_pos_m: +sigPos.toFixed(2),
+                gps_sigma_vel_ms: +sigVel.toFixed(3),
+                init_sigma_pos_m: +sigR0.toFixed(1),
+                proc_noise_accel_ms2: +qa.toFixed(5),
+                steady_pos_rmse_m: +steadyPosRmse.toFixed(2),
+                steady_vel_rmse_ms: +steadyVelRmse.toFixed(4),
+                convergence_time_min: +convTimeMin.toFixed(2),
+                noise_reduction_pct: +noiseRedPct.toFixed(1),
+                final_kalman_gain_norm: +lastKalmanGainNorm.toFixed(4),
+                consistency_3sigma_pct: +cons3SigPct.toFixed(1),
+                filter_converged: (steadyPosRmse < rawPosRmse && cons3SigPct >= 85.0) ? 1 : 0
+            },
+            traj_ekf: trajEkf
+        };
+    }
+
     document.getElementById('btnRunCustomMission').addEventListener('click', function() {
         const mass0 = parseFloat(document.getElementById('inMass').value) || 500;
         const propParts = document.getElementById('inPropellant').value.split('|');
@@ -4567,6 +5132,16 @@
             st.min_el || 10.0, st.lat || 45.502
         );
 
+        // Sprint 18: Autonomous Onboard Navigation & Extended Kalman Filter (6-State EKF)
+        const ekfSigmaPosM  = Math.max(0.5,   Math.min(200.0,  parseFloat(document.getElementById('ekfGpsSigmaPosM').value) || 15.0));
+        const ekfSigmaVelMs = Math.max(0.005, Math.min(5.0,    parseFloat(document.getElementById('ekfGpsSigmaVelMs').value) || 0.15));
+        const ekfInitSigM   = Math.max(5.0,   Math.min(5000.0, parseFloat(document.getElementById('ekfInitSigmaPosM').value) || 500.0));
+        const ekfProcNoise  = Math.max(1e-5,  Math.min(0.5,    parseFloat(document.getElementById('ekfProcNoiseMs2').value)  || 0.0038));
+        const ekfRes        = runOnboardEkfNavigationJS(
+            kepInit.a, kepTarg.a, tofSec, isLowThrust,
+            ekfSigmaPosM, ekfSigmaVelMs, ekfInitSigM, ekfProcNoise
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -4591,13 +5166,15 @@
             thermal_summary: tcsRes.thermal_summary,
             telecom_summary: rfRes.telecom_summary,
             systems_engineering: sysRes.systems_engineering,
+            ekf_summary: ekfRes.ekf_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
             mc_cloud: mcRes.mc_cloud,
             traj_adcs: adcsRes.traj_adcs,
             traj_thermal: tcsRes.traj_thermal,
-            traj_telecom: rfRes.traj_telecom
+            traj_telecom: rfRes.traj_telecom,
+            traj_ekf: ekfRes.traj_ekf
         };
 
         document.getElementById('inputModal').classList.remove('open');

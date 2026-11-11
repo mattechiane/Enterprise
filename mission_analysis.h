@@ -114,4 +114,12 @@ SystemEngineeringReport evaluate_payload_constellation_and_cost(KeplerianElement
                                                                 const GroundStation *station,
                                                                 double mu);
 
+// Sprint 18: Autonomous Onboard Navigation & Real-Time Orbit Determination via Extended Kalman Filter (EKF)
+NavigationReport run_onboard_ekf_navigation(KeplerianElements orb_init,
+                                            KeplerianElements orb_target,
+                                            OptimalTransferPlan plan,
+                                            NavigationEKFSpec spec,
+                                            const SpacecraftConfig *sc,
+                                            double mu);
+
 #endif // MISSION_ANALYSIS_H
