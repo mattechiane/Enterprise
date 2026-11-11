@@ -104,4 +104,14 @@ TelecomReport evaluate_rf_link_budget(KeplerianElements orb_init,
                                       const GroundStation *station,
                                       double mu);
 
+// Sprint 17: Payload Sensor Swath, Walker Delta Constellation Coverage & Parametric Mission Cost/Mass Model
+SystemEngineeringReport evaluate_payload_constellation_and_cost(KeplerianElements orb_target,
+                                                                OrbitReport rep_target,
+                                                                OptimalTransferPlan plan,
+                                                                RendezvousPlan rdv,
+                                                                MonteCarloReport mc,
+                                                                PayloadAndConstellationSpec spec,
+                                                                const GroundStation *station,
+                                                                double mu);
+
 #endif // MISSION_ANALYSIS_H

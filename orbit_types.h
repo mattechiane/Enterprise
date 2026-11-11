@@ -380,6 +380,75 @@ typedef struct {
     LinkSample samples[MAX_TELECOM_SAMPLES];
 } TelecomReport;
 
+// ==========================================
+// 5F. SPRINT 17: PAYLOAD SENSOR SWATH, WALKER DELTA CONSTELLATION & MASS/COST MODEL
+// ==========================================
+#define MAX_WALKER_SATS 128
+
+typedef struct {
+    double lat_deg;      // Latitudine sub-satellitare a t = 0 [deg]
+    double lon_deg;      // Longitudine sub-satellitare a t = 0 [deg]
+    int    plane_id;     // Indice del piano orbitale p in [0, P-1]
+    int    sat_id;       // Indice globale del satellite in [0, T-1]
+    double raan_deg;     // Ascensione retta del nodo ascendente del piano [deg]
+    double arg_lat_deg;  // Argomento di latitudine u = omega + theta [deg]
+} WalkerSatPoint;
+
+typedef struct {
+    double half_fov_deg;       // Semiapertura angolare del sensore theta_(FOV/2) [deg] (default 25.0 deg)
+    double opt_aperture_m;     // Diametro apertura ottica D_opt [m] (default 0.35 m)
+    double wavelength_nm;      // Lunghezza d'onda operativa lambda [nm] (default 550.0 nm)
+    int    walker_total_sats;  // Numero totale di satelliti della costellazione T (default 24)
+    int    walker_planes;      // Numero di piani orbitali P (default 3)
+    int    walker_phasing;     // Parametro di fasatura inter-piano F (default 1)
+} PayloadAndConstellationSpec;
+
+typedef struct {
+    PayloadAndConstellationSpec spec;
+
+    // 1. Geometria Sensore Ottico/SAR, Swath Width e Ground Sample Distance (GSD)
+    double target_alt_km;            // Quota orbitale operativa media h = a_target - R_E [km]
+    double earth_central_angle_deg;  // Angolo centrale terrestre di semi-swath Lambda [deg]
+    double swath_width_km;           // Larghezza striscia osservata a terra S_swath [km]
+    double footprint_radius_km;      // Raggio dell'impronta circolare al suolo [km]
+    double gsd_nadir_m;              // Risoluzione spaziale al nadir (Ground Sample Distance) [m]
+    double area_coverage_rate_km2_s; // Tasso di copertura areale istantaneo [km^2/s]
+
+    // 2. Costellazione Simmetrica di Walker Delta (i : T / P / F)
+    double inc_deg;                  // Inclinazione dei piani della costellazione [deg]
+    int    sats_per_plane;           // Numero di satelliti per piano S = T / P
+    double mean_revisit_min;         // Tempo medio di rivisita sulla latitudine target [min]
+    double global_coverage_pct;      // Percentuale di superficie terrestre coperta istantaneamente [%]
+    double mean_vis_sats;            // Numero medio di satelliti simultaneamente in vista N_vis
+    double pdop_geom;                // Geometric Position Dilution of Precision (PDOP)
+    int    num_walker_sats;          // Numero effettivo di sub-points esportati
+    WalkerSatPoint walker_subpoints[MAX_WALKER_SATS];
+
+    // 3. Bilancio di Massa (SMAD Dry Mass Breakdown + Propellant Margin)
+    double wet_mass_kg;              // Massa totale al lancio (Wet Mass m_0) [kg]
+    double propellant_transfer_kg;   // Propellente consumato per il trasferimento orbitale [kg]
+    double propellant_margin_kg;     // Riserva propellente (Rendezvous CW + TCM 3-Sigma + SK 1 anno) [kg]
+    double total_propellant_kg;      // Massa totale di propellente imbarcato m_prop [kg]
+    double dry_mass_kg;              // Massa a secco del satellite m_dry = m_wet - m_prop [kg]
+    double dry_wet_ratio_pct;        // Rapporto Dry/Wet Mass [%]
+    double mass_payload_kg;          // Payload Ottico/SAR (28% m_dry) [kg]
+    double mass_struct_kg;           // Struttura Primaria e Meccanismi (22% m_dry) [kg]
+    double mass_eps_kg;              // EPS Pannelli Solari, Li-Ion & PCDU (19% m_dry) [kg]
+    double mass_prop_dry_kg;         // Serbatoi, Tubazioni e Propulsori a secco (11% m_dry) [kg]
+    double mass_adcs_kg;             // ADCS Reaction Wheels, Star Trackers & MTQ (9% m_dry) [kg]
+    double mass_ttc_obdh_kg;         // TT&C Transponder RF & On-Board Computer (6% m_dry) [kg]
+    double mass_tcs_kg;              // Controllo Termico MLI, Radiatori & Heaters (5% m_dry) [kg]
+
+    // 4. Stima Parametrica dei Costi di Missione (SMAD / NASA NICM in M€)
+    double cost_platform_meur;       // Costo Piattaforma Bus (NRE + TFU) [M€]
+    double cost_payload_meur;        // Costo Sviluppo e Qualifica Payload [M€]
+    double cost_spacecraft_meur;     // Costo Totale Singolo Satellite C_sc [M€]
+    double cost_launch_meur;         // Costo di Lancio C_launch (tariffa per kg di Wet Mass) [M€]
+    double cost_ops_5yr_meur;        // Costo Operativo MO&DA su 5 anni (Ground Segment & Flight Ops) [M€]
+    double total_mission_cost_meur;  // Costo Totale Missione Singolo Satellite (Lifecycle 5 yr) [M€]
+    double constellation_cost_meur;  // Costo Stimato Costellazione Completa Walker (con curva di Wright) [M€]
+} SystemEngineeringReport;
+
 typedef struct {
     KeplerianElements initial_kep;
     double period_min;

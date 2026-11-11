@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 16: TCS, RAD & RF TELECOM LINK BUDGET  \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 17: PAYLOAD, WALKER & MASS/COST MODEL  \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -81,6 +81,18 @@ int main(void) {
     TelecomReport telecom = evaluate_rf_link_budget(orb_initial, orb_target, plan, rep_target,
                                                     rf_band, tx_power_w, &milano, EARTH_MU);
 
+    // 9. SPRINT 17: PAYLOAD SENSOR SWATH, WALKER DELTA CONSTELLATION & MASS/COST BUDGET
+    PayloadAndConstellationSpec sys_spec = {
+        .half_fov_deg      = 25.0,  // Semiapertura angolare sensore theta_(FOV/2) = 25.0 deg
+        .opt_aperture_m    = 0.35,  // Diametro apertura ottica D_opt = 0.35 m
+        .wavelength_nm     = 550.0, // Lunghezza d'onda visibile lambda = 550 nm
+        .walker_total_sats = 24,    // Costellazione Walker T = 24 satelliti
+        .walker_planes     = 3,     // P = 3 piani orbitali (8 satelliti per piano)
+        .walker_phasing    = 1      // F = 1 fasatura inter-piano
+    };
+    SystemEngineeringReport sys = evaluate_payload_constellation_and_cost(orb_target, rep_target, plan, rdv, mc,
+                                                                          sys_spec, &milano, EARTH_MU);
+
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -151,10 +163,22 @@ int main(void) {
     printf("  * ACM Data Downlink     : Peak Rate = %.1f Mbps | Mission Vol = %.2f GB | 24h Volume = %.2f GB/day\n\n",
            telecom.max_achieved_mbps, telecom.mission_data_gb, telecom.total_data_gb_24h);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with RF Telecom Link Budget, Thermal TCS, 6-DOF ADCS & GNC Data!\n");
+    printf("[PAYLOAD SENSOR SWATH, WALKER DELTA CONSTELLATION & MISSION MASS/COST BUDGET]\n");
+    printf("  * Sensor Optics & Swath : Half-FOV = %.1f deg | Swath Width = %.1f km | GSD (Nadir) = %.2f m | Rate = %.0f km^2/s\n",
+           sys.spec.half_fov_deg, sys.swath_width_km, sys.gsd_nadir_m, sys.area_coverage_rate_km2_s);
+    printf("  * Walker Delta (i:T/P/F): %.1f deg : %d / %d / %d (%d sats/plane) | Mean Revisit = %.1f min | Global Cov = %.1f%%\n",
+           sys.inc_deg, sys.spec.walker_total_sats, sys.spec.walker_planes, sys.spec.walker_phasing,
+           sys.sats_per_plane, sys.mean_revisit_min, sys.global_coverage_pct);
+    printf("  * Mass Budget (SMAD)    : Wet = %.1f kg | Dry = %.1f kg (%.1f%%) | Propellant = %.2f kg (Trans %.2f + Res %.2f kg)\n",
+           sys.wet_mass_kg, sys.dry_mass_kg, sys.dry_wet_ratio_pct,
+           sys.total_propellant_kg, sys.propellant_transfer_kg, sys.propellant_margin_kg);
+    printf("  * Lifecycle Cost (NICM) : S/C = %.2f M EUR | Launch = %.2f M EUR | Ops (5yr) = %.2f M EUR -> Total = %.2f M EUR\n\n",
+           sys.cost_spacecraft_meur, sys.cost_launch_meur, sys.cost_ops_5yr_meur, sys.total_mission_cost_meur);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Payload Swath, Walker Constellation, Mass/Cost & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

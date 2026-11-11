@@ -249,6 +249,7 @@ bool export_web_mission_json(const char *filename,
                              ADCSReport adcs,
                              ThermalReport tcs,
                              TelecomReport telecom,
+                             SystemEngineeringReport sys,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -397,6 +398,47 @@ bool export_web_mission_json(const char *filename,
             telecom.min_margin_db, telecom.peak_margin_db);
     fprintf(fp, "    \"pass_windows\": %d, \"contact_time_min\": %.2f, \"mission_data_gb\": %.3f, \"total_data_gb_24h\": %.2f\n  },\n",
             telecom.pass_windows, telecom.contact_time_min, telecom.mission_data_gb, telecom.total_data_gb_24h);
+
+    fprintf(fp, "  \"systems_engineering\": {\n");
+    fprintf(fp, "    \"half_fov_deg\": %.2f, \"opt_aperture_m\": %.2f, \"wavelength_nm\": %.1f,\n",
+            sys.spec.half_fov_deg, sys.spec.opt_aperture_m, sys.spec.wavelength_nm);
+    fprintf(fp, "    \"target_alt_km\": %.2f, \"earth_central_angle_deg\": %.3f,\n",
+            sys.target_alt_km, sys.earth_central_angle_deg);
+    fprintf(fp, "    \"swath_width_km\": %.2f, \"footprint_radius_km\": %.2f, \"gsd_nadir_m\": %.2f, \"area_coverage_rate_km2_s\": %.1f,\n",
+            sys.swath_width_km, sys.footprint_radius_km, sys.gsd_nadir_m, sys.area_coverage_rate_km2_s);
+    fprintf(fp, "    \"walker_total_sats\": %d, \"walker_planes\": %d, \"walker_phasing\": %d, \"sats_per_plane\": %d, \"inc_deg\": %.2f,\n",
+            sys.spec.walker_total_sats, sys.spec.walker_planes, sys.spec.walker_phasing, sys.sats_per_plane, sys.inc_deg);
+    fprintf(fp, "    \"mean_revisit_min\": %.2f, \"global_coverage_pct\": %.2f, \"mean_vis_sats\": %.2f, \"pdop_geom\": %.2f,\n",
+            sys.mean_revisit_min, sys.global_coverage_pct, sys.mean_vis_sats, sys.pdop_geom);
+    fprintf(fp, "    \"wet_mass_kg\": %.2f, \"dry_mass_kg\": %.2f, \"dry_wet_ratio_pct\": %.1f,\n",
+            sys.wet_mass_kg, sys.dry_mass_kg, sys.dry_wet_ratio_pct);
+    fprintf(fp, "    \"propellant_transfer_kg\": %.2f, \"propellant_margin_kg\": %.2f, \"total_propellant_kg\": %.2f,\n",
+            sys.propellant_transfer_kg, sys.propellant_margin_kg, sys.total_propellant_kg);
+    fprintf(fp, "    \"mass_breakdown\": [\n");
+    fprintf(fp, "      {\"subsystem\":\"Payload (Optical/SAR)\", \"mass_kg\":%.2f, \"pct_dry\":28.0},\n", sys.mass_payload_kg);
+    fprintf(fp, "      {\"subsystem\":\"Structure & Mechanisms\", \"mass_kg\":%.2f, \"pct_dry\":22.0},\n", sys.mass_struct_kg);
+    fprintf(fp, "      {\"subsystem\":\"EPS Solar & Li-Ion\", \"mass_kg\":%.2f, \"pct_dry\":19.0},\n", sys.mass_eps_kg);
+    fprintf(fp, "      {\"subsystem\":\"Propulsion (Dry)\", \"mass_kg\":%.2f, \"pct_dry\":11.0},\n", sys.mass_prop_dry_kg);
+    fprintf(fp, "      {\"subsystem\":\"ADCS (RW & Star Track)\", \"mass_kg\":%.2f, \"pct_dry\":9.0},\n", sys.mass_adcs_kg);
+    fprintf(fp, "      {\"subsystem\":\"TT&C & OBDH Avionics\", \"mass_kg\":%.2f, \"pct_dry\":6.0},\n", sys.mass_ttc_obdh_kg);
+    fprintf(fp, "      {\"subsystem\":\"Thermal Control (TCS)\", \"mass_kg\":%.2f, \"pct_dry\":5.0},\n", sys.mass_tcs_kg);
+    fprintf(fp, "      {\"subsystem\":\"Transfer Propellant\", \"mass_kg\":%.2f, \"pct_dry\":0.0},\n", sys.propellant_transfer_kg);
+    fprintf(fp, "      {\"subsystem\":\"GNC TCM & SK Reserve\", \"mass_kg\":%.2f, \"pct_dry\":0.0}\n", sys.propellant_margin_kg);
+    fprintf(fp, "    ],\n");
+    fprintf(fp, "    \"cost_platform_meur\": %.2f, \"cost_payload_meur\": %.2f, \"cost_spacecraft_meur\": %.2f,\n",
+            sys.cost_platform_meur, sys.cost_payload_meur, sys.cost_spacecraft_meur);
+    fprintf(fp, "    \"cost_launch_meur\": %.2f, \"cost_ops_5yr_meur\": %.2f,\n",
+            sys.cost_launch_meur, sys.cost_ops_5yr_meur);
+    fprintf(fp, "    \"total_mission_cost_meur\": %.2f, \"constellation_cost_meur\": %.2f,\n",
+            sys.total_mission_cost_meur, sys.constellation_cost_meur);
+    fprintf(fp, "    \"walker_subpoints\": [\n");
+    for (int i = 0; i < sys.num_walker_sats; i++) {
+        WalkerSatPoint w = sys.walker_subpoints[i];
+        fprintf(fp, "      {\"sat_id\":%d,\"plane_id\":%d,\"lat\":%.2f,\"lon\":%.2f,\"raan_deg\":%.1f,\"u_deg\":%.1f}%s\n",
+                w.sat_id, w.plane_id, w.lat_deg, w.lon_deg, w.raan_deg, w.arg_lat_deg,
+                (i < sys.num_walker_sats - 1) ? "," : "");
+    }
+    fprintf(fp, "    ]\n  },\n");
 
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);

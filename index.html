@@ -515,6 +515,52 @@
     </div>
 </section>
 
+<!-- 11. ELEVENTH OUTPUT BLOCK: PAYLOAD SWATH COVERAGE, WALKER DELTA CONSTELLATION & MISSION MASS/COST BUDGET -->
+<section class="section-block">
+    <div class="section-header">
+        <div>
+            <h2>11. Payload Swath Coverage, Walker Delta Constellation &amp; Mission Mass/Cost Budget</h2>
+            <span>Optical/SAR Sensor Swath Width &amp; Diffraction GSD &bull; Symmetrical Walker Delta Constellation (i : T / P / F) &bull; SMAD Mass Breakdown &amp; NASA NICM Cost Model</span>
+        </div>
+        <span class="badge" id="sysStatusBadge" style="color:var(--green); border-color:var(--green);">&#128752; PHASE-A MISSION ARCHITECTURE VERIFIED (WALKER 24/3/1)</span>
+    </div>
+
+    <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(213,0,249,0.13), rgba(0,229,255,0.11)); border-color: var(--purple);">
+        <div class="title-group">
+            <h3 id="sysBannerTitle" style="color:var(--purple);">PAYLOAD SENSOR SWATH, WALKER DELTA CONSTELLATION &amp; LIFECYCLE COST ARCHITECTURE</h3>
+            <p id="sysBannerSub">Sensor Swath Width: --- km (GSD: --- m) &bull; Walker Constellation (T/P/F): --- Mean Revisit: --- min &bull; Dry/Wet Mass Ratio: ---%</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="sysBannerCost" style="color:var(--amber);">Estimated Mission Cost: --- M&euro;</div>
+            <div class="sub-fuel" id="sysBannerSubMetrics">Swath: --- km (GSD --- m) | Walker Revisit: --- min | Dry/Wet: ---% | Constellation: --- M&euro;</div>
+        </div>
+    </div>
+
+    <div class="datasheet-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+        <div class="data-card">
+            <h4 style="color:var(--cyan)">&#128247; Payload Swath &amp; GSD Optics</h4>
+            <div id="sysCardSwath"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--purple)">&#127760; Walker Delta (i : T / P / F)</h4>
+            <div id="sysCardWalker"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--green)">&#9878; SMAD Dry/Wet Mass Budget</h4>
+            <div id="sysCardMass"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--amber)">&#128176; Parametric Cost (NASA NICM)</h4>
+            <div id="sysCardCost"></div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotWalkerSwath" class="plot-container-rdv"></div>
+        <div id="plotMassCostBudget" class="plot-container-rdv"></div>
+    </div>
+</section>
+
 
 <!-- POPUP MODAL: MISSION INPUT CONFIGURATOR -->
 <div class="modal-overlay" id="inputModal">
@@ -769,6 +815,35 @@
                 <div class="field">
                     <label>G/S Dish Diameter [m]</label>
                     <input type="number" id="rfDishM" value="3.5" min="1.0" max="15.0" step="0.5">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--purple)">9. Payload Sensor Optics &amp; Symmetrical Walker Delta Constellation (i : T / P / F)</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Ground Swath Width, Rayleigh GSD Resolution, Global Revisit &amp; Parametric Cost</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(5, 1fr);">
+                <div class="field">
+                    <label>Sensor Half-FOV &theta;<sub>FOV/2</sub> [deg]</label>
+                    <input type="number" id="sysHalfFovDeg" value="25.0" min="1.0" max="65.0" step="1.0">
+                </div>
+                <div class="field">
+                    <label>Optical Aperture D<sub>opt</sub> [m]</label>
+                    <input type="number" id="sysApertureM" value="0.35" min="0.05" max="4.0" step="0.05">
+                </div>
+                <div class="field">
+                    <label>Walker Total Satellites T</label>
+                    <input type="number" id="sysWalkerT" value="24" min="1" max="120" step="1">
+                </div>
+                <div class="field">
+                    <label>Orbital Planes P</label>
+                    <input type="number" id="sysWalkerP" value="3" min="1" max="24" step="1">
+                </div>
+                <div class="field">
+                    <label>Inter-Plane Phasing F</label>
+                    <input type="number" id="sysWalkerF" value="1" min="0" max="23" step="1">
                 </div>
             </div>
         </div>
@@ -1190,6 +1265,14 @@
             if (rf.tx_power_w !== undefined)  document.getElementById('rfTxPowerW').value  = rf.tx_power_w;
             if (rf.tx_gain_dbi !== undefined) document.getElementById('rfTxGainDbi').value = rf.tx_gain_dbi;
             if (rf.rx_dish_m !== undefined)   document.getElementById('rfDishM').value     = rf.rx_dish_m;
+        }
+        if (data.systems_engineering) {
+            const se = data.systems_engineering;
+            if (se.half_fov_deg !== undefined)      document.getElementById('sysHalfFovDeg').value = se.half_fov_deg;
+            if (se.opt_aperture_m !== undefined)    document.getElementById('sysApertureM').value  = se.opt_aperture_m;
+            if (se.walker_total_sats !== undefined) document.getElementById('sysWalkerT').value    = se.walker_total_sats;
+            if (se.walker_planes !== undefined)     document.getElementById('sysWalkerP').value    = se.walker_planes;
+            if (se.walker_phasing !== undefined)    document.getElementById('sysWalkerF').value    = se.walker_phasing;
         }
 
         validateModalOrbits(false);
@@ -2348,6 +2431,229 @@
                 font: { color: '#bbf7d0', size: 10.5 }
             }],
             legend: { font: { color: '#e2e8f0', size: 10 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---------------------------------------------------------------------
+        // SECTION 11: PAYLOAD SWATH COVERAGE, WALKER DELTA CONSTELLATION & MASS/COST BUDGET
+        // ---------------------------------------------------------------------
+        const fallbackSys = evaluatePayloadConstellationAndCostJS(
+            aTargKm,
+            r2.inc_deg || 53.0,
+            r2.raan_deg !== undefined ? r2.raan_deg : 30.0,
+            r2.period_min || 97.7,
+            r2.sk_fuel_yr || 0.85,
+            mass0,
+            m.fuel_kg || 35.8,
+            rdvInfo.fuel_kg || 0.42,
+            mcInfo.tcm_fuel_99_kg || 1.15,
+            25.0,
+            0.35,
+            550.0,
+            24,
+            3,
+            1,
+            st.min_el || 10.0,
+            st.lat || 45.502
+        );
+        const sysInfo = data.systems_engineering || fallbackSys.systems_engineering;
+        const wSubpts = (sysInfo.walker_subpoints && sysInfo.walker_subpoints.length)
+            ? sysInfo.walker_subpoints
+            : fallbackSys.systems_engineering.walker_subpoints;
+        const massBrk = (sysInfo.mass_breakdown && sysInfo.mass_breakdown.length)
+            ? sysInfo.mass_breakdown
+            : fallbackSys.systems_engineering.mass_breakdown;
+
+        const sysBadgeEl = document.getElementById('sysStatusBadge');
+        if (sysBadgeEl) {
+            sysBadgeEl.innerHTML = `&#128752; WALKER DELTA ${sysInfo.inc_deg}&deg; : ${sysInfo.walker_total_sats}/${sysInfo.walker_planes}/${sysInfo.walker_phasing} (Revisit: ${sysInfo.mean_revisit_min} min &bull; Swath: ${sysInfo.swath_width_km} km &bull; Cost: ${sysInfo.total_mission_cost_meur} M&euro;)`;
+        }
+
+        document.getElementById('sysBannerTitle').textContent =
+            `PAYLOAD SENSOR SWATH, WALKER DELTA CONSTELLATION (${sysInfo.inc_deg}° : ${sysInfo.walker_total_sats}/${sysInfo.walker_planes}/${sysInfo.walker_phasing}) & LIFECYCLE BUDGET`;
+        document.getElementById('sysBannerSub').innerHTML =
+            `Sensor Swath Width: <strong>${sysInfo.swath_width_km} km</strong> (GSD: <strong>${sysInfo.gsd_nadir_m} m</strong>, &theta;<sub>FOV/2</sub>=${sysInfo.half_fov_deg}&deg;) &bull; Walker Revisit Time: <strong>${sysInfo.mean_revisit_min} min</strong> (${sysInfo.global_coverage_pct}% Global) &bull; Dry/Wet Mass Ratio: <strong>${sysInfo.dry_wet_ratio_pct}%</strong> (${sysInfo.dry_mass_kg} / ${sysInfo.wet_mass_kg} kg)`;
+        document.getElementById('sysBannerCost').innerHTML =
+            `Estimated Mission Cost: ${sysInfo.total_mission_cost_meur} M&euro;`;
+        document.getElementById('sysBannerSubMetrics').innerHTML =
+            `Swath: ${sysInfo.swath_width_km} km (GSD ${sysInfo.gsd_nadir_m} m) &bull; Mean Revisit: ${sysInfo.mean_revisit_min} min &bull; Dry/Wet: ${sysInfo.dry_wet_ratio_pct}% &bull; Full ${sysInfo.walker_total_sats}-Sat Constellation: ${sysInfo.constellation_cost_meur} M&euro;`;
+
+        document.getElementById('sysCardSwath').innerHTML = `
+            <div class="row-item"><span class="row-label">Swath Width S_swath</span><span class="row-val" style="color:var(--cyan)">${sysInfo.swath_width_km} km (&Lambda;=${sysInfo.earth_central_angle_deg}&deg;)</span></div>
+            <div class="row-item"><span class="row-label">Nadir Resolution (GSD)</span><span class="row-val" style="color:var(--green)">${sysInfo.gsd_nadir_m} m (D=${sysInfo.opt_aperture_m}m)</span></div>
+            <div class="row-item"><span class="row-label">Area Coverage Rate</span><span class="row-val" style="color:var(--amber)">${sysInfo.area_coverage_rate_km2_s} km&sup2;/s</span></div>
+        `;
+        document.getElementById('sysCardWalker').innerHTML = `
+            <div class="row-item"><span class="row-label">Walker Delta (i : T/P/F)</span><span class="row-val" style="color:var(--purple)">${sysInfo.inc_deg}&deg; : ${sysInfo.walker_total_sats} / ${sysInfo.walker_planes} / ${sysInfo.walker_phasing}</span></div>
+            <div class="row-item"><span class="row-label">Mean Revisit Time</span><span class="row-val" style="color:var(--cyan)">${sysInfo.mean_revisit_min} min</span></div>
+            <div class="row-item"><span class="row-label">Instant Global Cov / PDOP</span><span class="row-val" style="color:var(--green)">${sysInfo.global_coverage_pct}% (PDOP ${sysInfo.pdop_geom})</span></div>
+        `;
+        document.getElementById('sysCardMass').innerHTML = `
+            <div class="row-item"><span class="row-label">Dry / Wet Mass (Ratio)</span><span class="row-val" style="color:var(--green)">${sysInfo.dry_mass_kg} / ${sysInfo.wet_mass_kg} kg (${sysInfo.dry_wet_ratio_pct}%)</span></div>
+            <div class="row-item"><span class="row-label">Payload / Struct / EPS</span><span class="row-val">${massBrk[0].mass_kg} / ${massBrk[1].mass_kg} / ${massBrk[2].mass_kg} kg</span></div>
+            <div class="row-item"><span class="row-label">Propellant (Trans + Res)</span><span class="row-val" style="color:var(--amber)">${sysInfo.total_propellant_kg} kg (${sysInfo.propellant_transfer_kg}+${sysInfo.propellant_margin_kg})</span></div>
+        `;
+        document.getElementById('sysCardCost').innerHTML = `
+            <div class="row-item"><span class="row-label">Spacecraft (Bus + Payload)</span><span class="row-val" style="color:var(--cyan)">${sysInfo.cost_spacecraft_meur} M&euro; (${sysInfo.cost_platform_meur}+${sysInfo.cost_payload_meur})</span></div>
+            <div class="row-item"><span class="row-label">Launch + 5-Yr MO&amp;DA Ops</span><span class="row-val">${sysInfo.cost_launch_meur} + ${sysInfo.cost_ops_5yr_meur} M&euro;</span></div>
+            <div class="row-item"><span class="row-label">1-Sat / ${sysInfo.walker_total_sats}-Sat Total Cost</span><span class="row-val" style="color:var(--amber)">${sysInfo.total_mission_cost_meur} / ${sysInfo.constellation_cost_meur} M&euro;</span></div>
+        `;
+
+        // 11A. Walker Delta Constellation Global Coverage & Sensor Swath Footprint Circles
+        const planeColors = ['#00e5ff', '#00e676', '#ffab00', '#d500f9', '#ff1744', '#38bdf8', '#a3e635', '#fb923c'];
+        const lambdaDeg = Math.max(1.2, Math.min(28.0, sysInfo.earth_central_angle_deg || 4.0));
+        const lambdaRad = lambdaDeg * DEG2RAD;
+        const swathLatArr = [];
+        const swathLonArr = [];
+
+        wSubpts.forEach(sat => {
+            const lat0 = sat.lat * DEG2RAD;
+            const lon0 = sat.lon * DEG2RAD;
+            const sinLat0 = Math.sin(lat0), cosLat0 = Math.cos(lat0);
+            const sinD = Math.sin(lambdaRad), cosD = Math.cos(lambdaRad);
+            let prevLonDeg = null;
+            for (let k = 0; k <= 28; k++) {
+                const brg = (k / 28) * 2.0 * Math.PI;
+                const sinLat = Math.max(-1.0, Math.min(1.0, sinLat0 * cosD + cosLat0 * sinD * Math.cos(brg)));
+                const latPtRad = Math.asin(sinLat);
+                const lonPtRad = lon0 + Math.atan2(Math.sin(brg) * sinD * cosLat0, cosD - sinLat0 * sinLat);
+                const latPtDeg = +(latPtRad * RAD2DEG).toFixed(2);
+                const lonPtDeg = +((((lonPtRad * RAD2DEG) + 540.0) % 360.0) - 180.0).toFixed(2);
+                if (prevLonDeg !== null && Math.abs(lonPtDeg - prevLonDeg) > 160.0) {
+                    swathLatArr.push(null);
+                    swathLonArr.push(null);
+                }
+                swathLatArr.push(latPtDeg);
+                swathLonArr.push(lonPtDeg);
+                prevLonDeg = lonPtDeg;
+            }
+            swathLatArr.push(null);
+            swathLonArr.push(null);
+        });
+
+        const walkerTraces = [
+            {
+                type: 'scattergeo',
+                mode: 'lines',
+                name: `Sensor Footprint Circles (S=${sysInfo.swath_width_km} km)`,
+                lat: swathLatArr,
+                lon: swathLonArr,
+                line: { color: 'rgba(0, 229, 255, 0.55)', width: 1.5 },
+                hoverinfo: 'skip'
+            }
+        ];
+
+        const numPlanes = Math.max(1, sysInfo.walker_planes || 3);
+        for (let p = 0; p < numPlanes; p++) {
+            const pSats = wSubpts.filter(s => s.plane_id === p);
+            if (!pSats.length) continue;
+            const col = planeColors[p % planeColors.length];
+            walkerTraces.push({
+                type: 'scattergeo',
+                mode: 'markers',
+                name: `Plane #${p + 1} (Ω=${pSats[0].raan_deg}° | ${pSats.length} Sats)`,
+                lat: pSats.map(s => s.lat),
+                lon: pSats.map(s => s.lon),
+                text: pSats.map(s => `Sat #${s.sat_id + 1} (Plane ${p + 1}) | Lat: ${s.lat}°, Lon: ${s.lon}° | Swath: ${sysInfo.swath_width_km} km`),
+                hovertemplate: '<b>%{text}</b><extra></extra>',
+                marker: { size: 8.5, color: col, symbol: 'circle', line: { color: '#ffffff', width: 1.3 } }
+            });
+        }
+
+        walkerTraces.push({
+            type: 'scattergeo',
+            mode: 'markers+text',
+            name: `${st.name} Ground Station`,
+            lat: [st.lat],
+            lon: [st.lon],
+            text: [st.name],
+            textposition: 'top right',
+            textfont: { color: '#ffffff', size: 10.5 },
+            marker: { size: 10, color: '#ff1744', symbol: 'triangle-up', line: { color: '#ffffff', width: 1.5 } }
+        });
+
+        Plotly.newPlot('plotWalkerSwath', walkerTraces, {
+            title: { text: `11A. Walker Delta Constellation (${sysInfo.inc_deg}°:${sysInfo.walker_total_sats}/${sysInfo.walker_planes}/${sysInfo.walker_phasing}) & Sensor Swath Footprints (${sysInfo.swath_width_km} km)`, font: { color: '#e2e8f0', size: 12.5 } },
+            paper_bgcolor: '#161d2b',
+            margin: { l: 6, r: 6, b: 6, t: 38 },
+            geo: {
+                bgcolor: '#111622',
+                projection: { type: 'natural earth' },
+                showland: true, landcolor: '#1e3a2f',
+                showocean: true, oceancolor: '#091e3a',
+                showcountries: true, countrycolor: '#475569',
+                showcoastlines: true, coastlinecolor: '#94a3b8',
+                lataxis: { showgrid: true, gridcolor: 'rgba(255,255,255,0.10)' },
+                lonaxis: { showgrid: true, gridcolor: 'rgba(255,255,255,0.10)' }
+            },
+            legend: { font: { color: '#e2e8f0', size: 9.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // 11B. Spacecraft Mass Breakdown [kg] & Mission Lifecycle Cost Allocation [M€]
+        const subLabels = [
+            'Payload (28%)',
+            'Structure (22%)',
+            'EPS Power (19%)',
+            'Prop Dry (11%)',
+            'ADCS (9%)',
+            'TT&C/OBDH (6%)',
+            'Thermal TCS (5%)',
+            'Transfer Fuel',
+            'GNC/SK Reserve'
+        ];
+        const subMassKg = massBrk.map(item => item.mass_kg);
+        const subBarColors = [
+            '#00e5ff', '#38bdf8', '#00e676', '#a3e635',
+            '#d500f9', '#c084fc', '#fb923c', '#ffab00', '#ff1744'
+        ];
+
+        const costLabels = ['Platform Bus', 'Optical Payload', 'Launch Vehicle', '5-Yr MO&DA Ops'];
+        const costValsMeur = [
+            sysInfo.cost_platform_meur,
+            sysInfo.cost_payload_meur,
+            sysInfo.cost_launch_meur,
+            sysInfo.cost_ops_5yr_meur
+        ];
+
+        Plotly.newPlot('plotMassCostBudget', [
+            {
+                type: 'bar',
+                name: 'Subsystem Wet Mass Allocation [kg]',
+                x: subLabels,
+                y: subMassKg,
+                marker: { color: subBarColors, line: { color: '#ffffff', width: 1.0 } },
+                text: subMassKg.map(v => `${v} kg`),
+                textposition: 'auto',
+                hovertemplate: '<b>%{x}</b>: %{y:.2f} kg<extra></extra>'
+            },
+            {
+                type: 'pie',
+                name: 'Mission Cost [M€]',
+                labels: costLabels,
+                values: costValsMeur,
+                hole: 0.54,
+                domain: { x: [0.58, 0.99], y: [0.36, 0.98] },
+                marker: {
+                    colors: ['#00e5ff', '#d500f9', '#ffab00', '#00e676'],
+                    line: { color: '#161d2b', width: 2 }
+                },
+                textinfo: 'percent',
+                textfont: { color: '#ffffff', size: 10 },
+                hovertemplate: '<b>%{label}</b>: %{value:.2f} M€ (%{percent})<extra></extra>'
+            }
+        ], {
+            title: { text: `11B. Spacecraft Wet Mass Breakdown (${sysInfo.wet_mass_kg} kg) & Mission Cost Allocation (${sysInfo.total_mission_cost_meur} M€)`, font: { color: '#e2e8f0', size: 12.5 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 55, r: 20, b: 68, t: 40 },
+            xaxis: { title: 'Spacecraft Subsystems & Propellant Reserves (SMAD Model)', color: '#e2e8f0', tickangle: -24, gridcolor: '#222d42' },
+            yaxis: { title: 'Allocated Mass [kg]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#cbd5e1' }, gridcolor: '#222d42', range: [0, Math.max(...subMassKg) * 1.45] },
+            annotations: [{
+                x: 0.785, y: 0.67, xref: 'paper', yref: 'paper',
+                text: `<b>${sysInfo.total_mission_cost_meur} M€</b><br><span style="font-size:9.5px;color:#cbd5e1">Lifecycle Cost</span>`,
+                showarrow: false,
+                font: { color: '#ffab00', size: 11.5 }
+            }],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.5 }, bgcolor: 'rgba(17,22,34,0.82)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
         startAnimationLoop();
@@ -3825,6 +4131,168 @@
         };
     }
 
+    // =========================================================================
+    // SPRINT 17: PAYLOAD SENSOR SWATH, WALKER DELTA CONSTELLATION & MASS/COST ENGINE (JS)
+    // =========================================================================
+    function evaluatePayloadConstellationAndCostJS(aTargetKm, incTargetDeg, raanTargetDeg, periodTargetMin, skFuelYrKg, wetMassKgIn, fuelTransferKg, fuelRdvKg, fuelTcm99Kg, halfFovDegIn = 25.0, optApertureMIn = 0.35, wavelengthNmIn = 550.0, walkerTIn = 24, walkerPIn = 3, walkerFIn = 1, minElDegIn = 10.0, stLatDegIn = 45.502) {
+        const halfFovDeg   = Math.max(1.0, Math.min(68.0, halfFovDegIn || 25.0));
+        const optApertureM = Math.max(0.05, Math.min(4.0, optApertureMIn || 0.35));
+        const wavelengthNm = Math.max(250.0, Math.min(15000.0, wavelengthNmIn || 550.0));
+        const T = Math.max(1, Math.min(128, Math.round(walkerTIn || 24)));
+        const P = Math.max(1, Math.min(T, Math.round(walkerPIn || 3)));
+        const F = Math.max(0, Math.round(walkerFIn !== undefined ? walkerFIn : 1)) % P;
+
+        const aTarg = (aTargetKm > R_EQ + 100.0) ? aTargetKm : (R_EQ + 650.0);
+        const hKm   = Math.max(150.0, aTarg - R_EQ);
+        const rKm   = R_EQ + hKm;
+
+        const fovHalfRad = halfFovDeg * DEG2RAD;
+        const sinArg = (rKm / R_EQ) * Math.sin(fovHalfRad);
+        let lambdaRad = 0.0;
+        if (sinArg < 0.9998) {
+            lambdaRad = Math.asin(sinArg) - fovHalfRad;
+        } else {
+            lambdaRad = Math.acos(R_EQ / rKm);
+        }
+        if (lambdaRad < 1e-5) lambdaRad = 1e-5;
+
+        const earthCentralAngleDeg = lambdaRad * RAD2DEG;
+        const swathWidthKm         = 2.0 * R_EQ * lambdaRad;
+        const footprintRadiusKm    = 0.5 * swathWidthKm;
+        const gsdNadirM            = 1.22 * ((wavelengthNm * 1.0e-9) * (hKm * 1000.0)) / optApertureM;
+
+        const vOrbKms = Math.sqrt(MU / rKm);
+        const vGndKms = vOrbKms * (R_EQ / rKm);
+        const areaCoverageRateKm2S = swathWidthKm * vGndKms;
+
+        const incDeg  = (incTargetDeg !== undefined) ? incTargetDeg : 53.0;
+        const incRad  = incDeg * DEG2RAD;
+        const raan0   = (raanTargetDeg !== undefined) ? raanTargetDeg : 30.0;
+        const satsPerPlane = Math.max(1, Math.floor(T / P));
+
+        const walkerSubpoints = [];
+        let satIdx = 0;
+        for (let p = 0; p < P && satIdx < 128; p++) {
+            const satsInP = Math.floor(T / P) + (p < (T % P) ? 1 : 0);
+            const raanPDeg = ((raan0 + p * (360.0 / P)) % 360.0 + 360.0) % 360.0;
+            for (let m = 0; m < satsInP && satIdx < 128; m++) {
+                const uDeg = (m * (360.0 / satsInP) + (p * F) * (360.0 / T)) % 360.0;
+                const uRad = uDeg * DEG2RAD;
+                const sinLat = Math.max(-1.0, Math.min(1.0, Math.sin(incRad) * Math.sin(uRad)));
+                const latDeg = Math.asin(sinLat) * RAD2DEG;
+                const dlonRad = Math.atan2(Math.cos(incRad) * Math.sin(uRad), Math.cos(uRad));
+                const lonRaw  = raanPDeg + dlonRad * RAD2DEG;
+                const lonDeg  = ((lonRaw + 540.0) % 360.0) - 180.0;
+
+                walkerSubpoints.push({
+                    sat_id: satIdx,
+                    plane_id: p,
+                    lat: +latDeg.toFixed(2),
+                    lon: +lonDeg.toFixed(2),
+                    raan_deg: +raanPDeg.toFixed(1),
+                    u_deg: +uDeg.toFixed(1)
+                });
+                satIdx++;
+            }
+        }
+
+        const fCapSingle = 0.5 * (1.0 - Math.cos(lambdaRad));
+        const globalCoveragePct = Math.min(99.9, 100.0 * (1.0 - Math.pow(1.0 - fCapSingle, T)));
+
+        const minElRad = Math.max(2.0, minElDegIn || 10.0) * DEG2RAD;
+        const stLatDeg = (stLatDegIn !== undefined) ? stLatDegIn : 45.502;
+        const argAcc = Math.max(-1.0, Math.min(1.0, (R_EQ / rKm) * Math.cos(minElRad)));
+        const lambdaAccRad = Math.max(lambdaRad, Math.acos(argAcc) - minElRad);
+        const fAccSingle = 0.5 * (1.0 - Math.cos(lambdaAccRad));
+
+        const incMatch = Math.max(0.65, Math.min(1.20, 1.05 - 0.30 * Math.abs(incDeg - Math.abs(stLatDeg)) / 90.0));
+        const meanVisSats = T * fAccSingle * incMatch * 1.35;
+        const pdopGeom    = 4.60 / Math.sqrt(Math.max(0.85, meanVisSats + 0.35 * P));
+
+        const periodMin = (periodTargetMin && periodTargetMin > 60.0) ? periodTargetMin : (2.0 * Math.PI * Math.sqrt(rKm * rKm * rKm / MU) / 60.0);
+        const latCircKm = 2.0 * Math.PI * R_EQ * Math.max(0.25, Math.cos(stLatDeg * DEG2RAD));
+        const swathEffKm = Math.max(80.0, swathWidthKm);
+        const revsForFullBand = latCircKm / swathEffKm;
+        const planeDiversity = 0.72 + 0.10 * Math.min(8.0, P);
+        const meanRevisitMin = Math.max(1.5, Math.min(1440.0, (periodMin * revsForFullBand) / (T * planeDiversity * incMatch)));
+
+        const wetMassKg = Math.max(20.0, wetMassKgIn || 500.0);
+        const propTransferKg = Math.max(0.0, fuelTransferKg || 0.0);
+        const propMarginKg   = Math.max(0.1, (fuelRdvKg || 0.0) + (fuelTcm99Kg || 0.0) + (skFuelYrKg || 0.0));
+        let totalPropKg      = propTransferKg + propMarginKg;
+        if (totalPropKg > 0.82 * wetMassKg) totalPropKg = 0.82 * wetMassKg;
+        const dryMassKg      = wetMassKg - totalPropKg;
+        const dryWetRatioPct = (dryMassKg / wetMassKg) * 100.0;
+
+        const massPayloadKg = 0.28 * dryMassKg;
+        const massStructKg  = 0.22 * dryMassKg;
+        const massEpsKg     = 0.19 * dryMassKg;
+        const massPropDryKg = 0.11 * dryMassKg;
+        const massAdcsKg    = 0.09 * dryMassKg;
+        const massTtcObdhKg = 0.06 * dryMassKg;
+        const massTcsKg     = 0.05 * dryMassKg;
+
+        const optFactor = Math.pow(optApertureM / 0.35, 1.15);
+        const costPlatformMeur   = 6.50 + 0.082 * Math.pow(dryMassKg, 0.85);
+        const costPayloadMeur    = (4.20 + 0.145 * Math.pow(massPayloadKg, 0.88)) * optFactor;
+        const costSpacecraftMeur = costPlatformMeur + costPayloadMeur;
+        const launchRateMeurKg   = (hKm > 1500.0) ? 0.0120 : 0.0085;
+        const costLaunchMeur     = wetMassKg * launchRateMeurKg;
+        const costOps5YrMeur     = 5.0 * (1.35 + 0.035 * costSpacecraftMeur);
+        const totalMissionCostMeur = costSpacecraftMeur + costLaunchMeur + costOps5YrMeur;
+        const constellationCostMeur = costSpacecraftMeur * Math.pow(T, 0.78) +
+                                      T * costLaunchMeur * 0.72 +
+                                      costOps5YrMeur * (1.0 + 0.08 * T);
+
+        return {
+            systems_engineering: {
+                half_fov_deg: +halfFovDeg.toFixed(2),
+                opt_aperture_m: +optApertureM.toFixed(2),
+                wavelength_nm: +wavelengthNm.toFixed(1),
+                target_alt_km: +hKm.toFixed(2),
+                earth_central_angle_deg: +earthCentralAngleDeg.toFixed(3),
+                swath_width_km: +swathWidthKm.toFixed(2),
+                footprint_radius_km: +footprintRadiusKm.toFixed(2),
+                gsd_nadir_m: +gsdNadirM.toFixed(2),
+                area_coverage_rate_km2_s: +areaCoverageRateKm2S.toFixed(1),
+                walker_total_sats: T,
+                walker_planes: P,
+                walker_phasing: F,
+                sats_per_plane: satsPerPlane,
+                inc_deg: +incDeg.toFixed(2),
+                mean_revisit_min: +meanRevisitMin.toFixed(2),
+                global_coverage_pct: +globalCoveragePct.toFixed(2),
+                mean_vis_sats: +meanVisSats.toFixed(2),
+                pdop_geom: +pdopGeom.toFixed(2),
+                wet_mass_kg: +wetMassKg.toFixed(2),
+                dry_mass_kg: +dryMassKg.toFixed(2),
+                dry_wet_ratio_pct: +dryWetRatioPct.toFixed(1),
+                propellant_transfer_kg: +propTransferKg.toFixed(2),
+                propellant_margin_kg: +propMarginKg.toFixed(2),
+                total_propellant_kg: +totalPropKg.toFixed(2),
+                mass_breakdown: [
+                    { subsystem: 'Payload (Optical/SAR)', mass_kg: +massPayloadKg.toFixed(2), pct_dry: 28.0 },
+                    { subsystem: 'Structure & Mechanisms', mass_kg: +massStructKg.toFixed(2), pct_dry: 22.0 },
+                    { subsystem: 'EPS Solar & Li-Ion', mass_kg: +massEpsKg.toFixed(2), pct_dry: 19.0 },
+                    { subsystem: 'Propulsion (Dry)', mass_kg: +massPropDryKg.toFixed(2), pct_dry: 11.0 },
+                    { subsystem: 'ADCS (RW & Star Track)', mass_kg: +massAdcsKg.toFixed(2), pct_dry: 9.0 },
+                    { subsystem: 'TT&C & OBDH Avionics', mass_kg: +massTtcObdhKg.toFixed(2), pct_dry: 6.0 },
+                    { subsystem: 'Thermal Control (TCS)', mass_kg: +massTcsKg.toFixed(2), pct_dry: 5.0 },
+                    { subsystem: 'Transfer Propellant', mass_kg: +propTransferKg.toFixed(2), pct_dry: 0.0 },
+                    { subsystem: 'GNC TCM & SK Reserve', mass_kg: +propMarginKg.toFixed(2), pct_dry: 0.0 }
+                ],
+                cost_platform_meur: +costPlatformMeur.toFixed(2),
+                cost_payload_meur: +costPayloadMeur.toFixed(2),
+                cost_spacecraft_meur: +costSpacecraftMeur.toFixed(2),
+                cost_launch_meur: +costLaunchMeur.toFixed(2),
+                cost_ops_5yr_meur: +costOps5YrMeur.toFixed(2),
+                total_mission_cost_meur: +totalMissionCostMeur.toFixed(2),
+                constellation_cost_meur: +constellationCostMeur.toFixed(2),
+                walker_subpoints: walkerSubpoints
+            }
+        };
+    }
+
     document.getElementById('btnRunCustomMission').addEventListener('click', function() {
         const mass0 = parseFloat(document.getElementById('inMass').value) || 500;
         const propParts = document.getElementById('inPropellant').value.split('|');
@@ -4086,6 +4554,19 @@
         const rfRes       = evaluateRfLinkBudgetJS(kepInit.a, kepTarg.a, tofSec, isLowThrust, orb2.i, repTarget.contact_min,
             isNaN(rfBandId) ? 1 : rfBandId, rfTxPowerW, rfTxGainDbi, rfDishM, st.min_el || 10.0, st.lat || 45.502);
 
+        // Sprint 17: Payload Sensor Swath, Walker Delta Constellation & Parametric Mass/Cost Model
+        const sysHalfFovDeg = Math.max(1.0,  Math.min(68.0, parseFloat(document.getElementById('sysHalfFovDeg').value) || 25.0));
+        const sysApertureM  = Math.max(0.05, Math.min(4.0,  parseFloat(document.getElementById('sysApertureM').value)  || 0.35));
+        const sysWalkerT    = Math.max(1,    Math.min(120,  parseInt(document.getElementById('sysWalkerT').value, 10)  || 24));
+        const sysWalkerP    = Math.max(1,    Math.min(sysWalkerT, parseInt(document.getElementById('sysWalkerP').value, 10) || 3));
+        const sysWalkerF    = Math.max(0,    parseInt(document.getElementById('sysWalkerF').value, 10) || 0) % sysWalkerP;
+        const sysRes        = evaluatePayloadConstellationAndCostJS(
+            kepTarg.a, orb2.i, orb2.raan, repTarget.period_min, repTarget.sk_fuel_yr,
+            mass0, fuelUsed, cwRes.rendezvous.fuel_kg, mcRes.monte_carlo.tcm_fuel_99_kg,
+            sysHalfFovDeg, sysApertureM, 550.0, sysWalkerT, sysWalkerP, sysWalkerF,
+            st.min_el || 10.0, st.lat || 45.502
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -4109,6 +4590,7 @@
             thermal_rad_summary: tcsRes.thermal_rad_summary,
             thermal_summary: tcsRes.thermal_summary,
             telecom_summary: rfRes.telecom_summary,
+            systems_engineering: sysRes.systems_engineering,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,

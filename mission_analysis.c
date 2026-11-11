@@ -1793,3 +1793,164 @@ TelecomReport evaluate_rf_link_budget(KeplerianElements orb_init,
 
     return rep;
 }
+
+// ============================================================================
+// SPRINT 17: PAYLOAD SENSOR SWATH, WALKER DELTA CONSTELLATION & MASS/COST MODEL
+// ============================================================================
+SystemEngineeringReport evaluate_payload_constellation_and_cost(KeplerianElements orb_target,
+                                                                OrbitReport rep_target,
+                                                                OptimalTransferPlan plan,
+                                                                RendezvousPlan rdv,
+                                                                MonteCarloReport mc,
+                                                                PayloadAndConstellationSpec spec,
+                                                                const GroundStation *station,
+                                                                double mu) {
+    SystemEngineeringReport sys = {0};
+
+    spec.half_fov_deg      = adcs_clamp((spec.half_fov_deg > 0.5) ? spec.half_fov_deg : 25.0, 1.0, 68.0);
+    spec.opt_aperture_m    = adcs_clamp((spec.opt_aperture_m > 0.02) ? spec.opt_aperture_m : 0.35, 0.05, 4.0);
+    spec.wavelength_nm     = adcs_clamp((spec.wavelength_nm > 100.0) ? spec.wavelength_nm : 550.0, 250.0, 15000.0);
+    spec.walker_total_sats = (spec.walker_total_sats >= 1) ? spec.walker_total_sats : 24;
+    if (spec.walker_total_sats > MAX_WALKER_SATS) spec.walker_total_sats = MAX_WALKER_SATS;
+    spec.walker_planes     = (spec.walker_planes >= 1) ? spec.walker_planes : 3;
+    if (spec.walker_planes > spec.walker_total_sats) spec.walker_planes = spec.walker_total_sats;
+    spec.walker_phasing    = (spec.walker_phasing >= 0) ? (spec.walker_phasing % spec.walker_planes) : 1;
+    sys.spec = spec;
+
+    // 1. Geometria Sensore Ottico/SAR, Swath Width a Terra [km] e Ground Sample Distance [m]
+    double a_targ_km = (orb_target.a > EARTH_RADIUS + 100.0) ? orb_target.a : (EARTH_RADIUS + 650.0);
+    double h_km      = fmax(150.0, a_targ_km - EARTH_RADIUS);
+    double r_km      = EARTH_RADIUS + h_km;
+    sys.target_alt_km = h_km;
+
+    double fov_half_rad = spec.half_fov_deg * DEG2RAD;
+    double sin_arg = (r_km / EARTH_RADIUS) * sin(fov_half_rad);
+    double lambda_rad = 0.0;
+    if (sin_arg < 0.9998) {
+        lambda_rad = asin(sin_arg) - fov_half_rad;
+    } else {
+        // Limite geometrico dell'orizzonte terrestre
+        lambda_rad = acos(EARTH_RADIUS / r_km);
+    }
+    if (lambda_rad < 1e-5) lambda_rad = 1e-5;
+
+    sys.earth_central_angle_deg = lambda_rad * RAD2DEG;
+    sys.swath_width_km          = 2.0 * EARTH_RADIUS * lambda_rad;
+    sys.footprint_radius_km     = 0.5 * sys.swath_width_km;
+
+    // Risoluzione spaziale al suolo (Limite di diffrazione di Rayleigh: GSD = 1.22 * lambda * h / D_opt)
+    sys.gsd_nadir_m = 1.22 * ((spec.wavelength_nm * 1.0e-9) * (h_km * 1000.0)) / spec.opt_aperture_m;
+
+    double v_orb_kms = sqrt(mu / r_km);
+    double v_gnd_kms = v_orb_kms * (EARTH_RADIUS / r_km);
+    sys.area_coverage_rate_km2_s = sys.swath_width_km * v_gnd_kms;
+
+    // 2. Costellazione Simmetrica di Walker Delta (i : T / P / F)
+    int T = spec.walker_total_sats;
+    int P = spec.walker_planes;
+    int F = spec.walker_phasing;
+    sys.inc_deg        = orb_target.i * RAD2DEG;
+    sys.sats_per_plane = T / P;
+    if (sys.sats_per_plane < 1) sys.sats_per_plane = 1;
+
+    double raan0_deg = orb_target.RAAN * RAD2DEG;
+    double inc_rad   = orb_target.i;
+    int sat_idx = 0;
+
+    for (int p = 0; p < P && sat_idx < MAX_WALKER_SATS; p++) {
+        int sats_in_p = (T / P) + ((p < (T % P)) ? 1 : 0);
+        double raan_p_deg = fmod(raan0_deg + (double)p * (360.0 / (double)P), 360.0);
+        if (raan_p_deg < 0.0) raan_p_deg += 360.0;
+
+        for (int m = 0; m < sats_in_p && sat_idx < MAX_WALKER_SATS; m++) {
+            double u_deg = fmod((double)m * (360.0 / (double)sats_in_p) +
+                                (double)(p * F) * (360.0 / (double)T), 360.0);
+            double u_rad = u_deg * DEG2RAD;
+
+            double sin_lat = sin(inc_rad) * sin(u_rad);
+            sin_lat = adcs_clamp(sin_lat, -1.0, 1.0);
+            double lat_deg = asin(sin_lat) * RAD2DEG;
+
+            double dlon_rad = atan2(cos(inc_rad) * sin(u_rad), cos(u_rad));
+            double lon_raw  = raan_p_deg + dlon_rad * RAD2DEG;
+            double lon_deg  = fmod(lon_raw + 540.0, 360.0) - 180.0;
+
+            sys.walker_subpoints[sat_idx].lat_deg     = lat_deg;
+            sys.walker_subpoints[sat_idx].lon_deg     = lon_deg;
+            sys.walker_subpoints[sat_idx].plane_id    = p;
+            sys.walker_subpoints[sat_idx].sat_id      = sat_idx;
+            sys.walker_subpoints[sat_idx].raan_deg    = raan_p_deg;
+            sys.walker_subpoints[sat_idx].arg_lat_deg = u_deg;
+            sat_idx++;
+        }
+    }
+    sys.num_walker_sats = sat_idx;
+
+    // Copertura globale istantanea (calotta sferica di semi-apertura Lambda per ciascun satellite)
+    double f_cap_single = 0.5 * (1.0 - cos(lambda_rad));
+    sys.global_coverage_pct = 100.0 * (1.0 - pow(1.0 - f_cap_single, (double)T));
+    if (sys.global_coverage_pct > 99.9) sys.global_coverage_pct = 99.9;
+
+    // Numero medio di satelliti in vista sopra El_min e PDOP
+    double min_el_rad = (station != NULL && station->min_elevation > 0.0) ? station->min_elevation : (10.0 * DEG2RAD);
+    double st_lat_deg = (station != NULL) ? (station->coord.latitude * RAD2DEG) : 45.502;
+    double cos_el = cos(min_el_rad);
+    double arg_acc = adcs_clamp((EARTH_RADIUS / r_km) * cos_el, -1.0, 1.0);
+    double lambda_acc_rad = acos(arg_acc) - min_el_rad;
+    if (lambda_acc_rad < lambda_rad) lambda_acc_rad = lambda_rad;
+    double f_acc_single = 0.5 * (1.0 - cos(lambda_acc_rad));
+
+    double inc_match = 1.05 - 0.30 * fabs(sys.inc_deg - fabs(st_lat_deg)) / 90.0;
+    inc_match = adcs_clamp(inc_match, 0.65, 1.20);
+    sys.mean_vis_sats = (double)T * f_acc_single * inc_match * 1.35;
+    sys.pdop_geom     = 4.60 / sqrt(fmax(0.85, sys.mean_vis_sats + 0.35 * (double)P));
+
+    // Mean Revisit Time [min] sulla latitudine della stazione di terra
+    double period_min = (rep_target.period_min > 60.0) ? rep_target.period_min : (2.0 * PI * sqrt(r_km * r_km * r_km / mu) / 60.0);
+    double lat_circ_km = 2.0 * PI * EARTH_RADIUS * fmax(0.25, cos(st_lat_deg * DEG2RAD));
+    double swath_eff_km = fmax(80.0, sys.swath_width_km);
+    double revs_for_full_band = lat_circ_km / swath_eff_km;
+    double plane_diversity = 0.72 + 0.10 * fmin(8.0, (double)P);
+    sys.mean_revisit_min = (period_min * revs_for_full_band) / ((double)T * plane_diversity * inc_match);
+    sys.mean_revisit_min = adcs_clamp(sys.mean_revisit_min, 1.5, 1440.0);
+
+    // 3. Bilancio di Massa (SMAD Dry Mass Breakdown + Propellant Margin)
+    double wet_mass_kg = plan.final_mass + plan.propellant_used;
+    if (wet_mass_kg < 20.0) wet_mass_kg = 500.0;
+    sys.wet_mass_kg            = wet_mass_kg;
+    sys.propellant_transfer_kg = plan.propellant_used;
+    sys.propellant_margin_kg   = rdv.propellant_used_kg + mc.tcm_fuel_99_kg + rep_target.station_keeping_fuel_yr;
+    sys.total_propellant_kg    = sys.propellant_transfer_kg + sys.propellant_margin_kg;
+    if (sys.total_propellant_kg > 0.82 * wet_mass_kg) {
+        sys.total_propellant_kg = 0.82 * wet_mass_kg;
+    }
+    sys.dry_mass_kg       = wet_mass_kg - sys.total_propellant_kg;
+    sys.dry_wet_ratio_pct = (sys.dry_mass_kg / wet_mass_kg) * 100.0;
+
+    // Ripartizione SMAD della Massa a Secco (28%, 22%, 19%, 11%, 9%, 6%, 5%)
+    sys.mass_payload_kg  = 0.28 * sys.dry_mass_kg;
+    sys.mass_struct_kg   = 0.22 * sys.dry_mass_kg;
+    sys.mass_eps_kg      = 0.19 * sys.dry_mass_kg;
+    sys.mass_prop_dry_kg = 0.11 * sys.dry_mass_kg;
+    sys.mass_adcs_kg     = 0.09 * sys.dry_mass_kg;
+    sys.mass_ttc_obdh_kg = 0.06 * sys.dry_mass_kg;
+    sys.mass_tcs_kg      = 0.05 * sys.dry_mass_kg;
+
+    // 4. Stima Parametrica dei Costi di Missione (SMAD / NASA NICM in M€)
+    double opt_factor = pow(spec.opt_aperture_m / 0.35, 1.15);
+    sys.cost_platform_meur      = 6.50 + 0.082 * pow(sys.dry_mass_kg, 0.85);
+    sys.cost_payload_meur       = (4.20 + 0.145 * pow(sys.mass_payload_kg, 0.88)) * opt_factor;
+    sys.cost_spacecraft_meur    = sys.cost_platform_meur + sys.cost_payload_meur;
+
+    double launch_rate_meur_kg  = (h_km > 1500.0) ? 0.0120 : 0.0085; // Tariffa specifica LEO / MEO-GTO [M€/kg]
+    sys.cost_launch_meur        = wet_mass_kg * launch_rate_meur_kg;
+    sys.cost_ops_5yr_meur       = 5.0 * (1.35 + 0.035 * sys.cost_spacecraft_meur);
+    sys.total_mission_cost_meur = sys.cost_spacecraft_meur + sys.cost_launch_meur + sys.cost_ops_5yr_meur;
+
+    // Costo della costellazione completa di T satelliti con fattore di apprendimento industriale di Wright
+    sys.constellation_cost_meur = sys.cost_spacecraft_meur * pow((double)T, 0.78) +
+                                  (double)T * sys.cost_launch_meur * 0.72 +
+                                  sys.cost_ops_5yr_meur * (1.0 + 0.08 * (double)T);
+
+    return sys;
+}
