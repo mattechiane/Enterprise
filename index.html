@@ -469,6 +469,52 @@
     </div>
 </section>
 
+<!-- 10. TENTH OUTPUT BLOCK: RF TELECOMMUNICATION LINK BUDGET, Eb/N0 MARGIN & DATA DOWNLINK -->
+<section class="section-block">
+    <div class="section-header">
+        <div>
+            <h2>10. RF Telecommunication Link Budget, E<sub>b</sub>/N<sub>0</sub> Margin &amp; Data Downlink</h2>
+            <span>Slant-Range FSPL(t) &bull; Atmospheric &amp; Elevation Loss &bull; E<sub>b</sub>/N<sub>0</sub> Carrier Lock Threshold &bull; ACM Downlink Throughput &amp; Data Volume [GB]</span>
+        </div>
+        <span class="badge" id="rfStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#128225; RF DOWNLINK CARRIER LOCKED (X-BAND 8.4 GHz)</span>
+    </div>
+
+    <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.13), rgba(0,230,118,0.11)); border-color: var(--cyan);">
+        <div class="title-group">
+            <h3 id="rfBannerTitle" style="color:var(--cyan);">RF TELECOMMUNICATION LINK BUDGET &amp; ACM GROUND STATION DOWNLINK</h3>
+            <p id="rfBannerSub">Selected RF Band: X-Band (8.4 GHz Science) &bull; EIRP: --- dBW &bull; Mean FSPL: --- dB &bull; Ground Station: Milano-Bovisa (3.5m Dish)</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="rfBannerVolume" style="color:var(--green);">Total Downlinked Data: --- GB/24h</div>
+            <div class="sub-fuel" id="rfBannerSubMetrics">Selected Band &amp; EIRP: --- dBW | Mean FSPL: --- dB | Peak Link Margin: +--- dB</div>
+        </div>
+    </div>
+
+    <div class="datasheet-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+        <div class="data-card">
+            <h4 style="color:var(--cyan)">&#128225; RF Band &amp; Onboard EIRP</h4>
+            <div id="rfCardBand"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--amber)">&#127760; Path Loss (FSPL) &amp; G/T</h4>
+            <div id="rfCardLosses"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--purple)">&#128200; E<sub>b</sub>/N<sub>0</sub> &amp; Link Margin</h4>
+            <div id="rfCardMargin"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--green)">&#128190; ACM Rate &amp; Downlink Volume</h4>
+            <div id="rfCardVolume"></div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotTelecomMargin" class="plot-container-rdv"></div>
+        <div id="plotTelecomData" class="plot-container-rdv"></div>
+    </div>
+</section>
+
 
 <!-- POPUP MODAL: MISSION INPUT CONFIGURATOR -->
 <div class="modal-overlay" id="inputModal">
@@ -698,6 +744,35 @@
             </div>
         </div>
 
+        <div class="form-section" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--green)">8. RF Telecommunication Link Budget &amp; Ground Station Downlink</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Milano-Bovisa 3.5m Ground Station &bull; Adaptive Coding &amp; Modulation (LDPC ACM)</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
+                <div class="field">
+                    <label>Downlink Frequency Band (S / X / Ka)</label>
+                    <select id="rfBandSelect" onchange="onRfBandChange()">
+                        <option value="0|2.2|2.0|6.5|36.2|S-Band (2.2 GHz TT&C)">S-Band (2.2 GHz TT&amp;C &bull; 2 Mbps Nom &bull; All-Weather)</option>
+                        <option value="1|8.4|50.0|15.5|47.8|X-Band (8.4 GHz Science)" selected>X-Band (8.4 GHz Science Downlink &bull; 50 Mbps Nom)</option>
+                        <option value="2|26.5|250.0|25.0|57.6|Ka-Band (26.5 GHz High-Rate)">Ka-Band (26.5 GHz High-Throughput &bull; 250 Mbps Nom)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Onboard Tx Power P<sub>tx</sub> [W]</label>
+                    <input type="number" id="rfTxPowerW" value="15.0" min="0.5" max="250.0" step="1.0">
+                </div>
+                <div class="field">
+                    <label>S/C Antenna Gain G<sub>tx</sub> [dBi]</label>
+                    <input type="number" id="rfTxGainDbi" value="15.5" min="0.0" max="45.0" step="0.5">
+                </div>
+                <div class="field">
+                    <label>G/S Dish Diameter [m]</label>
+                    <input type="number" id="rfDishM" value="3.5" min="1.0" max="15.0" step="0.5">
+                </div>
+            </div>
+        </div>
+
         <div class="modal-footer">
             <button class="btn-secondary" id="btnCancelModal">Cancel</button>
             <button class="btn-primary" id="btnRunCustomMission">&#128640; Compute Optimal Maneuver &amp; Update Mission</button>
@@ -762,6 +837,14 @@
             document.getElementById('tcsEps').value   = p[1];
             document.getElementById('tcsTmin').value  = p[2];
             document.getElementById('tcsTmax').value  = p[3];
+        }
+    }
+
+    function onRfBandChange() {
+        const val = document.getElementById('rfBandSelect').value;
+        const p = val.split('|');
+        if (p.length >= 4) {
+            document.getElementById('rfTxGainDbi').value = p[3];
         }
     }
 
@@ -1092,6 +1175,21 @@
             if (tcsSum.al_shield_mm !== undefined) document.getElementById('tcsShieldMm').value = tcsSum.al_shield_mm;
             if (tcsSum.t_min_op_c !== undefined)   document.getElementById('tcsTmin').value     = tcsSum.t_min_op_c;
             if (tcsSum.t_max_op_c !== undefined)   document.getElementById('tcsTmax').value     = tcsSum.t_max_op_c;
+        }
+        if (data.telecom_summary) {
+            const rf = data.telecom_summary;
+            if (rf.band_id !== undefined) {
+                const selRf = document.getElementById('rfBandSelect');
+                for (let i = 0; i < selRf.options.length; i++) {
+                    if (parseInt(selRf.options[i].value.split('|')[0], 10) === rf.band_id) {
+                        selRf.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (rf.tx_power_w !== undefined)  document.getElementById('rfTxPowerW').value  = rf.tx_power_w;
+            if (rf.tx_gain_dbi !== undefined) document.getElementById('rfTxGainDbi').value = rf.tx_gain_dbi;
+            if (rf.rx_dish_m !== undefined)   document.getElementById('rfDishM').value     = rf.rx_dish_m;
         }
 
         validateModalOrbits(false);
@@ -2106,6 +2204,148 @@
                 showarrow: true, arrowhead: 2, arrowcolor: '#d500f9', ax: -42, ay: -28,
                 bgcolor: 'rgba(11, 15, 25, 0.92)', bordercolor: '#d500f9', borderwidth: 1.3, borderpad: 4,
                 font: { color: '#f5d0fe', size: 10.5 }
+            }],
+            legend: { font: { color: '#e2e8f0', size: 10 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---------------------------------------------------------------------
+        // SECTION 10: RF TELECOMMUNICATION LINK BUDGET, Eb/N0 MARGIN & DATA DOWNLINK
+        // ---------------------------------------------------------------------
+        const fallbackRf = evaluateRfLinkBudgetJS(
+            aInitKm,
+            aTargKm,
+            (m.transfer_min || 47.57) * 60.0,
+            isLowThrust,
+            r2.inc_deg || 53.0,
+            r2.contact_min || 38.0,
+            1,
+            15.0,
+            15.5,
+            3.5,
+            st.min_el || 10.0,
+            st.lat || 45.502
+        );
+        const rfInfo = data.telecom_summary || fallbackRf.telecom_summary;
+        const rfTraj = (data.traj_telecom && data.traj_telecom.length) ? data.traj_telecom : fallbackRf.traj_telecom;
+
+        const rfBadgeEl = document.getElementById('rfStatusBadge');
+        if (rfBadgeEl) {
+            const linkOk = rfInfo.peak_margin_db > 0.0;
+            rfBadgeEl.innerHTML = linkOk
+                ? `&#128225; RF CARRIER LOCKED (${rfInfo.band_name} &bull; Peak Margin: +${rfInfo.peak_margin_db} dB &bull; ${rfInfo.total_data_gb_24h} GB/24h)`
+                : `&#9888; RF LINK MARGIN CRITICAL (${rfInfo.band_name} &bull; Margin: ${rfInfo.peak_margin_db} dB)`;
+            rfBadgeEl.style.color = linkOk ? 'var(--cyan)' : 'var(--red)';
+            rfBadgeEl.style.borderColor = linkOk ? 'var(--cyan)' : 'var(--red)';
+        }
+
+        document.getElementById('rfBannerTitle').textContent =
+            `RF TELECOMMUNICATION LINK BUDGET, Eb/N0 MARGIN & ACM GROUND STATION DOWNLINK`;
+        document.getElementById('rfBannerSub').innerHTML =
+            `Selected RF Band: <strong>${rfInfo.band_name}</strong> (${rfInfo.modulation_scheme}) &bull; EIRP: <strong>${rfInfo.eirp_dbw} dBW</strong> (P<sub>tx</sub>=${rfInfo.tx_power_w} W, G<sub>tx</sub>=${rfInfo.tx_gain_dbi} dBi) &bull; Ground Dish: <strong>${rfInfo.rx_dish_m} m (${rfInfo.rx_gain_dbi} dBi)</strong>`;
+        document.getElementById('rfBannerVolume').textContent =
+            `Total Downlinked Data: ${rfInfo.total_data_gb_24h} GB/24h (${rfInfo.mission_data_gb} GB Mission)`;
+        document.getElementById('rfBannerSubMetrics').textContent =
+            `Selected Band: ${rfInfo.freq_ghz} GHz (EIRP ${rfInfo.eirp_dbw} dBW) • Mean FSPL: ${rfInfo.mean_fspl_db} dB • Peak Link Margin: +${rfInfo.peak_margin_db} dB`;
+
+        document.getElementById('rfCardBand').innerHTML = `
+            <div class="row-item"><span class="row-label">Selected Frequency Band</span><span class="row-val" style="color:var(--cyan)">${rfInfo.band_name}</span></div>
+            <div class="row-item"><span class="row-label">Tx Power P_tx (W / dBW)</span><span class="row-val">${rfInfo.tx_power_w} W (${rfInfo.tx_power_dbw} dBW)</span></div>
+            <div class="row-item"><span class="row-label">Spacecraft EIRP (G_tx=${rfInfo.tx_gain_dbi} dBi)</span><span class="row-val" style="color:var(--amber)">${rfInfo.eirp_dbw} dBW</span></div>
+        `;
+        document.getElementById('rfCardLosses').innerHTML = `
+            <div class="row-item"><span class="row-label">Mean / Max Pass FSPL</span><span class="row-val" style="color:var(--amber)">${rfInfo.mean_fspl_db} / ${rfInfo.max_fspl_db} dB</span></div>
+            <div class="row-item"><span class="row-label">Ground Dish (${rfInfo.rx_dish_m}m) Gain G_rx</span><span class="row-val" style="color:var(--green)">+${rfInfo.rx_gain_dbi} dBi</span></div>
+            <div class="row-item"><span class="row-label">System Noise T_sys / N0</span><span class="row-val">${rfInfo.sys_noise_temp_k} K (${rfInfo.n0_dbw_hz} dBW/Hz)</span></div>
+        `;
+        document.getElementById('rfCardMargin').innerHTML = `
+            <div class="row-item"><span class="row-label">Peak Carrier Eb/N0</span><span class="row-val" style="color:var(--purple)">${rfInfo.peak_ebn0_db} dB</span></div>
+            <div class="row-item"><span class="row-label">Peak / Min Link Margin</span><span class="row-val" style="color:var(--cyan)">+${rfInfo.peak_margin_db} / +${rfInfo.min_margin_db} dB</span></div>
+            <div class="row-item"><span class="row-label">QPSK/LDPC Lock &amp; Req Eb/N0</span><span class="row-val">${rfInfo.lock_threshold_db} dB / ${rfInfo.req_ebn0_db} dB</span></div>
+        `;
+        document.getElementById('rfCardVolume').innerHTML = `
+            <div class="row-item"><span class="row-label">Nom / Peak ACM Data Rate</span><span class="row-val" style="color:var(--cyan)">${rfInfo.nom_bitrate_mbps} / ${rfInfo.max_achieved_mbps} Mbps</span></div>
+            <div class="row-item"><span class="row-label">Mission Pass Data Volume</span><span class="row-val" style="color:var(--amber)">${rfInfo.mission_data_gb} GB (${rfInfo.pass_windows} passes)</span></div>
+            <div class="row-item"><span class="row-label">Total 24h Downlink Volume</span><span class="row-val" style="color:var(--green)">${rfInfo.total_data_gb_24h} GB/24h</span></div>
+        `;
+
+        const rfTimeMin = rfTraj.map(p => p.t_min);
+        const rfStart = rfTimeMin[0], rfEnd = rfTimeMin[rfTraj.length - 1];
+        const lockThreshDb = rfInfo.lock_threshold_db !== undefined ? rfInfo.lock_threshold_db : 4.5;
+        const reqEbn0Db    = rfInfo.req_ebn0_db !== undefined ? rfInfo.req_ebn0_db : 7.5;
+
+        let peakPassIdx = 0;
+        for (let k = 1; k < rfTraj.length; k++) {
+            if (rfTraj[k].ebn0_db > rfTraj[peakPassIdx].ebn0_db) peakPassIdx = k;
+        }
+
+        Plotly.newPlot('plotTelecomMargin', [
+            {
+                type: 'scatter', mode: 'lines', name: 'Received Eb/N0(t) [dB]',
+                x: rfTimeMin, y: rfTraj.map(p => p.ebn0_db),
+                line: { color: '#00e5ff', width: 2.8 },
+                text: rfTraj.map(p => `FSPL: ${p.fspl_db} dB | El: ${(p.el_deg !== undefined ? p.el_deg : 0)}° | Range: ${(p.range_km !== undefined ? p.range_km : 0)} km`),
+                hovertemplate: '<b>Eb/N0</b>: %{y:.2f} dB<br>%{text}<extra></extra>'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'RF Link Margin(t) = Eb/N0 - Req [dB]',
+                x: rfTimeMin, y: rfTraj.map(p => p.link_margin_db),
+                line: { color: '#00e676', width: 2.3 },
+                fill: 'tozeroy', fillcolor: 'rgba(0, 230, 118, 0.08)'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: `Required Eb/N0 w/ 3dB Safety (${reqEbn0Db} dB)`,
+                x: [rfStart, rfEnd], y: [reqEbn0Db, reqEbn0Db],
+                line: { color: '#ffab00', width: 1.9, dash: 'dot' }
+            },
+            {
+                type: 'scatter', mode: 'lines', name: `Carrier Lock Threshold (QPSK/LDPC = ${lockThreshDb} dB)`,
+                x: [rfStart, rfEnd], y: [lockThreshDb, lockThreshDb],
+                line: { color: '#ff1744', width: 2.4, dash: 'dash' }
+            }
+        ], {
+            title: { text: '10A. Eb/N0 & Link Margin Evolution during Ground Station Passes [dB] vs. Lock Threshold', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 60, r: 30, b: 48, t: 40 }, hovermode: 'x unified',
+            xaxis: { title: 'Mission Timeline [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Signal-to-Noise Eb/N0 & Margin [dB]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#cbd5e1' }, gridcolor: '#222d42' },
+            annotations: [{
+                x: rfTimeMin[peakPassIdx], y: rfTraj[peakPassIdx].ebn0_db, xref: 'x', yref: 'y',
+                text: `<b>ZENITH PASS CULMINATION</b><br>(Eb/N0=${rfTraj[peakPassIdx].ebn0_db} dB | Margin=+${rfTraj[peakPassIdx].link_margin_db} dB)`,
+                showarrow: true, arrowhead: 2, arrowcolor: '#00e5ff', ax: -40, ay: -28,
+                bgcolor: 'rgba(11, 15, 25, 0.92)', bordercolor: '#00e5ff', borderwidth: 1.3, borderpad: 4,
+                font: { color: '#e0f2fe', size: 10.5 }
+            }],
+            legend: { font: { color: '#e2e8f0', size: 10 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        Plotly.newPlot('plotTelecomData', [
+            {
+                type: 'scatter', mode: 'lines', name: 'Instantaneous ACM Downlink Rate [Mbps]',
+                x: rfTimeMin, y: rfTraj.map(p => p.achieved_mbps),
+                line: { color: '#ffab00', width: 2.5, shape: 'hv' },
+                fill: 'tozeroy', fillcolor: 'rgba(255, 171, 0, 0.12)',
+                text: rfTraj.map(p => (p.in_pass === 1 ? `PASS ACTIVE (${rfInfo.modulation_scheme})` : 'BELOW HORIZON / STANDBY')),
+                hovertemplate: '<b>ACM Bitrate</b>: %{y:.2f} Mbps<br>%{text}<extra></extra>'
+            },
+            {
+                type: 'scatter', mode: 'lines', name: 'Cumulative Data Volume Downlinked [GB]',
+                x: rfTimeMin, y: rfTraj.map(p => p.cum_data_gb), yaxis: 'y2',
+                line: { color: '#00e676', width: 3.2 },
+                hovertemplate: '<b>Cumulative Downlinked</b>: %{y:.3f} GB<extra></extra>'
+            }
+        ], {
+            title: { text: '10B. Instantaneous ACM Downlink Throughput [Mbps] & Cumulative Data Volume [GB]', font: { color: '#e2e8f0', size: 13 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 60, r: 68, b: 48, t: 40 }, hovermode: 'x unified',
+            xaxis: { title: 'Mission Timeline [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Instantaneous ACM Throughput [Mbps]', titlefont: { color: '#ffab00' }, tickfont: { color: '#ffab00' }, gridcolor: '#222d42', rangemode: 'tozero' },
+            yaxis2: { title: 'Cumulative Data Downlinked [GB]', titlefont: { color: '#00e676' }, tickfont: { color: '#00e676' }, overlaying: 'y', side: 'right', showgrid: false, rangemode: 'tozero' },
+            annotations: [{
+                x: rfEnd, y: rfTraj[rfTraj.length - 1].cum_data_gb, xref: 'x', yref: 'y2',
+                text: `<b>MISSION DATA</b>: ${rfInfo.mission_data_gb} GB<br><b>24h VOLUME</b>: ${rfInfo.total_data_gb_24h} GB/day`,
+                showarrow: true, arrowhead: 2, arrowcolor: '#00e676', ax: -75, ay: -25,
+                bgcolor: 'rgba(11, 15, 25, 0.92)', bordercolor: '#00e676', borderwidth: 1.3, borderpad: 4,
+                font: { color: '#bbf7d0', size: 10.5 }
             }],
             legend: { font: { color: '#e2e8f0', size: 10 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
@@ -3378,6 +3618,213 @@
         };
     }
 
+    // =========================================================================
+    // SPRINT 16: RF TELECOMMUNICATION LINK BUDGET, Eb/N0 & ACM DOWNLINK ENGINE (JS)
+    // =========================================================================
+    function evaluateRfLinkBudgetJS(aInitKm, aTargetKm, tofSec, isLowThrust, incTargetDeg, targetContactMin24h, bandIdIn = 1, txPowerWIn = 15.0, txGainDbiIn = null, dishMIn = 3.5, minElDegIn = 10.0, stLatDegIn = 45.502) {
+        const BOLTZMANN_DBW = -228.60;
+        const bandId = (bandIdIn === 0 || bandIdIn === 1 || bandIdIn === 2) ? bandIdIn : 1;
+        const txPowerW = Math.max(0.5, Math.min(250.0, txPowerWIn || 15.0));
+        const txPowerDbw = 10.0 * Math.log10(txPowerW);
+        const rxDishM = Math.max(1.0, Math.min(15.0, dishMIn || 3.5));
+        const dishScaleDb = 20.0 * Math.log10(rxDishM / 3.5);
+        const lockThresholdDb = 4.5;
+        const reqEbn0Db = 7.5;
+
+        let bandName = 'X-Band (8.4 GHz Science)';
+        let modScheme = '8PSK / 16APSK + LDPC ACM';
+        let freqGhz = 8.40;
+        let nomBitrateMbps = 50.0;
+        let txGainDbi = 15.5;
+        let rxGainDbi = 47.8 + dishScaleDb;
+        let sysNoiseTempK = 165.0;
+        let zenithAtmLossDb = 0.22;
+        let pointingLossDb = 0.45;
+
+        if (bandId === 0) {
+            bandName = 'S-Band (2.2 GHz TT&C)';
+            modScheme = 'QPSK + LDPC (1/2 - 3/4) ACM';
+            freqGhz = 2.20;
+            nomBitrateMbps = 2.0;
+            txGainDbi = 6.5;
+            rxGainDbi = 36.2 + dishScaleDb;
+            sysNoiseTempK = 135.0;
+            zenithAtmLossDb = 0.08;
+            pointingLossDb = 0.25;
+        } else if (bandId === 2) {
+            bandName = 'Ka-Band (26.5 GHz High-Rate)';
+            modScheme = '16APSK / 32APSK + DVB-S2X ACM';
+            freqGhz = 26.50;
+            nomBitrateMbps = 250.0;
+            txGainDbi = 25.0;
+            rxGainDbi = 57.6 + dishScaleDb;
+            sysNoiseTempK = 255.0;
+            zenithAtmLossDb = 0.78;
+            pointingLossDb = 0.75;
+        }
+
+        if (txGainDbiIn !== null && !isNaN(txGainDbiIn) && txGainDbiIn > 0) {
+            txGainDbi = txGainDbiIn;
+        }
+
+        const lineLossDb = 0.80;
+        const eirpDbw = txPowerDbw + txGainDbi - lineLossDb;
+        const n0DbwHz = BOLTZMANN_DBW + 10.0 * Math.log10(sysNoiseTempK);
+
+        const pInitS = 2.0 * Math.PI * Math.sqrt(Math.pow(aInitKm, 3) / MU);
+        const pTargS = 2.0 * Math.PI * Math.sqrt(Math.pow(aTargetKm, 3) / MU);
+        const tPhase1S = 2.0 * pInitS;
+        const tPhase2S = isLowThrust ? (6.0 * 5600.0) : Math.max(600.0, tofSec || 2700.0);
+        const tPhase3S = 2.0 * pTargS;
+        const totalMissionMin = (tPhase1S + tPhase2S + tPhase3S) / 60.0;
+
+        const minElDeg = Math.max(2.0, minElDegIn || 10.0);
+        const stLatDeg = stLatDegIn !== undefined ? stLatDegIn : 45.502;
+        const passCenters = [0.14, 0.41, 0.67, 0.89];
+        const passHalfW   = [0.055, 0.062, 0.058, 0.065];
+        const passMaxElBase = [52.0, 68.0, 44.0, 74.0];
+
+        const incFactor = Math.max(0.68, Math.min(1.08, 1.0 - 0.22 * Math.abs((incTargetDeg || 53.0) - stLatDeg) / 90.0));
+        const numPts = 151;
+        const dtSampleS = (totalMissionMin * 60.0) / (numPts - 1);
+        const log10NomBps = 10.0 * Math.log10(nomBitrateMbps * 1.0e6);
+
+        let maxFsplDb = 0.0, peakEbn0Db = -100.0, minMarginDb = 100.0, peakMarginDb = -100.0, maxAchievedMbps = 0.0;
+        let passWindows = 0, contactTimeMin = 0.0, sumFsplPass = 0.0, passSampleCount = 0, cumDataGb = 0.0;
+        let inPassPrev = false;
+        const trajTelecom = [];
+
+        for (let i = 0; i < numPts; i++) {
+            const tau = i / (numPts - 1);
+            const tMin = tau * totalMissionMin;
+
+            let rCurKm = aInitKm;
+            if (tau >= 0.34 && tau <= 0.76) {
+                const fTr = (tau - 0.34) / 0.42;
+                rCurKm = aInitKm + fTr * (aTargetKm - aInitKm);
+            } else if (tau > 0.76) {
+                rCurKm = aTargetKm;
+            }
+            const altCurKm = Math.max(150.0, rCurKm - R_EQ);
+
+            let elDeg = -18.0 + 6.0 * Math.sin(2.0 * Math.PI * 4.5 * tau);
+            for (let p = 0; p < 4; p++) {
+                const u = (tau - passCenters[p]) / passHalfW[p];
+                if (Math.abs(u) < 1.35) {
+                    let arch = passMaxElBase[p] * incFactor * Math.cos(0.5 * Math.PI * (u / 1.05));
+                    if (u * u > 1.05 * 1.05) {
+                        arch = -12.0 * (Math.abs(u) - 1.05) / 0.30;
+                    }
+                    if (arch > elDeg) elDeg = arch;
+                }
+            }
+
+            let slantRangeKm = 0.0;
+            if (elDeg > 0.0) {
+                const sinEl = Math.sin(elDeg * DEG2RAD);
+                slantRangeKm = -R_EQ * sinEl + Math.sqrt(R_EQ * R_EQ * sinEl * sinEl + rCurKm * rCurKm - R_EQ * R_EQ);
+            } else {
+                const horizKm = Math.sqrt(Math.max(100.0, rCurKm * rCurKm - R_EQ * R_EQ));
+                slantRangeKm = horizKm * (1.0 + 0.12 * Math.abs(elDeg) / 20.0);
+            }
+            if (slantRangeKm < altCurKm) slantRangeKm = altCurKm;
+
+            const fsplDb = 20.0 * Math.log10(slantRangeKm) + 20.0 * Math.log10(freqGhz) + 92.45;
+            if (fsplDb > maxFsplDb) maxFsplDb = fsplDb;
+
+            const elClampedDeg = Math.max(5.0, elDeg);
+            let atmLossDb = (zenithAtmLossDb / Math.sin(elClampedDeg * DEG2RAD)) + pointingLossDb;
+            if (elDeg < minElDeg) {
+                atmLossDb += 0.55 * (minElDeg - elDeg);
+            }
+
+            const prxDbw  = eirpDbw - fsplDb - atmLossDb + rxGainDbi;
+            const cn0Dbhz = prxDbw - n0DbwHz;
+            const ebn0Db  = cn0Dbhz - log10NomBps;
+            const linkMarginDb = ebn0Db - reqEbn0Db;
+
+            let achievedMbps = 0.0;
+            let inPass = 0;
+            if (elDeg >= minElDeg && linkMarginDb > 0.0) {
+                inPass = 1;
+                if (!inPassPrev) {
+                    passWindows++;
+                    inPassPrev = true;
+                }
+                contactTimeMin += dtSampleS / 60.0;
+                sumFsplPass += fsplDb;
+                passSampleCount++;
+
+                if (linkMarginDb >= 9.0)      achievedMbps = nomBitrateMbps * 1.60;
+                else if (linkMarginDb >= 5.0) achievedMbps = nomBitrateMbps * 1.25;
+                else if (linkMarginDb >= 1.5) achievedMbps = nomBitrateMbps * 1.00;
+                else                          achievedMbps = nomBitrateMbps * 0.65;
+
+                cumDataGb += (achievedMbps * dtSampleS) / 8000.0;
+                if (achievedMbps > maxAchievedMbps) maxAchievedMbps = achievedMbps;
+                if (linkMarginDb < minMarginDb)     minMarginDb     = linkMarginDb;
+            } else {
+                inPassPrev = false;
+            }
+
+            if (ebn0Db > peakEbn0Db)          peakEbn0Db   = ebn0Db;
+            if (linkMarginDb > peakMarginDb) peakMarginDb = linkMarginDb;
+
+            trajTelecom.push({
+                t_min: +tMin.toFixed(2),
+                fspl_db: +fsplDb.toFixed(2),
+                ebn0_db: +ebn0Db.toFixed(2),
+                link_margin_db: +linkMarginDb.toFixed(2),
+                achieved_mbps: +achievedMbps.toFixed(2),
+                cum_data_gb: +cumDataGb.toFixed(3),
+                el_deg: +elDeg.toFixed(2),
+                range_km: +slantRangeKm.toFixed(1),
+                in_pass: inPass
+            });
+        }
+
+        const meanFsplDb = (passSampleCount > 0) ? (sumFsplPass / passSampleCount) : (maxFsplDb - 4.5);
+        if (passSampleCount === 0) minMarginDb = peakMarginDb;
+
+        const dailyContactMin = (targetContactMin24h && targetContactMin24h > 18.0) ? targetContactMin24h : 38.0;
+        const totalDataGb24h = (contactTimeMin > 1.0 && cumDataGb > 0.0)
+            ? Math.max(cumDataGb, (cumDataGb / contactTimeMin) * dailyContactMin)
+            : 0.0;
+
+        return {
+            telecom_summary: {
+                band_id: bandId,
+                band_name: bandName,
+                modulation_scheme: modScheme,
+                freq_ghz: +freqGhz.toFixed(2),
+                tx_power_w: +txPowerW.toFixed(1),
+                tx_power_dbw: +txPowerDbw.toFixed(2),
+                tx_gain_dbi: +txGainDbi.toFixed(1),
+                rx_dish_m: +rxDishM.toFixed(1),
+                rx_gain_dbi: +rxGainDbi.toFixed(1),
+                eirp_dbw: +eirpDbw.toFixed(2),
+                sys_noise_temp_k: +sysNoiseTempK.toFixed(1),
+                n0_dbw_hz: +n0DbwHz.toFixed(2),
+                zenith_atm_loss_db: +zenithAtmLossDb.toFixed(2),
+                pointing_loss_db: +pointingLossDb.toFixed(2),
+                lock_threshold_db: +lockThresholdDb.toFixed(2),
+                req_ebn0_db: +reqEbn0Db.toFixed(2),
+                nom_bitrate_mbps: +nomBitrateMbps.toFixed(1),
+                max_achieved_mbps: +maxAchievedMbps.toFixed(2),
+                mean_fspl_db: +meanFsplDb.toFixed(2),
+                max_fspl_db: +maxFsplDb.toFixed(2),
+                peak_ebn0_db: +peakEbn0Db.toFixed(2),
+                min_margin_db: +minMarginDb.toFixed(2),
+                peak_margin_db: +peakMarginDb.toFixed(2),
+                pass_windows: passWindows,
+                contact_time_min: +contactTimeMin.toFixed(2),
+                mission_data_gb: +cumDataGb.toFixed(3),
+                total_data_gb_24h: +totalDataGb24h.toFixed(2)
+            },
+            traj_telecom: trajTelecom
+        };
+    }
+
     document.getElementById('btnRunCustomMission').addEventListener('click', function() {
         const mass0 = parseFloat(document.getElementById('inMass').value) || 500;
         const propParts = document.getElementById('inPropellant').value.split('|');
@@ -3630,6 +4077,15 @@
         const tcsRes      = simulateThermalProfileJS(kepInit.a, kepTarg.a, tofSec, isLowThrust, tcsAlpha, tcsEps,
             isNaN(tcsTmin) ? -10.0 : tcsTmin, isNaN(tcsTmax) ? 45.0 : tcsTmax, tcsShieldMm, orb1.i, orb2.i);
 
+        // Sprint 16: RF Telecommunication Link Budget, Eb/N0 Margin & Data Downlink Volume
+        const rfBandParts = (document.getElementById('rfBandSelect').value || '1|8.4|50.0|15.5|47.8').split('|');
+        const rfBandId    = parseInt(rfBandParts[0], 10);
+        const rfTxPowerW  = Math.max(0.5, Math.min(250.0, parseFloat(document.getElementById('rfTxPowerW').value)  || 15.0));
+        const rfTxGainDbi = Math.max(0.5, Math.min(45.0,  parseFloat(document.getElementById('rfTxGainDbi').value) || parseFloat(rfBandParts[3]) || 15.5));
+        const rfDishM     = Math.max(1.0, Math.min(15.0,  parseFloat(document.getElementById('rfDishM').value)     || 3.5));
+        const rfRes       = evaluateRfLinkBudgetJS(kepInit.a, kepTarg.a, tofSec, isLowThrust, orb2.i, repTarget.contact_min,
+            isNaN(rfBandId) ? 1 : rfBandId, rfTxPowerW, rfTxGainDbi, rfDishM, st.min_el || 10.0, st.lat || 45.502);
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -3652,12 +4108,14 @@
             adcs_summary: adcsRes.adcs_summary,
             thermal_rad_summary: tcsRes.thermal_rad_summary,
             thermal_summary: tcsRes.thermal_summary,
+            telecom_summary: rfRes.telecom_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
             mc_cloud: mcRes.mc_cloud,
             traj_adcs: adcsRes.traj_adcs,
-            traj_thermal: tcsRes.traj_thermal
+            traj_thermal: tcsRes.traj_thermal,
+            traj_telecom: rfRes.traj_telecom
         };
 
         document.getElementById('inputModal').classList.remove('open');

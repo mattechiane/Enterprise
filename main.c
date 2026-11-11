@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 15: 6-DOF ADCS & THERMAL CONTROL (TCS)\n");
+    printf("   PROJECT ENTERPRISE - SPRINT 16: TCS, RAD & RF TELECOM LINK BUDGET  \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -75,6 +75,12 @@ int main(void) {
     ThermalRadReport tcs = simulate_thermal_and_radiation(orb_initial, orb_target, plan,
                                                           coating, al_shield_mm, t_min_op_c, t_max_op_c, EARTH_MU);
 
+    // 8. SPRINT 16: RF TELECOMMUNICATION LINK BUDGET, Eb/N0 MARGIN & GROUND STATION DATA DOWNLINK
+    RFBandType rf_band = BAND_X_8_4GHZ; // X-Band (8.4 GHz Science Downlink, 50 Mbps nominal)
+    double tx_power_w  = 15.0;          // Potenza trasmettitore di bordo P_tx = 15.0 W (11.76 dBW)
+    TelecomReport telecom = evaluate_rf_link_budget(orb_initial, orb_target, plan, rep_target,
+                                                    rf_band, tx_power_w, &milano, EARTH_MU);
+
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -134,10 +140,21 @@ int main(void) {
            tcs.al_shield_mm, tcs.tid_krad_yr, tcs.peak_dose_urad_h, tcs.seu_rate_day, tcs.avionics_life_yr);
     printf("  * Magnetic Belt Status  : %s\n\n", tcs.saa_status);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with 6-DOF ADCS, Thermal TCS, CW Rendezvous & Monte Carlo Data!\n");
+    printf("[RF TELECOMMUNICATION LINK BUDGET, Eb/N0 MARGIN & GROUND STATION DOWNLINK]\n");
+    printf("  * RF Band & Modulation  : %s | %s\n", telecom.band_name, telecom.modulation_scheme);
+    printf("  * Onboard Transmitter   : P_tx = %.1f W (%.2f dBW) | G_tx = %.1f dBi -> EIRP = %.2f dBW\n",
+           telecom.tx_power_w, telecom.tx_power_dbw, telecom.tx_gain_dbi, telecom.eirp_dbw);
+    printf("  * Ground Station (%.1fm) : %s | G_rx = %.1f dBi | T_sys = %.0f K (N0 = %.2f dBW/Hz)\n",
+           telecom.rx_dish_m, milano.name, telecom.rx_gain_dbi, telecom.sys_noise_temp_k, telecom.n0_dbw_hz);
+    printf("  * Path Loss & Link Eb/N0: Mean FSPL = %.2f dB | Peak Eb/N0 = %.2f dB | Link Margin = [ %+.2f, %+.2f ] dB\n",
+           telecom.mean_fspl_db, telecom.peak_ebn0_db, telecom.min_margin_db, telecom.peak_margin_db);
+    printf("  * ACM Data Downlink     : Peak Rate = %.1f Mbps | Mission Vol = %.2f GB | 24h Volume = %.2f GB/day\n\n",
+           telecom.max_achieved_mbps, telecom.mission_data_gb, telecom.total_data_gb_24h);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with RF Telecom Link Budget, Thermal TCS, 6-DOF ADCS & GNC Data!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

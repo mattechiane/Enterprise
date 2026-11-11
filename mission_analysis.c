@@ -1559,3 +1559,237 @@ ThermalReport simulate_thermal_profile(KeplerianElements orb_init,
     coating.eps_ir  = eps_ir;
     return simulate_thermal_and_radiation(orb_init, orb_target, plan, coating, 4.0, t_min_op_c, t_max_op_c, mu);
 }
+
+// ============================================================================
+// SPRINT 16: RF TELECOMMUNICATION LINK BUDGET, Eb/N0 MARGIN & DATA DOWNLINK
+// ============================================================================
+TelecomReport evaluate_rf_link_budget(KeplerianElements orb_init,
+                                      KeplerianElements orb_target,
+                                      OptimalTransferPlan plan,
+                                      OrbitReport rep_target,
+                                      RFBandType band,
+                                      double tx_power_w,
+                                      const GroundStation *station,
+                                      double mu) {
+    TelecomReport rep = {0};
+    rep.band = band;
+    rep.tx_power_w = adcs_clamp(tx_power_w, 0.5, 250.0);
+    rep.tx_power_dbw = 10.0 * log10(rep.tx_power_w);
+    rep.rx_dish_m = 3.5; // Parabola da 3.5m presso la Ground Station di Milano-Bovisa
+    rep.lock_threshold_db = 4.5; // Soglia di decodifica QPSK/8PSK + LDPC (BER < 10^-6)
+    rep.req_ebn0_db = 7.5;       // 4.5 dB Lock Threshold + 3.0 dB Safety Margin
+
+    switch (band) {
+        case BAND_S_2_2GHZ:
+            strcpy(rep.band_name, "S-Band (2.2 GHz TT&C)");
+            strcpy(rep.modulation_scheme, "QPSK + LDPC (1/2 - 3/4) ACM");
+            rep.freq_ghz           = 2.20;
+            rep.nom_bitrate_mbps   = 2.0;
+            rep.tx_gain_dbi        = 6.5;   // Antenna TT&C emisferica/patch a largo fascio
+            rep.rx_gain_dbi        = 36.2;  // Parabola 3.5m a 2.2 GHz (eff = 58%)
+            rep.sys_noise_temp_k   = 135.0;
+            rep.zenith_atm_loss_db = 0.08;
+            rep.pointing_loss_db   = 0.25;
+            break;
+
+        case BAND_KA_26GHZ:
+            strcpy(rep.band_name, "Ka-Band (26.5 GHz High-Rate)");
+            strcpy(rep.modulation_scheme, "16APSK / 32APSK + DVB-S2X ACM");
+            rep.freq_ghz           = 26.50;
+            rep.nom_bitrate_mbps   = 250.0;
+            rep.tx_gain_dbi        = 25.0;  // Antenna direttiva Ka-band HGA gimballed
+            rep.rx_gain_dbi        = 57.6;  // Parabola 3.5m a 26.5 GHz
+            rep.sys_noise_temp_k   = 255.0;
+            rep.zenith_atm_loss_db = 0.78;  // Sensibile a vapore acqueo/pioggia a bassa elevazione
+            rep.pointing_loss_db   = 0.75;
+            break;
+
+        case BAND_X_8_4GHZ:
+        default:
+            rep.band = BAND_X_8_4GHZ;
+            strcpy(rep.band_name, "X-Band (8.4 GHz Science)");
+            strcpy(rep.modulation_scheme, "8PSK / 16APSK + LDPC ACM");
+            rep.freq_ghz           = 8.40;
+            rep.nom_bitrate_mbps   = 50.0;
+            rep.tx_gain_dbi        = 15.5;  // Antenna X-Band Horn / Phased Array
+            rep.rx_gain_dbi        = 47.8;  // Parabola 3.5m a 8.4 GHz
+            rep.sys_noise_temp_k   = 165.0;
+            rep.zenith_atm_loss_db = 0.22;
+            rep.pointing_loss_db   = 0.45;
+            break;
+    }
+
+    double line_loss_db = 0.80; // Perdite di cavo/diplexer RF di bordo
+    rep.eirp_dbw  = rep.tx_power_dbw + rep.tx_gain_dbi - line_loss_db;
+    rep.n0_dbw_hz = BOLTZMANN_DBW_K_HZ + 10.0 * log10(rep.sys_noise_temp_k);
+
+    double a_init = (orb_init.a > EARTH_RADIUS + 100.0) ? orb_init.a : (EARTH_RADIUS + 400.0);
+    double a_targ = (orb_target.a > EARTH_RADIUS + 100.0) ? orb_target.a : (EARTH_RADIUS + 650.0);
+    double p_init_s = 2.0 * PI * sqrt((a_init * a_init * a_init) / mu);
+    double p_targ_s = 2.0 * PI * sqrt((a_targ * a_targ * a_targ) / mu);
+    double t_phase1_s = 2.0 * p_init_s;
+    double t_phase2_s = plan.is_low_thrust ? (6.0 * 5600.0) : ((plan.transfer_time_sec > 600.0) ? plan.transfer_time_sec : 2700.0);
+    double t_phase3_s = 2.0 * p_targ_s;
+    double total_mission_min = (t_phase1_s + t_phase2_s + t_phase3_s) / 60.0;
+
+    double min_el_deg = (station != NULL && station->min_elevation > 0.0)
+                        ? (station->min_elevation * RAD2DEG)
+                        : 10.0;
+    double st_lat_deg = (station != NULL) ? (station->coord.latitude * RAD2DEG) : 45.502;
+
+    // Centri temporali normalizzati dei 4 passaggi radar sopra Milano-Bovisa lungo la missione
+    const double pass_centers[4] = {0.14, 0.41, 0.67, 0.89};
+    const double pass_half_w[4]  = {0.055, 0.062, 0.058, 0.065};
+    const double pass_max_el_base[4] = {52.0, 68.0, 44.0, 74.0};
+
+    double inc_deg = orb_target.i * RAD2DEG;
+    double inc_factor = 1.0 - 0.22 * fabs(inc_deg - st_lat_deg) / 90.0;
+    inc_factor = adcs_clamp(inc_factor, 0.68, 1.08);
+
+    int num_pts = 151;
+    rep.num_samples = num_pts;
+    double dt_sample_s = (total_mission_min * 60.0) / (double)(num_pts - 1);
+
+    rep.mean_fspl_db      = 0.0;
+    rep.max_fspl_db       = 0.0;
+    rep.peak_ebn0_db      = -100.0;
+    rep.min_margin_db     = 100.0;
+    rep.peak_margin_db    = -100.0;
+    rep.max_achieved_mbps = 0.0;
+    rep.pass_windows      = 0;
+    rep.contact_time_min  = 0.0;
+
+    double sum_fspl_pass = 0.0;
+    int    pass_sample_count = 0;
+    double cum_data_gb = 0.0;
+    bool   in_pass_prev = false;
+    double log10_nom_bps = 10.0 * log10(rep.nom_bitrate_mbps * 1.0e6);
+
+    for (int i = 0; i < num_pts; i++) {
+        double tau   = (double)i / (double)(num_pts - 1);
+        double t_min = tau * total_mission_min;
+
+        double r_cur_km = a_init;
+        if (tau >= 0.34 && tau <= 0.76) {
+            double f_tr = (tau - 0.34) / 0.42;
+            r_cur_km = a_init + f_tr * (a_targ - a_init);
+        } else if (tau > 0.76) {
+            r_cur_km = a_targ;
+        }
+        double alt_cur_km = r_cur_km - EARTH_RADIUS;
+        if (alt_cur_km < 150.0) alt_cur_km = 150.0;
+
+        // Calcolo dell'angolo di elevazione El(t) rispetto alla Ground Station
+        double el_deg = -18.0 + 6.0 * sin(2.0 * PI * 4.5 * tau);
+        for (int p = 0; p < 4; p++) {
+            double u = (tau - pass_centers[p]) / pass_half_w[p];
+            if (fabs(u) < 1.35) {
+                double arch = pass_max_el_base[p] * inc_factor * cos(0.5 * PI * (u / 1.05));
+                if (u * u > 1.05 * 1.05) {
+                    arch = -12.0 * (fabs(u) - 1.05) / 0.30;
+                }
+                if (arch > el_deg) el_deg = arch;
+            }
+        }
+
+        // Distanza obliqua (Slant Range) rho(t) [km] dalla geometria sferica Terra-Satellite
+        double slant_range_km = 0.0;
+        if (el_deg > 0.0) {
+            double sin_el = sin(el_deg * DEG2RAD);
+            slant_range_km = -EARTH_RADIUS * sin_el +
+                             sqrt(EARTH_RADIUS * EARTH_RADIUS * sin_el * sin_el +
+                                  r_cur_km * r_cur_km - EARTH_RADIUS * EARTH_RADIUS);
+        } else {
+            double horiz_km = sqrt(fmax(100.0, r_cur_km * r_cur_km - EARTH_RADIUS * EARTH_RADIUS));
+            slant_range_km = horiz_km * (1.0 + 0.12 * fabs(el_deg) / 20.0);
+        }
+        if (slant_range_km < alt_cur_km) slant_range_km = alt_cur_km;
+
+        // Free-Space Path Loss: FSPL(t) = 20*log10(rho_km) + 20*log10(f_GHz) + 92.45 [dB]
+        double fspl_db = 20.0 * log10(slant_range_km) + 20.0 * log10(rep.freq_ghz) + 92.45;
+        if (fspl_db > rep.max_fspl_db) rep.max_fspl_db = fspl_db;
+
+        // Attenuazione atmosferica dipendente dall'elevazione: L_atm(t) = L_zenith / sin(max(El, 5 deg)) + L_point
+        double el_clamped_deg = (el_deg > 5.0) ? el_deg : 5.0;
+        double atm_loss_db = (rep.zenith_atm_loss_db / sin(el_clamped_deg * DEG2RAD)) + rep.pointing_loss_db;
+        if (el_deg < min_el_deg) {
+            // Forte attenuazione di multippercorso/ostruzione orizzonte sotto l'elevazione minima di stazione
+            double below_deg = min_el_deg - el_deg;
+            atm_loss_db += 0.55 * below_deg;
+        }
+
+        // Potenza ricevuta P_rx(t) [dBW], C/N0(t) [dB-Hz], Eb/N0(t) [dB] e Link Margin(t) [dB]
+        double prx_dbw  = rep.eirp_dbw - fspl_db - atm_loss_db + rep.rx_gain_dbi;
+        double cn0_dbhz = prx_dbw - rep.n0_dbw_hz;
+        double ebn0_db  = cn0_dbhz - log10_nom_bps;
+        double link_margin_db = ebn0_db - rep.req_ebn0_db;
+
+        // Adaptive Coding & Modulation (ACM) e integrazione del volume dati durante i passaggi validi
+        double achieved_mbps = 0.0;
+        int in_pass = 0;
+        if (el_deg >= min_el_deg && link_margin_db > 0.0) {
+            in_pass = 1;
+            if (!in_pass_prev) {
+                rep.pass_windows++;
+                in_pass_prev = true;
+            }
+            rep.contact_time_min += dt_sample_s / 60.0;
+            sum_fspl_pass += fspl_db;
+            pass_sample_count++;
+
+            if (link_margin_db >= 9.0) {
+                achieved_mbps = rep.nom_bitrate_mbps * 1.60; // 32APSK 4/5 High-Order ACM
+            } else if (link_margin_db >= 5.0) {
+                achieved_mbps = rep.nom_bitrate_mbps * 1.25; // 16APSK 3/4 ACM
+            } else if (link_margin_db >= 1.5) {
+                achieved_mbps = rep.nom_bitrate_mbps * 1.00; // 8PSK 2/3 Nominal Rate
+            } else {
+                achieved_mbps = rep.nom_bitrate_mbps * 0.65; // QPSK 1/2 Robust Rate
+            }
+
+            // Conversione Mbps * dt_sec in Gigabyte (1 Byte = 8 bit, 1 GB = 8000 Mbit)
+            cum_data_gb += (achieved_mbps * dt_sample_s) / 8000.0;
+
+            if (achieved_mbps > rep.max_achieved_mbps) rep.max_achieved_mbps = achieved_mbps;
+            if (link_margin_db < rep.min_margin_db)    rep.min_margin_db     = link_margin_db;
+        } else {
+            in_pass_prev = false;
+        }
+
+        if (ebn0_db > rep.peak_ebn0_db)          rep.peak_ebn0_db   = ebn0_db;
+        if (link_margin_db > rep.peak_margin_db) rep.peak_margin_db = link_margin_db;
+
+        rep.samples[i].t_min          = t_min;
+        rep.samples[i].slant_range_km = slant_range_km;
+        rep.samples[i].elevation_deg  = el_deg;
+        rep.samples[i].fspl_db        = fspl_db;
+        rep.samples[i].atm_loss_db    = atm_loss_db;
+        rep.samples[i].prx_dbw        = prx_dbw;
+        rep.samples[i].cn0_dbhz       = cn0_dbhz;
+        rep.samples[i].ebn0_db        = ebn0_db;
+        rep.samples[i].link_margin_db = link_margin_db;
+        rep.samples[i].achieved_mbps  = achieved_mbps;
+        rep.samples[i].cum_data_gb    = cum_data_gb;
+        rep.samples[i].in_pass        = in_pass;
+    }
+
+    if (pass_sample_count > 0) {
+        rep.mean_fspl_db = sum_fspl_pass / (double)pass_sample_count;
+    } else {
+        rep.mean_fspl_db = rep.max_fspl_db - 4.5;
+        rep.min_margin_db = rep.peak_margin_db;
+    }
+
+    rep.mission_data_gb = cum_data_gb;
+
+    // Proiezione volume dati scaricato sulle 24 ore (combinando i passaggi della missione e il contatto giornaliero)
+    double daily_contact_min = (rep_target.total_contact_min > 18.0) ? rep_target.total_contact_min : 38.0;
+    if (rep.contact_time_min > 1.0 && cum_data_gb > 0.0) {
+        double mean_rate_gb_per_min = cum_data_gb / rep.contact_time_min;
+        rep.total_data_gb_24h = fmax(cum_data_gb, mean_rate_gb_per_min * daily_contact_min);
+    } else {
+        rep.total_data_gb_24h = 0.0;
+    }
+
+    return rep;
+}

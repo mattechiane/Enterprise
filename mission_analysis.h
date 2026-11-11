@@ -94,4 +94,14 @@ ThermalReport simulate_thermal_profile(KeplerianElements orb_init,
                                        double t_max_op_c,
                                        double mu);
 
+// Sprint 16: RF Telecommunication Link Budget, Eb/N0 Margin & Ground Station Data Downlink Volume
+TelecomReport evaluate_rf_link_budget(KeplerianElements orb_init,
+                                      KeplerianElements orb_target,
+                                      OptimalTransferPlan plan,
+                                      OrbitReport rep_target,
+                                      RFBandType band,
+                                      double tx_power_w,
+                                      const GroundStation *station,
+                                      double mu);
+
 #endif // MISSION_ANALYSIS_H

@@ -228,6 +228,18 @@ static void write_thermal_trajectory_json_array(FILE *fp, ThermalRadReport tcs) 
     fprintf(fp, "  ]");
 }
 
+static void write_telecom_trajectory_json_array(FILE *fp, TelecomReport telecom) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < telecom.num_samples; i++) {
+        LinkSample s = telecom.samples[i];
+        fprintf(fp, "    {\"t_min\":%.2f,\"fspl_db\":%.2f,\"ebn0_db\":%.2f,\"link_margin_db\":%.2f,\"achieved_mbps\":%.2f,\"cum_data_gb\":%.3f,\"el_deg\":%.2f,\"range_km\":%.1f,\"in_pass\":%d}%s\n",
+                s.t_min, s.fspl_db, s.ebn0_db, s.link_margin_db, s.achieved_mbps, s.cum_data_gb,
+                s.elevation_deg, s.slant_range_km, s.in_pass,
+                (i < telecom.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
@@ -236,6 +248,7 @@ bool export_web_mission_json(const char *filename,
                              MonteCarloReport mc,
                              ADCSReport adcs,
                              ThermalReport tcs,
+                             TelecomReport telecom,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -365,6 +378,26 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"saa_encountered\": %d, \"saa_status\": \"%s\"\n  },\n",
             tcs.saa_encountered ? 1 : 0, tcs.saa_status);
 
+    fprintf(fp, "  \"telecom_summary\": {\n");
+    fprintf(fp, "    \"band_id\": %d, \"band_name\": \"%s\", \"modulation_scheme\": \"%s\",\n",
+            (int)telecom.band, telecom.band_name, telecom.modulation_scheme);
+    fprintf(fp, "    \"freq_ghz\": %.2f, \"tx_power_w\": %.1f, \"tx_power_dbw\": %.2f,\n",
+            telecom.freq_ghz, telecom.tx_power_w, telecom.tx_power_dbw);
+    fprintf(fp, "    \"tx_gain_dbi\": %.1f, \"rx_dish_m\": %.1f, \"rx_gain_dbi\": %.1f, \"eirp_dbw\": %.2f,\n",
+            telecom.tx_gain_dbi, telecom.rx_dish_m, telecom.rx_gain_dbi, telecom.eirp_dbw);
+    fprintf(fp, "    \"sys_noise_temp_k\": %.1f, \"n0_dbw_hz\": %.2f, \"zenith_atm_loss_db\": %.2f, \"pointing_loss_db\": %.2f,\n",
+            telecom.sys_noise_temp_k, telecom.n0_dbw_hz, telecom.zenith_atm_loss_db, telecom.pointing_loss_db);
+    fprintf(fp, "    \"lock_threshold_db\": %.2f, \"req_ebn0_db\": %.2f,\n",
+            telecom.lock_threshold_db, telecom.req_ebn0_db);
+    fprintf(fp, "    \"nom_bitrate_mbps\": %.1f, \"max_achieved_mbps\": %.2f,\n",
+            telecom.nom_bitrate_mbps, telecom.max_achieved_mbps);
+    fprintf(fp, "    \"mean_fspl_db\": %.2f, \"max_fspl_db\": %.2f, \"peak_ebn0_db\": %.2f,\n",
+            telecom.mean_fspl_db, telecom.max_fspl_db, telecom.peak_ebn0_db);
+    fprintf(fp, "    \"min_margin_db\": %.2f, \"peak_margin_db\": %.2f,\n",
+            telecom.min_margin_db, telecom.peak_margin_db);
+    fprintf(fp, "    \"pass_windows\": %d, \"contact_time_min\": %.2f, \"mission_data_gb\": %.3f, \"total_data_gb_24h\": %.2f\n  },\n",
+            telecom.pass_windows, telecom.contact_time_min, telecom.mission_data_gb, telecom.total_data_gb_24h);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -432,6 +465,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_thermal\": ");
     write_thermal_trajectory_json_array(fp, tcs);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_telecom\": ");
+    write_telecom_trajectory_json_array(fp, telecom);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

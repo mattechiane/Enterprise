@@ -321,6 +321,65 @@ typedef struct {
 
 typedef ThermalRadReport ThermalReport;
 
+// ==========================================
+// 5E. SPRINT 16: RF TELECOMMUNICATION LINK BUDGET, Eb/N0 MARGIN & DATA DOWNLINK
+// ==========================================
+#define MAX_TELECOM_SAMPLES 160
+#define BOLTZMANN_DBW_K_HZ  (-228.60) // Costante di Boltzmann k_B in [dBW/K/Hz]
+
+typedef enum {
+    BAND_S_2_2GHZ  = 0, // S-Band (f = 2.2 GHz, TT&C robusto, bassa attenuazione atm, 2 Mbps nom)
+    BAND_X_8_4GHZ  = 1, // X-Band (f = 8.4 GHz, Science Downlink ad alta velocità, 50 Mbps nom)
+    BAND_KA_26GHZ  = 2  // Ka-Band (f = 26.5 GHz, High-Throughput Downlink, 250 Mbps nom, sensibile a pioggia/El)
+} RFBandType;
+
+typedef struct {
+    double t_min;             // Tempo missione [minuti]
+    double slant_range_km;    // Distanza obliqua satellite-stazione di terra rho(t) [km]
+    double elevation_deg;     // Angolo di elevazione sull'orizzonte El(t) [deg]
+    double fspl_db;           // Free-Space Path Loss FSPL(t) [dB]
+    double atm_loss_db;       // Attenuazione atmosferica e perdite di puntamento L_atm(t) + L_point [dB]
+    double prx_dbw;           // Potenza ricevuta a terra P_rx(t) [dBW]
+    double cn0_dbhz;          // Rapporto Portante/Densità Spettrale di Rumore C/N0(t) [dB-Hz]
+    double ebn0_db;           // Rapporto Energia per Bit / Rumore Eb/N0(t) [dB]
+    double link_margin_db;    // Margine di collegamento RF Margin(t) = Eb/N0(t) - (Eb/N0)_req [dB]
+    double achieved_mbps;     // Throughput istantaneo con Adaptive Coding & Modulation (ACM) [Mbps]
+    double cum_data_gb;       // Volume cumulativo di dati scaricati a terra [GB]
+    int    in_pass;           // 1 = Finestra di visibilità attiva (El >= El_min e Link Locked), 0 = Fuori vista
+} LinkSample;
+
+typedef struct {
+    RFBandType band;                 // Banda di frequenza RF selezionata (S / X / Ka)
+    char   band_name[48];            // Nome descrittivo della banda (es. "X-Band (8.4 GHz Science)")
+    char   modulation_scheme[48];    // Schema di modulazione e codifica (es. "8PSK / 16APSK + LDPC ACM")
+    double freq_ghz;                 // Frequenza portante di downlink f [GHz]
+    double tx_power_w;               // Potenza trasmettitore di bordo P_tx [W]
+    double tx_power_dbw;             // Potenza trasmettitore convertita in [dBW] = 10*log10(P_tx)
+    double tx_gain_dbi;              // Guadagno antenna di bordo G_tx [dBi]
+    double rx_dish_m;                // Diametro antenna parabolica stazione di terra [m] (3.5 m Milano-Bovisa)
+    double rx_gain_dbi;              // Guadagno antenna stazione di terra G_rx [dBi]
+    double eirp_dbw;                 // Equivalent Isotropically Radiated Power EIRP = P_tx + G_tx - L_line [dBW]
+    double sys_noise_temp_k;         // Temperatura equivalente di rumore di sistema T_sys [K]
+    double n0_dbw_hz;                // Densità spettrale di potenza di rumore N0 = k_B + 10*log10(T_sys) [dBW/Hz]
+    double zenith_atm_loss_db;       // Attenuazione atmosferica allo zenit L_zenith [dB]
+    double pointing_loss_db;         // Perdita di puntamento d'assetto ADCS L_point [dB]
+    double lock_threshold_db;        // Soglia minima di decodifica QPSK/8PSK + LDPC (4.5 dB)
+    double req_ebn0_db;              // Eb/N0 richiesto incluso margine di sicurezza (+3.0 dB => 7.5 dB)
+    double nom_bitrate_mbps;         // Data rate nominale della banda [Mbps] (2 / 50 / 250 Mbps)
+    double max_achieved_mbps;        // Data rate di picco raggiunto con ACM [Mbps]
+    double mean_fspl_db;             // Free-Space Path Loss medio durante i passaggi [dB]
+    double max_fspl_db;              // Free-Space Path Loss massimo lungo l'orbita [dB]
+    double peak_ebn0_db;             // Picco di Eb/N0 al culminare del passaggio (Max Elevation) [dB]
+    double min_margin_db;            // Margine di link minimo registrato durante i passaggi utili [dB]
+    double peak_margin_db;           // Margine di link massimo al culminare del passaggio [dB]
+    int    pass_windows;             // Numero di finestre di visibilità/downlink nella timeline
+    double contact_time_min;         // Tempo totale di contatto radar in finestra di missione [min]
+    double mission_data_gb;          // Volume dati scaricato lungo la finestra di missione simulata [GB]
+    double total_data_gb_24h;        // Volume totale di dati scaricabili a terra in 24 ore [GB/24h]
+    int    num_samples;              // Numero di campioni temporali nel profilo telecom
+    LinkSample samples[MAX_TELECOM_SAMPLES];
+} TelecomReport;
+
 typedef struct {
     KeplerianElements initial_kep;
     double period_min;
