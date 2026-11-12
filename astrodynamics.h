@@ -31,4 +31,14 @@ CartesianState keplerian_to_cartesian(KeplerianElements kep, double mu, double m
 // Calcola il periodo orbitale in secondi (per orbite chiuse, e < 1)
 double orbital_period(double a, double mu);
 
+// ==========================================
+// 3. PARSER STANDARD NORAD TWO-LINE ELEMENTS (TLE)
+// ==========================================
+// Decodifica una coppia di righe TLE standard NORAD/CelesTrak (69 caratteri per riga)
+// ed estrae i 6 Elementi Kepleriani osculanti (a [km], e, i [rad], RAAN [rad], omega [rad], theta [rad])
+bool parse_norad_tle(const char *line1, const char *line2, KeplerianElements *kep_out);
+
+// Versione estesa che popola anche i metadati di catalogo NORAD, epoca, moto medio e checksum modulo-10
+bool parse_norad_tle_extended(const char *line1, const char *line2, NoradTLEData *tle_out);
+
 #endif // ASTRODYNAMICS_H

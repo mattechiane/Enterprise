@@ -726,6 +726,82 @@ typedef struct {
     SloshFlexSample samples[MAX_CSI_SAMPLES];
 } StructuralReport;
 
+// ==========================================
+// 5L. SPRINT 23: AUTONOMOUS FDIR, NORAD TLE PARSER & CCSDS OEM 2.0 EXPORT
+// ==========================================
+#define MAX_FDIR_SAMPLES 150
+
+typedef enum {
+    FDIR_FAULT_RW2_ACTUATOR = 0, // Guasto tachimetro/driver Ruota di Reazione #2 -> Switchover su Skewed RW #4 B-Side
+    FDIR_FAULT_SOLAR_SHUNT  = 1, // Cortocircuito sezione SADA Pannello Solare -> Undervoltage Bus 28V -> Regolatore B-Side
+    FDIR_FAULT_STAR_TRACKER = 2  // Accecamento/SEU Star Tracker Primario STR-A -> Commutazione su Hot-Standby STR-B
+} FDIRFaultScenario;
+
+typedef enum {
+    FDIR_STATE_NOMINAL          = 0,
+    FDIR_STATE_FAULT_DETECTED   = 1,
+    FDIR_STATE_ISOLATION        = 2,
+    FDIR_STATE_REDUNDANT_SWITCH = 3,
+    FDIR_STATE_SAFE_SUN_ACQ     = 4,
+    FDIR_STATE_NOMINAL_RECOVERY = 5
+} FDIRStateId;
+
+typedef struct {
+    int    sat_catalog_num;      // Numero di catalogo NORAD (es. 25544 per ISS, 40697 per Sentinel-2A)
+    int    epoch_year;           // Anno epoca TLE (4 cifre, es. 2026)
+    double epoch_day;            // Giorno frazionario dell'anno (1.0 - 366.99999999)
+    double mean_motion_rev_day;  // Moto medio n [rev/day]
+    double mean_anomaly_deg;     // Anomalia media M [deg]
+    double eccentric_anom_deg;   // Anomalia eccentrica risolta E [deg]
+    bool   checksum_valid;       // Validità checksum modulo-10 sulle 2 righe TLE
+    KeplerianElements kep;       // Elementi Kepleriani convertiti (a [km], e, i [rad], RAAN [rad], omega [rad], theta [rad])
+} NoradTLEData;
+
+typedef struct {
+    int    fault_scenario;       // 0 = RW-2 Actuator Failure, 1 = Solar Array Shunt Short, 2 = Star Tracker STR-A Blinded
+    double fault_inject_time_s;  // Istante di iniezione dell'anomalia t_fault [s] (default 12.0 s)
+    double detection_threshold;  // Soglia normalizzata residuo FDIR (default 3.0 sigma)
+    double nominal_bus_v;        // Tensione nominale bus primario non regolato [V] (default 28.0 V)
+} FDIRSpec;
+
+typedef struct {
+    double t_sec;                // Tempo nel transitorio FDIR [s] (0 .. 120 s)
+    double sys_health_pct;       // Indice di salute globale del sistema di bordo [%]
+    double att_err_deg;          // Errore di puntamento d'assetto 3-assi [deg]
+    double bus_voltage_v;        // Tensione del bus elettrico primario 28V [V]
+    int    fdir_state_id;        // Stato macchina a stati OBDH FDIR (0..5)
+    double primary_unit_pct;     // Livello di attività/coppia unità primaria A-Side [%]
+    double redundant_unit_pct;   // Livello di subentro unità ridondante B-Side [%]
+} FDIRSample;
+
+typedef struct {
+    FDIRSpec spec;
+    char   fault_name[80];           // Nome descrittivo del guasto iniettato
+    char   fault_subsystem[48];      // Sottosistema colpito (ADCS / EPS / GNC)
+    char   primary_unit_name[48];    // Unità primaria guasta (A-Side)
+    char   redundant_unit_name[48];  // Unità ridondante attivata (B-Side)
+    double fault_inject_time_s;      // Istante di iniezione del guasto [s]
+    double detection_latency_s;      // Latenza di rilevamento FDIR (Fault Detection Latency) [s]
+    double isolation_switchover_s;   // Tempo di isolamento LCL + commutazione ramo B-Side [s]
+    double safe_mode_duration_s;     // Durata acquisizione Sun-Pointing Safe Mode [s]
+    double total_recovery_time_s;    // Tempo totale da iniezione a recupero nominale [s]
+    double peak_att_err_deg;         // Escursione massima transitoria d'assetto durante il guasto [deg]
+    double steady_post_err_deg;      // Errore di puntamento residuo dopo il recupero [deg]
+    double nominal_bus_voltage_v;    // Tensione nominale bus elettrico [V] (28.0 V)
+    double min_bus_voltage_v;        // Tensione minima raggiunta durante il transitorio [V]
+    double min_sys_health_pct;       // Salute minima del sistema durante l'anomalia [%]
+    char   redundancy_status[64];    // Stato della ridondanza hardware (B-Side Active / Hot-Cold Standby)
+    char   recovery_outcome[80];     // Esito del recupero missione autonomo
+    char   ccsds_oem_filename[48];   // Nome file CCSDS OEM generato ("enterprise_mission.oem")
+    char   ccsds_oem_status[64];     // Stato conformità CCSDS 502.0-B-2 (OEM v2.0)
+    int    oem_state_vectors;        // Numero di vettori di stato esportati nel file .oem
+    int    tle_norad_id;             // ID catalogo NORAD di riferimento testato dal parser TLE
+    char   tle_sat_name[48];         // Nome satellite TLE di riferimento
+
+    int    num_samples;
+    FDIRSample samples[MAX_FDIR_SAMPLES];
+} FDIRReport;
+
 typedef struct {
     KeplerianElements initial_kep;
     double period_min;

@@ -149,4 +149,9 @@ StructuralReport simulate_structural_slosh_and_csi(OptimalTransferPlan plan,
                                                    SystemEngineeringReport sys,
                                                    StructuralCSISpec spec);
 
+// Sprint 23: Autonomous FDIR (Fault Detection, Isolation & Recovery), Redundancy Switchover & Safe-Mode
+FDIRReport simulate_fdir_and_safemode(ADCSReport adcs,
+                                      ThermalReport tcs,
+                                      FDIRSpec spec);
+
 #endif // MISSION_ANALYSIS_H

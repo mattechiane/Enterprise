@@ -14,8 +14,16 @@ FILE* telemetry_open(const char *filename);
 void  telemetry_write_step(FILE *fp, CartesianState state, KeplerianElements kep, GeodeticCoord geo, SpaceEnvironment env, bool thruster_on);
 void  telemetry_close(FILE *fp);
 
-// Esporta l'intero scenario di missione (Orbita 1 -> Trasferimento -> Orbita 2 -> Rendezvous CW -> Monte Carlo & TCM -> ADCS 6-DOF -> Thermal TCS -> RF Telecom -> Systems Eng -> Onboard EKF -> SSA & CAM -> EoL Re-Entry -> Cislunar CR3BP -> Structural Slosh & CSI)
-// in formato JSON interattivo per la Web App 3D, Proximity Operations, Dispersion Analysis, Attitude Dynamics, Thermal Control, RF Link Budget, Walker Constellation, Navigation EKF, B-Plane CAM, Rientro Atmosferico EoL, Cislunar CR3BP e Dinamica Strutturale CSI
+// Esporta le effemeridi orbitali in formato standard internazionale CCSDS 502.0-B-2 Orbit Ephemeris Message (CCSDS_OEM_VERS = 2.0)
+// direttamente compatibile con NASA GMAT, Ansys STK ed ESOC Flight Dynamics
+bool export_ccsds_oem_file(const char *filename,
+                           OrbitReport rep_init,
+                           OptimalTransferPlan plan,
+                           OrbitReport rep_target,
+                           const SpacecraftConfig *sc);
+
+// Esporta l'intero scenario di missione (Orbita 1 -> Trasferimento -> Orbita 2 -> Rendezvous CW -> Monte Carlo & TCM -> ADCS 6-DOF -> Thermal TCS -> RF Telecom -> Systems Eng -> Onboard EKF -> SSA & CAM -> EoL Re-Entry -> Cislunar CR3BP -> Structural Slosh & CSI -> Autonomous FDIR)
+// in formato JSON interattivo per la Web App 3D
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
@@ -31,6 +39,7 @@ bool export_web_mission_json(const char *filename,
                              EndOfLifeReport eol,
                              CislunarReport cislunar,
                              StructuralReport csi,
+                             FDIRReport fdir,
                              const GroundStation *station,
                              const SpacecraftConfig *sc);
 

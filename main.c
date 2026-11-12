@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 22: FLEXIBLE DYNAMICS, SLOSH & CSI     \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 23: AUTONOMOUS FDIR, TLE & CCSDS OEM   \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -140,6 +140,21 @@ int main(void) {
         .enable_notch_filter = true  // Filtro digitale Bi-Quad Notch GNC attivo
     };
     StructuralReport csi = simulate_structural_slosh_and_csi(plan, adcs, sys, csi_spec);
+
+    // 15. SPRINT 23: AUTONOMOUS FDIR, NORAD TLE PARSER & CCSDS OEM 2.0 EXPORT
+    FDIRSpec fdir_spec = {
+        .fault_scenario      = FDIR_FAULT_RW2_ACTUATOR, // Guasto tachimetro/driver RW-2 -> Switchover su Skewed RW-4 B-Side
+        .fault_inject_time_s = 12.0,                    // Iniezione anomalia a t = 12.0 s
+        .detection_threshold = 3.0,                     // Soglia residuo FDIR 3.0-sigma
+        .nominal_bus_v       = 28.0                     // Bus primario non regolato a 28.0 V
+    };
+    FDIRReport fdir = simulate_fdir_and_safemode(adcs, tcs, fdir_spec);
+
+    // Test diretto di parse_norad_tle(...) su TLE reale ISS (ZARYA)
+    KeplerianElements kep_tle_test = {0};
+    const char *tle_l1 = "1 25544U 98067A   26316.50000000  .00016717  00000-0  10270-3 0  9993";
+    const char *tle_l2 = "2 25544  51.6416  24.8512 0006703 130.5360 229.6085 15.49560532421537";
+    bool tle_ok = parse_norad_tle(tle_l1, tle_l2, &kep_tle_test);
 
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
@@ -278,10 +293,30 @@ int main(void) {
     printf("  * Launch Loads & QSL    : Stowed f_ax = %.1f Hz (>35), f_lat = %.1f Hz (>15) | sigma_vM = %.1f MPa -> MoS = +%.1f%%\n\n",
            csi.launch_axial_freq_hz, csi.launch_lateral_freq_hz, csi.max_von_mises_mpa, csi.launch_mos_pct);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Structural Dynamics, Sloshing, CSI & All Subsystems!\n");
+    printf("[AUTONOMOUS FDIR, REDUNDANCY SWITCHOVER, NORAD TLE PARSER & CCSDS OEM 2.0]\n");
+    printf("  * Injected Fault Event  : %s [%s] at t = %.1f s\n",
+           fdir.fault_name, fdir.fault_subsystem, fdir.fault_inject_time_s);
+    printf("  * FDIR Timing & Latency : Detection = %.2f s | LCL Isolation & B-Side Switchover = %.2f s | Recovery = %.1f s\n",
+           fdir.detection_latency_s, fdir.isolation_switchover_s, fdir.total_recovery_time_s);
+    printf("  * Redundancy Switchover : %s -> %s\n",
+           fdir.primary_unit_name, fdir.redundant_unit_name);
+    printf("  * Transient Excursion   : Peak Attitude Error = %.2f deg (Post-Recovery = %.3f deg) | Min Bus = %.2f V (Nom %.1f V)\n",
+           fdir.peak_att_err_deg, fdir.steady_post_err_deg, fdir.min_bus_voltage_v, fdir.nominal_bus_voltage_v);
+    printf("  * NORAD TLE Decoder     : %s -> a = %.2f km (h = %.1f km), i = %.4f deg, e = %.7f\n",
+           tle_ok ? "VALIDATED (ISS #25544)" : "ERROR",
+           kep_tle_test.a, kep_tle_test.a - EARTH_RADIUS, kep_tle_test.i * RAD2DEG, kep_tle_test.e);
+    printf("  * CCSDS OEM Ephemeris   : %s (%d EME2000 State Vectors)\n\n",
+           fdir.ccsds_oem_status, fdir.oem_state_vectors);
+
+    if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
+        printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, &milano, &sc);
+    export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Autonomous FDIR, NORAD TLE, CCSDS OEM & All Subsystems!\n");
+    }
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;
