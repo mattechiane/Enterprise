@@ -577,6 +577,83 @@ typedef struct {
     ReentrySample samples[MAX_REENTRY_SAMPLES];
 } EndOfLifeReport;
 
+// ==========================================
+// 5J. SPRINT 21: CISLUNAR ASTRODYNAMICS, CR3BP, LAGRANGE POINTS & LUNAR HALO
+// ==========================================
+#define MOON_MU           4902.800066  // Costante gravitazionale lunare (km^3/s^2)
+#define MOON_RADIUS       1737.4       // Raggio medio lunare (km)
+#define CR3BP_MU_EM       0.0121505856 // Parametro di massa adimensionale Terra-Luna mu = m_M / (m_E + m_M)
+#define CR3BP_L_STAR_KM   384400.0     // Distanza caratteristica Terra-Luna L* (km)
+#define CR3BP_T_STAR_SEC  375190.258   // Tempo caratteristico T* = sqrt(L*^3 / (mu_E + mu_M)) (s)
+#define MAX_CR3BP_SAMPLES 200
+
+typedef enum {
+    CISLUNAR_L2_HALO     = 0, // L2 Far-Side Southern Halo Orbit (Lunar Gateway / NRHO Regime)
+    CISLUNAR_L1_GATEWAY  = 1, // L1 Cislunar Neck Gateway / Lyapunov Orbit
+    CISLUNAR_FREE_RETURN = 2  // Lunar Free-Return Circum-Lunar Figure-8 Flyby
+} CislunarRegimeType;
+
+typedef struct {
+    int    target_regime;      // 0 = L2 Far-Side Halo, 1 = L1 Gateway, 2 = Free-Return Flyby
+    double halo_az_km;         // Ampiezza fuori dal piano Halo A_z [km] (default 15000.0 km)
+    double leo_parking_alt_km; // Quota orbita terrestre di partenza pre-TLI [km] (default 400.0 km)
+} CR3BPSpec;
+
+typedef struct {
+    double t_days;        // Tempo di missione nel frame sinodico [giorni]
+    double x_syn_km;      // Coordinata X sinodica baricentrica co-rotante [km]
+    double y_syn_km;      // Coordinata Y sinodica baricentrica co-rotante [km]
+    double z_syn_km;      // Coordinata Z sinodica fuori dal piano [km]
+    double jacobi_c;      // Costante di Jacobi istantanea C_J [-]
+    double dist_moon_km;  // Distanza dal centro della Luna r_2 [km]
+} CR3BPSample;
+
+typedef struct {
+    CR3BPSpec spec;
+    char   regime_name[64];          // Nome descrittivo del regime cislunare selezionato
+    double mu_em;                    // Rapporto di massa adimensionale Terra-Luna (~0.0121505856)
+    double l_star_km;                // Distanza caratteristica Terra-Luna L* [km] (384400.0 km)
+    double t_star_sec;               // Tempo caratteristico T* [s] (~375190.26 s)
+    double v_star_kms;               // Velocità caratteristica V* = L* / T* [km/s] (~1.024548 km/s)
+    double earth_x_km;               // Posizione Terra sull'asse X sinodico (-mu * L*) [km]
+    double moon_x_km;                // Posizione Luna sull'asse X sinodico ((1 - mu) * L*) [km]
+
+    // Coordinate esatte dei 5 Punti di Librazione di Lagrange (Newton-Raphson sul Quintico di Eulero)
+    double l1_x_km;                  // Punto collineare cislunare L1 X [km] (~321710 km dal baricentro)
+    double l2_x_km;                  // Punto collineare translunare L2 X [km] (~444244 km dal baricentro)
+    double l3_x_km;                  // Punto collineare opposto L3 X [km] (~-386346 km dal baricentro)
+    double l4_x_km;                  // Punto triangolare equilatero L4 X [km] ((0.5 - mu) * L*)
+    double l4_y_km;                  // Punto triangolare equilatero L4 Y [km] (+sqrt(3)/2 * L*)
+    double l5_x_km;                  // Punto triangolare equilatero L5 X [km] ((0.5 - mu) * L*)
+    double l5_y_km;                  // Punto triangolare equilatero L5 Y [km] (-sqrt(3)/2 * L*)
+    double cj_l1;                    // Energia di soglia di Jacobi al collo di L1 (~3.188341)
+    double cj_l2;                    // Energia di soglia di Jacobi al collo di L2 (~3.172160)
+    double cj_l3;                    // Energia di soglia di Jacobi a L3 (~3.012147)
+    double cj_l4_l5;                 // Energia minima di Jacobi a L4/L5 (~2.987997)
+
+    // Budget Propulsivo Cislunare (Trans-Lunar Injection + Lunar / Halo Orbit Insertion)
+    double dv_tli_ms;                // Impulso Trans-Lunar Injection da LEO [m/s] (~3130 m/s)
+    double dv_loi_ms;                // Impulso Halo / Lunar Orbit Insertion [m/s] (~420 - 650 m/s)
+    double total_cislunar_dv_ms;     // Costo totale Delta-V cislunare (TLI + LOI) [m/s]
+    double cislunar_fuel_kg;         // Consumo propellente equivalente per iniezione cislunare [kg]
+    double tof_days;                 // Tempo di volo del trasferimento cislunare [giorni] (~4.6 - 5.2 d)
+    double halo_period_days;         // Periodo dell'orbita periodica Halo / Lyapunov [giorni] (~14.6 d)
+    double halo_ax_km;               // Semiasse in-plane X dell'orbita Halo [km]
+    double halo_ay_km;               // Semiasse in-plane Y dell'orbita Halo [km]
+    double halo_az_km;               // Ampiezza out-of-plane Z dell'orbita Halo [km]
+    double perilune_alt_km;          // Quota minima sopra la superficie lunare [km]
+
+    // Costante di Jacobi e verifica di conservazione numerica RK4 (|dC_J / C_J0| < 1e-8)
+    double jacobi_c;                 // Costante di Jacobi del trasferimento cislunare C_J [-]
+    double jacobi_halo_c;            // Costante di Jacobi dell'orbita Halo periodica [-]
+    double delta_cj_rel;             // Errore relativo massimo di conservazione |dC_J / C_J0| (< 1e-8)
+
+    int    num_transfer_samples;
+    CR3BPSample traj_cislunar_transfer[MAX_CR3BP_SAMPLES];
+    int    num_halo_samples;
+    CR3BPSample traj_halo_orbit[MAX_CR3BP_SAMPLES];
+} CislunarReport;
+
 typedef struct {
     KeplerianElements initial_kep;
     double period_min;

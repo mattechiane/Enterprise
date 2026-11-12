@@ -274,6 +274,17 @@ static void write_reentry_trajectory_json_array(FILE *fp, EndOfLifeReport eol) {
     fprintf(fp, "  ]");
 }
 
+static void write_cr3bp_trajectory_json_array(FILE *fp, const CR3BPSample *samples, int num_samples) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < num_samples; i++) {
+        CR3BPSample s = samples[i];
+        fprintf(fp, "    {\"t_days\":%.4f,\"x_syn_km\":%.2f,\"y_syn_km\":%.2f,\"z_syn_km\":%.2f,\"jacobi_c\":%.10f,\"dist_moon_km\":%.2f}%s\n",
+                s.t_days, s.x_syn_km, s.y_syn_km, s.z_syn_km, s.jacobi_c, s.dist_moon_km,
+                (i < num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
@@ -287,6 +298,7 @@ bool export_web_mission_json(const char *filename,
                              NavigationReport nav,
                              CAMReport cam,
                              EndOfLifeReport eol,
+                             CislunarReport cislunar,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -523,6 +535,28 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"total_entry_time_sec\": %.1f, \"total_downrange_km\": %.1f\n  },\n",
             eol.total_entry_time_sec, eol.total_downrange_km);
 
+    fprintf(fp, "  \"cislunar_summary\": {\n");
+    fprintf(fp, "    \"target_regime\": %d, \"regime_name\": \"%s\",\n",
+            cislunar.spec.target_regime, cislunar.regime_name);
+    fprintf(fp, "    \"mu_em\": %.10f, \"l_star_km\": %.1f, \"t_star_sec\": %.2f, \"v_star_kms\": %.6f,\n",
+            cislunar.mu_em, cislunar.l_star_km, cislunar.t_star_sec, cislunar.v_star_kms);
+    fprintf(fp, "    \"earth_x_km\": %.2f, \"moon_x_km\": %.2f,\n",
+            cislunar.earth_x_km, cislunar.moon_x_km);
+    fprintf(fp, "    \"l1_x_km\": %.2f, \"l2_x_km\": %.2f, \"l3_x_km\": %.2f,\n",
+            cislunar.l1_x_km, cislunar.l2_x_km, cislunar.l3_x_km);
+    fprintf(fp, "    \"l4_x_km\": %.2f, \"l4_y_km\": %.2f, \"l5_x_km\": %.2f, \"l5_y_km\": %.2f,\n",
+            cislunar.l4_x_km, cislunar.l4_y_km, cislunar.l5_x_km, cislunar.l5_y_km);
+    fprintf(fp, "    \"cj_l1\": %.6f, \"cj_l2\": %.6f, \"cj_l3\": %.6f, \"cj_l4_l5\": %.6f,\n",
+            cislunar.cj_l1, cislunar.cj_l2, cislunar.cj_l3, cislunar.cj_l4_l5);
+    fprintf(fp, "    \"dv_tli_ms\": %.2f, \"dv_loi_ms\": %.2f, \"total_cislunar_dv_ms\": %.2f, \"cislunar_fuel_kg\": %.2f,\n",
+            cislunar.dv_tli_ms, cislunar.dv_loi_ms, cislunar.total_cislunar_dv_ms, cislunar.cislunar_fuel_kg);
+    fprintf(fp, "    \"tof_days\": %.3f, \"halo_period_days\": %.3f,\n",
+            cislunar.tof_days, cislunar.halo_period_days);
+    fprintf(fp, "    \"halo_ax_km\": %.1f, \"halo_ay_km\": %.1f, \"halo_az_km\": %.1f, \"perilune_alt_km\": %.1f,\n",
+            cislunar.halo_ax_km, cislunar.halo_ay_km, cislunar.halo_az_km, cislunar.perilune_alt_km);
+    fprintf(fp, "    \"jacobi_c\": %.8f, \"jacobi_halo_c\": %.8f, \"delta_cj\": %.3e, \"delta_cj_rel\": %.3e\n  },\n",
+            cislunar.jacobi_c, cislunar.jacobi_halo_c, cislunar.delta_cj_rel * cislunar.jacobi_c, cislunar.delta_cj_rel);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -606,6 +640,14 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_reentry\": ");
     write_reentry_trajectory_json_array(fp, eol);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_cislunar_transfer\": ");
+    write_cr3bp_trajectory_json_array(fp, cislunar.traj_cislunar_transfer, cislunar.num_transfer_samples);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_halo_orbit\": ");
+    write_cr3bp_trajectory_json_array(fp, cislunar.traj_halo_orbit, cislunar.num_halo_samples);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

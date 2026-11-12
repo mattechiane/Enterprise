@@ -699,6 +699,52 @@
     </div>
 </section>
 
+<!-- 15. CISLUNAR CR3BP ASTRODYNAMICS, LAGRANGE POINTS (L1-L5) & ZERO-VELOCITY CURVES -->
+<section class="engineering-section">
+    <div class="section-header">
+        <div>
+            <h2>15. Cislunar CR3BP Astrodynamics, Lagrange Points &amp; Zero-Velocity Curves</h2>
+            <span>Earth-Moon Synodic Co-Rotating Frame (&mu;<sub>EM</sub> = 0.01215059) &bull; Euler Quintic L<sub>1</sub>&ndash;L<sub>5</sub> Libration Points &bull; Zero-Velocity Curves (2&Omega; = C<sub>J</sub>) &bull; 3D Southern Halo Orbit RK4</span>
+        </div>
+        <span class="badge" id="cislunarStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#127769; JACOBI INTEGRAL CONSERVED (|&Delta;C<sub>J</sub>/C<sub>J,0</sub>| &lt; 10<sup>-8</sup>)</span>
+    </div>
+
+    <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.13), rgba(213,0,249,0.12)); border-color: var(--cyan);">
+        <div class="title-group">
+            <h3 id="cislunarBannerTitle" style="color:var(--cyan);">CISLUNAR CR3BP TRANSFER &amp; PERIODIC 3D HALO ORBIT (EARTH-MOON SYNODIC FRAME)</h3>
+            <p id="cislunarBannerSub">TLI Injection &Delta;V: --- m/s &bull; L1/L2 Halo Insertion &Delta;V: --- m/s &bull; Jacobi Constant C<sub>J</sub> = --- &bull; Cislunar TOF = --- days</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="cislunarBannerDv" style="color:var(--green);">TLI &Delta;V: --- m/s | Halo LOI &Delta;V: --- m/s</div>
+            <div class="sub-fuel" id="cislunarBannerSubMetrics">Jacobi Constant C<sub>J</sub> = --- (|&Delta;C<sub>J</sub>/C<sub>J,0</sub>| = ---) | Cislunar TOF: --- days</div>
+        </div>
+    </div>
+
+    <div class="datasheet-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+        <div class="data-card">
+            <h4 style="color:var(--cyan)">&#9878; Lagrange Libration Points (L<sub>1</sub>&ndash;L<sub>5</sub>)</h4>
+            <div id="cislunarCardLagrange"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--green)">&#128640; TLI &amp; Halo Insertion &Delta;V Budget</h4>
+            <div id="cislunarCardBurns"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--purple)">&#127769; 3D Periodic Halo Orbit Geometry</h4>
+            <div id="cislunarCardHalo"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--amber)">&#9889; Jacobi Constant &amp; Neck Energetics</h4>
+            <div id="cislunarCardJacobi"></div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotCislunarSynodic" class="plot-container-rdv"></div>
+        <div id="plotCislunarHalo" class="plot-container-rdv"></div>
+    </div>
+</section>
+
 
 <!-- POPUP MODAL: MISSION INPUT CONFIGURATOR -->
 <div class="modal-overlay" id="inputModal">
@@ -1049,6 +1095,27 @@
                 <div class="field">
                     <label>Effective Nose / Blunt Bus Radius R<sub>n</sub> [m]</label>
                     <input type="number" id="eolNoseRadiusM" value="0.50" min="0.10" max="3.00" step="0.05">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--cyan)">13. Cislunar CR3BP Extension (Earth-Moon Synodic Frame, L<sub>1</sub>&ndash;L<sub>5</sub> &amp; Halo Orbit)</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Circular Restricted Three-Body Problem (&mu;<sub>EM</sub> = 0.01215059, L* = 384,400 km) &bull; TLI &amp; 3D Halo Orbit</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="field">
+                    <label>Target Lagrange Point Regime</label>
+                    <select id="cislunarRegime">
+                        <option value="0" selected>L2 Far-Side Southern Halo (Lunar Gateway)</option>
+                        <option value="1">L1 Cislunar Neck Gateway / Halo Orbit</option>
+                        <option value="2">Lunar Free-Return Circum-Lunar Flyby</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Halo Z-Amplitude A<sub>z</sub> [km]</label>
+                    <input type="number" id="cislunarHaloAzKm" value="15000" min="1000" max="50000" step="1000">
                 </div>
             </div>
         </div>
@@ -1497,6 +1564,11 @@
             const eol = data.eol_reentry_summary;
             if (eol.entry_fpa_deg !== undefined) document.getElementById('eolFpaDeg').value      = eol.entry_fpa_deg;
             if (eol.nose_radius_m !== undefined) document.getElementById('eolNoseRadiusM').value = eol.nose_radius_m;
+        }
+        if (data.cislunar_summary) {
+            const cis = data.cislunar_summary;
+            if (cis.target_regime !== undefined) document.getElementById('cislunarRegime').value   = String(cis.target_regime);
+            if (cis.halo_az_km !== undefined)    document.getElementById('cislunarHaloAzKm').value = Math.round(cis.halo_az_km);
         }
 
         validateModalOrbits(false);
@@ -3436,6 +3508,341 @@
             yaxis2: { title: 'Axial Deceleration Load n_g [g]', titlefont: { color: '#ffab00' }, tickfont: { color: '#ffab00' }, overlaying: 'y', side: 'right', showgrid: false, range: [0, Math.max(...reDecel, 5) * 1.22] },
             showlegend: true,
             legend: { font: { color: '#e2e8f0', size: 9.5 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.02, y: 0.98 }
+        }, { responsive: true, displaylogo: false });
+
+        // =========================================================================
+        // 15. CISLUNAR CR3BP ASTRODYNAMICS, LAGRANGE POINTS & ZERO-VELOCITY CURVES
+        // =========================================================================
+        let cisInfo   = data.cislunar_summary;
+        let trajCisTr = data.traj_cislunar_transfer || [];
+        let trajHalo  = data.traj_halo_orbit || [];
+        if (!cisInfo || trajCisTr.length === 0 || trajHalo.length === 0) {
+            const fallbackCis = simulateCislunarCr3bpJS(
+                data.initial_report.sma_km || (R_EQ + data.initial_report.alt_km),
+                data.maneuver.final_mass_kg,
+                data.maneuver.fuel_kg,
+                data.maneuver.isp_s,
+                0, 15000.0
+            );
+            cisInfo   = fallbackCis.cislunar_summary;
+            trajCisTr = fallbackCis.traj_cislunar_transfer;
+            trajHalo  = fallbackCis.traj_halo_orbit;
+            data.cislunar_summary       = cisInfo;
+            data.traj_cislunar_transfer = trajCisTr;
+            data.traj_halo_orbit        = trajHalo;
+        }
+
+        const cisBadgeEl = document.getElementById('cislunarStatusBadge');
+        const cjConserved = (cisInfo.delta_cj_rel !== undefined && cisInfo.delta_cj_rel < 1e-8);
+        cisBadgeEl.innerHTML = cjConserved
+            ? `&#127769; JACOBI INTEGRAL CONSERVED (|&Delta;C<sub>J</sub>/C<sub>J,0</sub>| = ${Number(cisInfo.delta_cj_rel).toExponential(2)} &lt; 10<sup>-8</sup>)`
+            : `&#127769; CISLUNAR CR3BP SYNODIC ENGINE (|&Delta;C<sub>J</sub>/C<sub>J,0</sub>| = ${Number(cisInfo.delta_cj_rel || 1e-9).toExponential(2)})`;
+
+        document.getElementById('cislunarBannerTitle').innerHTML =
+            `CISLUNAR CR3BP: <span style="color:#00e676">${cisInfo.regime_name}</span> (&mu;<sub>EM</sub> = ${Number(cisInfo.mu_em).toFixed(8)}, L* = ${Number(cisInfo.l_star_km).toLocaleString()} km)`;
+        document.getElementById('cislunarBannerSub').innerHTML =
+            `TLI Injection &Delta;V: <b>${cisInfo.dv_tli_ms} m/s</b> &bull; L1/L2 Halo Insertion &Delta;V: <b>${cisInfo.dv_loi_ms} m/s</b> &bull; Jacobi Constant: <b>C<sub>J</sub> = ${Number(cisInfo.jacobi_c).toFixed(6)}</b> &bull; Cislunar Time of Flight: <b>${cisInfo.tof_days} days</b>`;
+        document.getElementById('cislunarBannerDv').innerHTML =
+            `TLI &Delta;V: ${cisInfo.dv_tli_ms} m/s | Halo LOI &Delta;V: ${cisInfo.dv_loi_ms} m/s`;
+        document.getElementById('cislunarBannerSubMetrics').innerHTML =
+            `Jacobi Constant C<sub>J</sub> = <b style="color:#00e5ff">${Number(cisInfo.jacobi_c).toFixed(6)}</b> (|&Delta;C<sub>J</sub>/C<sub>J,0</sub>| = <b style="color:#00e676">${Number(cisInfo.delta_cj_rel).toExponential(2)}</b>) | Cislunar TOF: <b>${cisInfo.tof_days} days</b>`;
+
+        document.getElementById('cislunarCardLagrange').innerHTML = `
+            <h3>Euler-Lagrange Points</h3>
+            <div class="stat-line"><span class="stat-label">L<sub>1</sub> Cislunar Neck:</span><span class="stat-val" style="color:#00e5ff">+${cisInfo.l1_x_km} km</span></div>
+            <div class="stat-line"><span class="stat-label">L<sub>2</sub> Far-Side Gate:</span><span class="stat-val" style="color:#00e676">+${cisInfo.l2_x_km} km</span></div>
+            <div class="stat-line"><span class="stat-label">L<sub>3</sub> Trans-Earth:</span><span class="stat-val">${cisInfo.l3_x_km} km</span></div>
+            <div class="stat-line"><span class="stat-label">L<sub>4</sub> / L<sub>5</sub> Trojan:</span><span class="stat-val" style="color:#d500f9">[+${cisInfo.l4_x_km}, &plusmn;${cisInfo.l4_y_km}] km</span></div>
+        `;
+
+        document.getElementById('cislunarCardBurns').innerHTML = `
+            <h3>Cislunar &Delta;V &amp; TOF</h3>
+            <div class="stat-line"><span class="stat-label">TLI Injection &Delta;V<sub>TLI</sub>:</span><span class="stat-val" style="color:#00e5ff">${cisInfo.dv_tli_ms} m/s</span></div>
+            <div class="stat-line"><span class="stat-label">Halo / LOI Insertion &Delta;V:</span><span class="stat-val" style="color:#00e676">${cisInfo.dv_loi_ms} m/s</span></div>
+            <div class="stat-line"><span class="stat-label">Total Cislunar &Delta;V:</span><span class="stat-val" style="color:#ffab00">${cisInfo.total_cislunar_dv_ms} m/s</span></div>
+            <div class="stat-line"><span class="stat-label">Cislunar Transfer TOF:</span><span class="stat-val">${cisInfo.tof_days} days (h<sub>0</sub>=${cisInfo.leo_parking_alt_km} km)</span></div>
+        `;
+
+        document.getElementById('cislunarCardHalo').innerHTML = `
+            <h3>3D Periodic Halo Orbit</h3>
+            <div class="stat-line"><span class="stat-label">Vertical Amp A<sub>z</sub>:</span><span class="stat-val" style="color:#d500f9">${cisInfo.halo_az_km} km</span></div>
+            <div class="stat-line"><span class="stat-label">In-Plane Amp A<sub>x</sub> / A<sub>y</sub>:</span><span class="stat-val">${cisInfo.halo_ax_km} / ${cisInfo.halo_ay_km} km</span></div>
+            <div class="stat-line"><span class="stat-label">Halo Orbit Period T:</span><span class="stat-val" style="color:#00e5ff">${cisInfo.halo_period_days} days</span></div>
+            <div class="stat-line"><span class="stat-label">Perilune Altitude:</span><span class="stat-val" style="color:#00e676">${cisInfo.perilune_alt_km} km</span></div>
+        `;
+
+        document.getElementById('cislunarCardJacobi').innerHTML = `
+            <h3>Jacobi Energy &amp; Necks</h3>
+            <div class="stat-line"><span class="stat-label">Operating Jacobi C<sub>J</sub>:</span><span class="stat-val" style="color:#00e5ff">${Number(cisInfo.jacobi_c).toFixed(6)}</span></div>
+            <div class="stat-line"><span class="stat-label">Threshold C<sub>J,L1</sub> / C<sub>J,L2</sub>:</span><span class="stat-val">${Number(cisInfo.cj_l1).toFixed(5)} / ${Number(cisInfo.cj_l2).toFixed(5)}</span></div>
+            <div class="stat-line"><span class="stat-label">Trojan Min C<sub>J,L4/L5</sub>:</span><span class="stat-val">${Number(cisInfo.cj_l4_l5).toFixed(5)}</span></div>
+            <div class="stat-line"><span class="stat-label">RK4 Error |&Delta;C<sub>J</sub>/C<sub>J,0</sub>|:</span><span class="stat-val" style="color:#00e676">${Number(cisInfo.delta_cj_rel).toExponential(2)}</span></div>
+        `;
+
+        // 15A. Plot Sinistro: Earth-Moon Synodic Frame Trajectory, Lagrange Points L1-L5 & Zero-Velocity Contours
+        const muEm   = cisInfo.mu_em || 0.0121505856;
+        const lStar  = cisInfo.l_star_km || 384400.0;
+        const cjOp   = cisInfo.jacobi_c || 3.159986;
+        const xGridKm = [];
+        const yGridKm = [];
+        const zvcGrid = [];
+        const nxZvc = 92, nyZvc = 74;
+        for (let ix = 0; ix < nxZvc; ix++) {
+            xGridKm.push(-435000.0 + (ix / (nxZvc - 1)) * 930000.0);
+        }
+        for (let iy = 0; iy < nyZvc; iy++) {
+            const yKm = -375000.0 + (iy / (nyZvc - 1)) * 750000.0;
+            yGridKm.push(yKm);
+            const row = [];
+            const yn = yKm / lStar;
+            for (let ix = 0; ix < nxZvc; ix++) {
+                const xn = xGridKm[ix] / lStar;
+                const r1n = Math.max(0.015, Math.hypot(xn + muEm, yn));
+                const r2n = Math.max(0.008, Math.hypot(xn - 1.0 + muEm, yn));
+                const twoOmega = (xn * xn + yn * yn) + 2.0 * (1.0 - muEm) / r1n + 2.0 * muEm / r2n;
+                row.push(Math.min(3.32, Math.max(2.96, twoOmega)));
+            }
+            zvcGrid.push(row);
+        }
+
+        const cisTrX  = trajCisTr.map(p => p.x_syn_km);
+        const cisTrY  = trajCisTr.map(p => p.y_syn_km);
+        const cisTrZ  = trajCisTr.map(p => p.z_syn_km);
+        const haloX   = trajHalo.map(p => p.x_syn_km);
+        const haloY   = trajHalo.map(p => p.y_syn_km);
+        const haloZ   = trajHalo.map(p => p.z_syn_km);
+
+        Plotly.react('plotCislunarSynodic', [
+            {
+                type: 'contour',
+                x: xGridKm,
+                y: yGridKm,
+                z: zvcGrid,
+                name: `Zero-Velocity Forbidden Region (2Ω < C_J = ${Number(cjOp).toFixed(4)})`,
+                contours: {
+                    start: 2.988,
+                    end: cjOp,
+                    size: Math.max(0.008, (cjOp - 2.988) / 5.0),
+                    coloring: 'heatmap',
+                    showlines: true
+                },
+                colorscale: [
+                    [0.0, 'rgba(213, 0, 249, 0.28)'],
+                    [0.55, 'rgba(255, 82, 82, 0.19)'],
+                    [0.96, 'rgba(255, 171, 0, 0.14)'],
+                    [1.0, 'rgba(17, 22, 34, 0.0)']
+                ],
+                line: { color: 'rgba(255, 171, 0, 0.65)', width: 1.5, dash: 'dot' },
+                showscale: false,
+                hovertemplate: 'x_syn = %{x:.0f} km<br>y_syn = %{y:.0f} km<br>2Ω(x,y,0) = %{z:.5f}<extra>Zero-Velocity Surface</extra>'
+            },
+            {
+                x: [cisInfo.earth_x_km, cisInfo.l4_x_km, cisInfo.moon_x_km, cisInfo.l5_x_km, cisInfo.earth_x_km],
+                y: [0, cisInfo.l4_y_km, 0, cisInfo.l5_y_km, 0],
+                mode: 'lines',
+                name: 'Equilateral L4/L5 Trojan Geometry',
+                line: { color: 'rgba(148, 163, 184, 0.25)', width: 1.2, dash: 'dash' },
+                hoverinfo: 'skip'
+            },
+            {
+                x: cisTrX,
+                y: cisTrY,
+                mode: 'lines',
+                name: `Cislunar Transfer Trajectory (TOF = ${cisInfo.tof_days} d)`,
+                line: { color: '#00e5ff', width: 2.8 },
+                hovertemplate: 'x_syn = %{x:.0f} km<br>y_syn = %{y:.0f} km<extra>Cislunar Transfer</extra>'
+            },
+            {
+                x: haloX,
+                y: haloY,
+                mode: 'lines',
+                name: `Periodic Halo Orbit (A_z = ${cisInfo.halo_az_km} km, T = ${cisInfo.halo_period_days} d)`,
+                line: { color: '#00e676', width: 3.0 },
+                hovertemplate: 'x_syn = %{x:.0f} km<br>y_syn = %{y:.0f} km<extra>Periodic Halo Orbit</extra>'
+            },
+            {
+                x: [cisInfo.earth_x_km],
+                y: [0.0],
+                mode: 'markers+text',
+                name: `Earth Primary (-μ L* = ${cisInfo.earth_x_km} km)`,
+                marker: { size: 14, color: '#38bdf8', symbol: 'circle', line: { color: '#ffffff', width: 2 } },
+                text: ['EARTH'],
+                textposition: 'bottom left',
+                textfont: { color: '#38bdf8', size: 10.5 },
+                hovertemplate: '<b>Earth Primary</b><br>x_syn = %{x:.1f} km, y_syn = 0 km<extra></extra>'
+            },
+            {
+                x: [cisInfo.moon_x_km],
+                y: [0.0],
+                mode: 'markers+text',
+                name: `Moon Primary ((1-μ) L* = +${cisInfo.moon_x_km} km)`,
+                marker: { size: 10.5, color: '#e2e8f0', symbol: 'circle', line: { color: '#ffab00', width: 1.8 } },
+                text: ['MOON'],
+                textposition: 'bottom center',
+                textfont: { color: '#e2e8f0', size: 10 },
+                hovertemplate: '<b>Moon Primary</b><br>x_syn = %{x:.1f} km, y_syn = 0 km<extra></extra>'
+            },
+            {
+                x: [cisInfo.l1_x_km, cisInfo.l2_x_km, cisInfo.l3_x_km],
+                y: [0.0, 0.0, 0.0],
+                mode: 'markers+text',
+                name: 'Collinear Libration Points (L1, L2, L3)',
+                marker: { size: 10.5, color: '#ffab00', symbol: 'diamond', line: { color: '#ffffff', width: 1.4 } },
+                text: ['L1', 'L2', 'L3'],
+                textposition: ['top left', 'top right', 'top right'],
+                textfont: { color: '#ffab00', size: 10.5 },
+                hovertemplate: '<b>%{text} Collinear Point</b><br>x_syn = %{x:.1f} km<extra></extra>'
+            },
+            {
+                x: [cisInfo.l4_x_km, cisInfo.l5_x_km],
+                y: [cisInfo.l4_y_km, cisInfo.l5_y_km],
+                mode: 'markers+text',
+                name: 'Equilateral Libration Points (L4, L5)',
+                marker: { size: 10.5, color: '#d500f9', symbol: 'triangle-up', line: { color: '#ffffff', width: 1.4 } },
+                text: ['L4 (+60°)', 'L5 (-60°)'],
+                textposition: ['top center', 'bottom center'],
+                textfont: { color: '#d500f9', size: 10 },
+                hovertemplate: '<b>%{text} Triangular Point</b><br>x_syn = %{x:.1f} km, y_syn = %{y:.1f} km<extra></extra>'
+            }
+        ], {
+            title: { text: `15A. Earth-Moon Synodic Frame Trajectory, Lagrange Points L₁–L₅ & Zero-Velocity Contours (C_J = ${Number(cjOp).toFixed(4)})`, font: { color: '#e2e8f0', size: 12.2 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#111622',
+            margin: { l: 58, r: 22, b: 48, t: 40 },
+            xaxis: { title: 'Synodic Co-Rotating X Axis [km]', color: '#e2e8f0', gridcolor: '#222d42', zerolinecolor: '#334155', range: [-435000, 495000] },
+            yaxis: { title: 'Synodic Co-Rotating Y Axis [km]', color: '#e2e8f0', gridcolor: '#222d42', zerolinecolor: '#334155', scaleanchor: 'x', scaleratio: 1, range: [-375000, 375000] },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.0 }, bgcolor: 'rgba(17,22,34,0.86)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // 15B. Plot Destro: 3D Halo Orbit around L2/L1 & Jacobi Integral / Lunar Distance Profile
+        const tCombinedDays = [];
+        const dMoonCombinedKm = [];
+        const cjCombined = [];
+        const tofOff = cisInfo.tof_days || (trajCisTr.length ? trajCisTr[trajCisTr.length - 1].t_days : 5.0);
+        trajCisTr.forEach(p => {
+            tCombinedDays.push(p.t_days);
+            dMoonCombinedKm.push(p.dist_moon_km);
+            cjCombined.push(p.jacobi_c);
+        });
+        trajHalo.forEach(p => {
+            tCombinedDays.push(+(tofOff + p.t_days).toFixed(4));
+            dMoonCombinedKm.push(p.dist_moon_km);
+            cjCombined.push(p.jacobi_c);
+        });
+
+        const nApproach = Math.max(2, Math.floor(trajCisTr.length * 0.40));
+        const trAppSlice = trajCisTr.slice(trajCisTr.length - nApproach);
+
+        Plotly.react('plotCislunarHalo', [
+            {
+                type: 'scatter3d',
+                scene: 'scene',
+                x: haloX, y: haloY, z: haloZ,
+                mode: 'lines',
+                name: `3D Southern Halo Orbit (A_z = ${cisInfo.halo_az_km} km)`,
+                line: { color: '#00e676', width: 5.0 },
+                hovertemplate: '<b>3D Halo Orbit</b><br>x = %{x:.0f} km<br>y = %{y:.0f} km<br>z = %{z:.0f} km<extra></extra>'
+            },
+            {
+                type: 'scatter3d',
+                scene: 'scene',
+                x: trAppSlice.map(p => p.x_syn_km),
+                y: trAppSlice.map(p => p.y_syn_km),
+                z: trAppSlice.map(p => p.z_syn_km),
+                mode: 'lines',
+                name: 'Cislunar Transfer Approach Leg',
+                line: { color: '#00e5ff', width: 3.5, dash: 'dash' },
+                hovertemplate: '<b>Transfer Arrival</b><br>x = %{x:.0f} km<br>y = %{y:.0f} km<br>z = %{z:.0f} km<extra></extra>'
+            },
+            {
+                type: 'scatter3d',
+                scene: 'scene',
+                x: [cisInfo.moon_x_km], y: [0.0], z: [0.0],
+                mode: 'markers+text',
+                name: 'Moon Primary',
+                marker: { size: 7.5, color: '#e2e8f0', symbol: 'circle', line: { color: '#ffab00', width: 1.5 } },
+                text: ['MOON'],
+                textposition: 'top center',
+                textfont: { color: '#e2e8f0', size: 9.5 },
+                hoverinfo: 'name'
+            },
+            {
+                type: 'scatter3d',
+                scene: 'scene',
+                x: [cisInfo.l1_x_km, cisInfo.l2_x_km],
+                y: [0.0, 0.0],
+                z: [0.0, 0.0],
+                mode: 'markers+text',
+                name: 'L1 / L2 Libration Points',
+                marker: { size: 5.5, color: '#ffab00', symbol: 'diamond' },
+                text: ['L1', 'L2'],
+                textposition: 'top center',
+                textfont: { color: '#ffab00', size: 9.5 },
+                hoverinfo: 'name'
+            },
+            {
+                type: 'scatter',
+                xaxis: 'x',
+                yaxis: 'y',
+                x: tCombinedDays,
+                y: dMoonCombinedKm,
+                mode: 'lines',
+                name: 'Lunar Distance r₂(t) [km]',
+                line: { color: '#00e5ff', width: 2.3 },
+                hovertemplate: 't = %{x:.2f} days<br>Distance to Moon = %{y:.0f} km<extra></extra>'
+            },
+            {
+                type: 'scatter',
+                xaxis: 'x',
+                yaxis: 'y2',
+                x: tCombinedDays,
+                y: cjCombined,
+                mode: 'lines',
+                name: `Jacobi Constant C_J(t) (|ΔC_J/C_J0| = ${Number(cisInfo.delta_cj_rel).toExponential(2)})`,
+                line: { color: '#d500f9', width: 2.2, dash: 'dot' },
+                hovertemplate: 't = %{x:.2f} days<br>Jacobi Constant C_J = %{y:.9f}<extra></extra>'
+            }
+        ], {
+            title: { text: `15B. 3D Southern Halo Orbit Around L₂/L₁ & Lunar Distance / Jacobi Integral Conservation Profile`, font: { color: '#e2e8f0', size: 12.2 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 12, r: 54, b: 46, t: 40 },
+            scene: {
+                domain: { x: [0.0, 0.52], y: [0.04, 0.96] },
+                bgcolor: '#111622',
+                xaxis: { title: 'X_syn [km]', color: '#cbd5e1', gridcolor: '#222d42', tickfont: { size: 8.5 } },
+                yaxis: { title: 'Y_syn [km]', color: '#cbd5e1', gridcolor: '#222d42', tickfont: { size: 8.5 } },
+                zaxis: { title: 'Z_syn [km]', color: '#d500f9', gridcolor: '#222d42', tickfont: { size: 8.5 } },
+                camera: { eye: { x: 1.45, y: -1.55, z: 0.95 } }
+            },
+            xaxis: { domain: [0.60, 0.98], title: 'Mission Time (Transfer + Halo) [days]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Distance to Moon [km]', titlefont: { color: '#00e5ff', size: 11 }, tickfont: { color: '#00e5ff', size: 9.5 }, gridcolor: '#222d42', position: 0.60 },
+            yaxis2: {
+                title: 'Jacobi Integral C_J [-]',
+                titlefont: { color: '#d500f9', size: 11 },
+                tickfont: { color: '#d500f9', size: 9.5 },
+                tickformat: '.6f',
+                overlaying: 'y',
+                side: 'right',
+                showgrid: false,
+                range: [cjOp - 0.0025, cjOp + 0.0025]
+            },
+            shapes: [{
+                type: 'line',
+                xref: 'x', yref: 'paper',
+                x0: tofOff, x1: tofOff,
+                y0: 0.06, y1: 0.94,
+                line: { color: '#00e676', width: 1.5, dash: 'dash' }
+            }],
+            annotations: [{
+                xref: 'x', yref: 'paper',
+                x: tofOff, y: 0.92,
+                text: `Halo Insertion (${tofOff} d)`,
+                showarrow: true, arrowhead: 2, ax: 32, ay: -14,
+                font: { color: '#00e676', size: 9.5 },
+                bgcolor: 'rgba(15,23,42,0.85)', bordercolor: '#00e676'
+            }],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.8 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
         startAnimationLoop();
@@ -5724,6 +6131,414 @@
         };
     }
 
+    // =========================================================================
+    // SPRINT 21: CISLUNAR CR3BP ASTRODYNAMICS, LAGRANGE POINTS & HALO ORBIT (JS)
+    // =========================================================================
+    function cr3bpPseudopotentialOmegaJS(x, y, z, mu) {
+        const dx1 = x + mu;
+        const dx2 = x - (1.0 - mu);
+        const r1 = Math.max(1e-12, Math.sqrt(dx1 * dx1 + y * y + z * z));
+        const r2 = Math.max(1e-12, Math.sqrt(dx2 * dx2 + y * y + z * z));
+        return 0.5 * (x * x + y * y) + (1.0 - mu) / r1 + mu / r2;
+    }
+
+    function cr3bpJacobiConstantJS(s, mu) {
+        const omega = cr3bpPseudopotentialOmegaJS(s.x, s.y, s.z, mu);
+        const v2 = s.vx * s.vx + s.vy * s.vy + s.vz * s.vz;
+        return 2.0 * omega - v2;
+    }
+
+    function cr3bpOdeDerivJS(s, mu) {
+        const dx1 = s.x + mu;
+        const dx2 = s.x - (1.0 - mu);
+        let r1Sq = dx1 * dx1 + s.y * s.y + s.z * s.z;
+        let r2Sq = dx2 * dx2 + s.y * s.y + s.z * s.z;
+        if (r1Sq < 1e-16) r1Sq = 1e-16;
+        if (r2Sq < 1e-16) r2Sq = 1e-16;
+        const r13 = r1Sq * Math.sqrt(r1Sq);
+        const r23 = r2Sq * Math.sqrt(r2Sq);
+        const dOmegaDx = s.x - (1.0 - mu) * dx1 / r13 - mu * dx2 / r23;
+        const dOmegaDy = s.y * (1.0 - (1.0 - mu) / r13 - mu / r23);
+        const dOmegaDz = -s.z * ((1.0 - mu) / r13 + mu / r23);
+        return {
+            x:  s.vx,
+            y:  s.vy,
+            z:  s.vz,
+            vx: 2.0 * s.vy + dOmegaDx,
+            vy: -2.0 * s.vx + dOmegaDy,
+            vz: dOmegaDz
+        };
+    }
+
+    function cr3bpRk4StepJS(s, dt, mu) {
+        const k1 = cr3bpOdeDerivJS(s, mu);
+        const k2 = cr3bpOdeDerivJS({
+            x: s.x + 0.5 * dt * k1.x, y: s.y + 0.5 * dt * k1.y, z: s.z + 0.5 * dt * k1.z,
+            vx: s.vx + 0.5 * dt * k1.vx, vy: s.vy + 0.5 * dt * k1.vy, vz: s.vz + 0.5 * dt * k1.vz
+        }, mu);
+        const k3 = cr3bpOdeDerivJS({
+            x: s.x + 0.5 * dt * k2.x, y: s.y + 0.5 * dt * k2.y, z: s.z + 0.5 * dt * k2.z,
+            vx: s.vx + 0.5 * dt * k2.vx, vy: s.vy + 0.5 * dt * k2.vy, vz: s.vz + 0.5 * dt * k2.vz
+        }, mu);
+        const k4 = cr3bpOdeDerivJS({
+            x: s.x + dt * k3.x, y: s.y + dt * k3.y, z: s.z + dt * k3.z,
+            vx: s.vx + dt * k3.vx, vy: s.vy + dt * k3.vy, vz: s.vz + dt * k3.vz
+        }, mu);
+        return {
+            x:  s.x  + (dt / 6.0) * (k1.x  + 2.0 * k2.x  + 2.0 * k3.x  + k4.x),
+            y:  s.y  + (dt / 6.0) * (k1.y  + 2.0 * k2.y  + 2.0 * k3.y  + k4.y),
+            z:  s.z  + (dt / 6.0) * (k1.z  + 2.0 * k2.z  + 2.0 * k3.z  + k4.z),
+            vx: s.vx + (dt / 6.0) * (k1.vx + 2.0 * k2.vx + 2.0 * k3.vx + k4.vx),
+            vy: s.vy + (dt / 6.0) * (k1.vy + 2.0 * k2.vy + 2.0 * k3.vy + k4.vy),
+            vz: s.vz + (dt / 6.0) * (k1.vz + 2.0 * k2.vz + 2.0 * k3.vz + k4.vz)
+        };
+    }
+
+    function solveCollinearLagrangePointsJS(mu) {
+        const rh = Math.pow(mu / (3.0 * (1.0 - mu)), 1.0 / 3.0);
+        // L1: -mu < x < 1 - mu
+        let x1 = (1.0 - mu) - rh * (1.0 - rh / 3.0);
+        for (let iter = 0; iter < 40; iter++) {
+            const d1 = x1 + mu;
+            const d2 = (1.0 - mu) - x1;
+            const f  = x1 - (1.0 - mu) / (d1 * d1) + mu / (d2 * d2);
+            const df = 1.0 + 2.0 * (1.0 - mu) / (d1 * d1 * d1) + 2.0 * mu / (d2 * d2 * d2);
+            const dx = f / df;
+            x1 -= dx;
+            if (Math.abs(dx) < 1e-14) break;
+        }
+        // L2: x > 1 - mu
+        let x2 = (1.0 - mu) + rh * (1.0 + rh / 3.0);
+        for (let iter = 0; iter < 40; iter++) {
+            const d1 = x2 + mu;
+            const d2 = x2 - (1.0 - mu);
+            const f  = x2 - (1.0 - mu) / (d1 * d1) - mu / (d2 * d2);
+            const df = 1.0 + 2.0 * (1.0 - mu) / (d1 * d1 * d1) + 2.0 * mu / (d2 * d2 * d2);
+            const dx = f / df;
+            x2 -= dx;
+            if (Math.abs(dx) < 1e-14) break;
+        }
+        // L3: x < -mu
+        let x3 = -1.0 - (5.0 / 12.0) * mu;
+        for (let iter = 0; iter < 40; iter++) {
+            const d1 = -mu - x3;
+            const d2 = (1.0 - mu) - x3;
+            const f  = x3 + (1.0 - mu) / (d1 * d1) + mu / (d2 * d2);
+            const df = 1.0 + 2.0 * (1.0 - mu) / (d1 * d1 * d1) + 2.0 * mu / (d2 * d2 * d2);
+            const dx = f / df;
+            x3 -= dx;
+            if (Math.abs(dx) < 1e-14) break;
+        }
+        return { xL1: x1, xL2: x2, xL3: x3 };
+    }
+
+    function haloHalfPeriodVxResidualJS(x0, z0, vy0, xEq, mu) {
+        let s = { x: x0, y: 0.0, z: z0, vx: 0.0, vy: vy0, vz: 0.0 };
+        const dt = 0.0025;
+        let t = 0.0;
+        for (let step = 0; step < 1800; step++) {
+            const sNext = cr3bpRk4StepJS(s, dt, mu);
+            const tNext = t + dt;
+            if (step > 25 && ((s.y > 0.0 && sNext.y <= 0.0) || (s.y < 0.0 && sNext.y >= 0.0))) {
+                const frac = Math.abs(s.y) / (Math.abs(s.y) + Math.abs(sNext.y) + 1e-18);
+                const sCross = cr3bpRk4StepJS(s, frac * dt, mu);
+                return { vx: sCross.vx, tHalf: t + frac * dt };
+            }
+            if (Math.abs(sNext.x - xEq) > 0.24) {
+                return { vx: (sNext.x > xEq) ? 10.0 : -10.0, tHalf: tNext };
+            }
+            s = sNext;
+            t = tNext;
+        }
+        return { vx: s.vx, tHalf: t };
+    }
+
+    function simulateCislunarCr3bpJS(aInitKm, finalMassKg, fuelUsedKg, ispS, targetRegime, haloAzKm) {
+        const muEm     = 0.0121505856;
+        const lStarKm  = 384400.0;
+        const tStarSec = 375190.258;
+        const vStarKms = lStarKm / tStarSec;
+        const moonRadiusKm = 1737.4;
+
+        const reg = (targetRegime === 1 || targetRegime === 2) ? targetRegime : 0;
+        const azInKm = (haloAzKm >= 1000.0 && haloAzKm <= 65000.0) ? haloAzKm : 15000.0;
+        const hInit = (aInitKm || (R_EQ + 400.0)) - R_EQ;
+        const leoAltKm = (hInit >= 150.0 && hInit <= 2000.0) ? hInit : 400.0;
+
+        const earthXKm = -muEm * lStarKm;
+        const moonXKm  = (1.0 - muEm) * lStarKm;
+        const lag = solveCollinearLagrangePointsJS(muEm);
+        const l1XKm = lag.xL1 * lStarKm;
+        const l2XKm = lag.xL2 * lStarKm;
+        const l3XKm = lag.xL3 * lStarKm;
+        const l4XKm = (0.5 - muEm) * lStarKm;
+        const l4YKm = (0.5 * Math.sqrt(3.0)) * lStarKm;
+        const l5XKm = l4XKm;
+        const l5YKm = -l4YKm;
+
+        const cjL1   = 2.0 * cr3bpPseudopotentialOmegaJS(lag.xL1, 0.0, 0.0, muEm);
+        const cjL2   = 2.0 * cr3bpPseudopotentialOmegaJS(lag.xL2, 0.0, 0.0, muEm);
+        const cjL3   = 2.0 * cr3bpPseudopotentialOmegaJS(lag.xL3, 0.0, 0.0, muEm);
+        const cjL4L5 = 2.0 * cr3bpPseudopotentialOmegaJS(0.5 - muEm, 0.5 * Math.sqrt(3.0), 0.0, muEm);
+
+        // 1. Periodic 3D Southern Halo Orbit via Shooting + RK4
+        const isL1 = (reg === 1);
+        const xEq  = isL1 ? lag.xL1 : lag.xL2;
+        const azNorm = azInKm / lStarKm;
+        const z0Halo = -azNorm;
+        const dx0Halo = isL1 ? (0.036 + 0.14 * azNorm) : (0.046 + 0.18 * azNorm);
+        const x0Halo  = xEq - dx0Halo;
+
+        let vyLow = 0.05, vyHigh = 0.45;
+        let fLow = haloHalfPeriodVxResidualJS(x0Halo, z0Halo, vyLow, xEq, muEm).vx;
+        for (let k = 1; k <= 80; k++) {
+            const vTest = 0.05 + (0.40 * k / 80.0);
+            const fTest = haloHalfPeriodVxResidualJS(x0Halo, z0Halo, vTest, xEq, muEm).vx;
+            if (fLow * fTest <= 0.0) {
+                vyHigh = vTest;
+                break;
+            }
+            vyLow = vTest;
+            fLow  = fTest;
+        }
+
+        let vy0Halo = 0.5 * (vyLow + vyHigh);
+        let tHalfNorm = 1.65;
+        for (let iter = 0; iter < 54; iter++) {
+            vy0Halo = 0.5 * (vyLow + vyHigh);
+            const res = haloHalfPeriodVxResidualJS(x0Halo, z0Halo, vy0Halo, xEq, muEm);
+            tHalfNorm = res.tHalf;
+            if (fLow * res.vx <= 0.0) {
+                vyHigh = vy0Halo;
+            } else {
+                vyLow = vy0Halo;
+                fLow  = res.vx;
+            }
+        }
+
+        const haloInit = { x: x0Halo, y: 0.0, z: z0Halo, vx: 0.0, vy: vy0Halo, vz: 0.0 };
+        const cjHalo0 = cr3bpJacobiConstantJS(haloInit, muEm);
+        const haloPeriodDays = (2.0 * tHalfNorm * tStarSec) / 86400.0;
+
+        const nHalo = 161;
+        const halfIdx = (nHalo - 1) / 2;
+        const dtHaloSeg = tHalfNorm / halfIdx;
+        const subHalo = 20;
+        const dtHaloRk4 = dtHaloSeg / subHalo;
+
+        const trajHalo = new Array(nHalo);
+        let sCur = { ...haloInit };
+        let maxRelCjErr = 0.0;
+        let xMinHalo = x0Halo, xMaxHalo = x0Halo, yMaxHalo = 0.0, zMaxHalo = Math.abs(z0Halo);
+        let minMoonDistKm = 1e9;
+
+        for (let i = 0; i <= halfIdx; i++) {
+            const tNorm = i * dtHaloSeg;
+            const cjNow = cr3bpJacobiConstantJS(sCur, muEm);
+            const relErr = Math.abs(cjNow - cjHalo0) / Math.abs(cjHalo0);
+            if (relErr > maxRelCjErr) maxRelCjErr = relErr;
+
+            const dxM = (sCur.x - (1.0 - muEm)) * lStarKm;
+            const dyM = sCur.y * lStarKm;
+            const dzM = sCur.z * lStarKm;
+            const dMoon = Math.sqrt(dxM * dxM + dyM * dyM + dzM * dzM);
+            if (dMoon < minMoonDistKm) minMoonDistKm = dMoon;
+
+            if (sCur.x < xMinHalo) xMinHalo = sCur.x;
+            if (sCur.x > xMaxHalo) xMaxHalo = sCur.x;
+            if (Math.abs(sCur.y) > yMaxHalo) yMaxHalo = Math.abs(sCur.y);
+            if (Math.abs(sCur.z) > zMaxHalo) zMaxHalo = Math.abs(sCur.z);
+
+            trajHalo[i] = {
+                t_days: +((tNorm * tStarSec) / 86400.0).toFixed(4),
+                x_syn_km: +(sCur.x * lStarKm).toFixed(2),
+                y_syn_km: +(sCur.y * lStarKm).toFixed(2),
+                z_syn_km: +(sCur.z * lStarKm).toFixed(2),
+                jacobi_c: +cjNow.toFixed(10),
+                dist_moon_km: +dMoon.toFixed(2)
+            };
+
+            const mirrorI = (nHalo - 1) - i;
+            if (mirrorI > halfIdx) {
+                const tMirrorNorm = 2.0 * tHalfNorm - tNorm;
+                trajHalo[mirrorI] = {
+                    t_days: +((tMirrorNorm * tStarSec) / 86400.0).toFixed(4),
+                    x_syn_km: +(sCur.x * lStarKm).toFixed(2),
+                    y_syn_km: +(-sCur.y * lStarKm).toFixed(2),
+                    z_syn_km: +(sCur.z * lStarKm).toFixed(2),
+                    jacobi_c: +cjNow.toFixed(10),
+                    dist_moon_km: +dMoon.toFixed(2)
+                };
+            }
+
+            if (i < halfIdx) {
+                for (let sub = 0; sub < subHalo; sub++) {
+                    sCur = cr3bpRk4StepJS(sCur, dtHaloRk4, muEm);
+                }
+            }
+        }
+
+        // 2. Cislunar Transfer Trajectory from LEO through L1 Neck via RK4
+        const rLeoKm = R_EQ + leoAltKm;
+        const r10    = rLeoKm / lStarKm;
+        const aTransN = (reg === 1) ? 0.465 : ((reg === 2) ? 0.548 : 0.568);
+        const vCircInertN = Math.sqrt((1.0 - muEm) / r10);
+        const vTliInertN  = Math.sqrt((1.0 - muEm) * (2.0 / r10 - 1.0 / aTransN));
+        const vSyn0       = vTliInertN - r10;
+        const dvTliMs     = (vTliInertN - vCircInertN) * vStarKms * 1000.0;
+
+        const xTargArr = (reg === 1) ? x0Halo : ((reg === 2) ? (1.0 - muEm + 0.016) : x0Halo);
+        let thetaLow  = -160.0 * DEG2RAD;
+        let thetaHigh = -70.0  * DEG2RAD;
+        let bestTheta = -118.0 * DEG2RAD;
+        let bestTof   = 1.05;
+        let bestErr   = 1e9;
+
+        for (let pass = 0; pass < 2; pass++) {
+            const nScan = (pass === 0) ? 36 : 28;
+            for (let k = 0; k <= nScan; k++) {
+                const th = thetaLow + (k / nScan) * (thetaHigh - thetaLow);
+                let st = {
+                    x: -muEm + r10 * Math.cos(th),
+                    y: r10 * Math.sin(th),
+                    z: 0.0,
+                    vx: -vSyn0 * Math.sin(th),
+                    vy:  vSyn0 * Math.cos(th),
+                    vz: 0.0
+                };
+                let tAcc = 0.0;
+                const tMax = 1.38;
+                while (tAcc < tMax) {
+                    const dx1 = st.x + muEm;
+                    const r1Now = Math.sqrt(dx1 * dx1 + st.y * st.y + st.z * st.z);
+                    const dtStep = Math.min(0.010, Math.max(0.0003, 0.015 * r1Now));
+                    st = cr3bpRk4StepJS(st, dtStep, muEm);
+                    tAcc += dtStep;
+                    if (tAcc > 0.55 && st.x > 0.70) {
+                        const err = Math.hypot(st.x - xTargArr, st.y);
+                        if (err < bestErr) {
+                            bestErr   = err;
+                            bestTheta = th;
+                            bestTof   = tAcc;
+                        }
+                    }
+                }
+            }
+            const span = (thetaHigh - thetaLow) * 0.12;
+            thetaLow  = bestTheta - span;
+            thetaHigh = bestTheta + span;
+        }
+
+        const tofNorm = bestTof;
+        const tofDays = (tofNorm * tStarSec) / 86400.0;
+        const vz0     = z0Halo / Math.max(0.75, tofNorm);
+
+        let sTr = {
+            x: -muEm + r10 * Math.cos(bestTheta),
+            y: r10 * Math.sin(bestTheta),
+            z: 0.0,
+            vx: -vSyn0 * Math.sin(bestTheta),
+            vy:  vSyn0 * Math.cos(bestTheta),
+            vz: vz0
+        };
+        const cjTr0 = cr3bpJacobiConstantJS(sTr, muEm);
+
+        const nTr = 160;
+        const dtTrSeg = tofNorm / (nTr - 1);
+        const trajTransfer = [];
+
+        for (let i = 0; i < nTr; i++) {
+            const tNorm = i * dtTrSeg;
+            const cjNow = cr3bpJacobiConstantJS(sTr, muEm);
+            const relTrErr = Math.abs(cjNow - cjTr0) / Math.abs(cjTr0);
+            if (relTrErr > maxRelCjErr) maxRelCjErr = relTrErr;
+
+            const dxM = (sTr.x - (1.0 - muEm)) * lStarKm;
+            const dyM = sTr.y * lStarKm;
+            const dzM = sTr.z * lStarKm;
+            const dMoon = Math.sqrt(dxM * dxM + dyM * dyM + dzM * dzM);
+            if (dMoon < minMoonDistKm) minMoonDistKm = dMoon;
+
+            const cjSample = cjHalo0 + (cjNow - cjTr0);
+            trajTransfer.push({
+                t_days: +((tNorm * tStarSec) / 86400.0).toFixed(4),
+                x_syn_km: +(sTr.x * lStarKm).toFixed(2),
+                y_syn_km: +(sTr.y * lStarKm).toFixed(2),
+                z_syn_km: +(sTr.z * lStarKm).toFixed(2),
+                jacobi_c: +cjSample.toFixed(10),
+                dist_moon_km: +dMoon.toFixed(2)
+            });
+
+            if (i < nTr - 1) {
+                const dx1 = sTr.x + muEm;
+                const r1Now = Math.sqrt(dx1 * dx1 + sTr.y * sTr.y + sTr.z * sTr.z);
+                const nSub = (r1Now < 0.05) ? 600 : ((r1Now < 0.16) ? 160 : 36);
+                const dtSub = dtTrSeg / nSub;
+                for (let sub = 0; sub < nSub; sub++) {
+                    sTr = cr3bpRk4StepJS(sTr, dtSub, muEm);
+                }
+            }
+        }
+
+        let regimeName = 'L2 Far-Side Southern Halo (Lunar Gateway)';
+        let dvLoiMs = 0.0;
+        const vArrN = Math.sqrt(sTr.vx * sTr.vx + sTr.vy * sTr.vy + sTr.vz * sTr.vz);
+        if (reg === 1) {
+            regimeName = 'L1 Cislunar Neck Gateway / Halo Orbit';
+            dvLoiMs = Math.max(380.0, Math.abs(vArrN - vy0Halo) * vStarKms * 1000.0 * 0.68);
+        } else if (reg === 2) {
+            regimeName = 'Lunar Free-Return Circum-Lunar Flyby & L2 Halo';
+            dvLoiMs = 0.0;
+        } else {
+            regimeName = 'L2 Far-Side Southern Halo (Lunar Gateway)';
+            dvLoiMs = Math.max(420.0, Math.abs(vArrN - vy0Halo) * vStarKms * 1000.0 * 0.62);
+        }
+
+        const totalCislunarDvMs = dvTliMs + dvLoiMs;
+        const m0Kg = Math.max(100.0, (finalMassKg || 464.0) + (fuelUsedKg || 36.0));
+        const ispCis = Math.max(316.0, ispS || 316.0);
+        const cislunarFuelKg = m0Kg * (1.0 - Math.exp(-totalCislunarDvMs / (ispCis * G0)));
+        const periluneAltKm  = Math.max(120.0, minMoonDistKm - moonRadiusKm);
+
+        return {
+            cislunar_summary: {
+                target_regime: reg,
+                regime_name: regimeName,
+                mu_em: +muEm.toFixed(10),
+                l_star_km: +lStarKm.toFixed(1),
+                t_star_sec: +tStarSec.toFixed(2),
+                earth_x_km: +earthXKm.toFixed(2),
+                moon_x_km: +moonXKm.toFixed(2),
+                l1_x_km: +l1XKm.toFixed(2),
+                l2_x_km: +l2XKm.toFixed(2),
+                l3_x_km: +l3XKm.toFixed(2),
+                l4_x_km: +l4XKm.toFixed(2),
+                l4_y_km: +l4YKm.toFixed(2),
+                l5_x_km: +l5XKm.toFixed(2),
+                l5_y_km: +l5YKm.toFixed(2),
+                cj_l1: +cjL1.toFixed(6),
+                cj_l2: +cjL2.toFixed(6),
+                cj_l3: +cjL3.toFixed(6),
+                cj_l4_l5: +cjL4L5.toFixed(6),
+                leo_parking_alt_km: +leoAltKm.toFixed(1),
+                dv_tli_ms: +dvTliMs.toFixed(2),
+                dv_loi_ms: +dvLoiMs.toFixed(2),
+                total_cislunar_dv_ms: +totalCislunarDvMs.toFixed(2),
+                cislunar_fuel_kg: +cislunarFuelKg.toFixed(2),
+                tof_days: +tofDays.toFixed(2),
+                halo_period_days: +haloPeriodDays.toFixed(2),
+                halo_ax_km: +(0.5 * (xMaxHalo - xMinHalo) * lStarKm).toFixed(1),
+                halo_ay_km: +(yMaxHalo * lStarKm).toFixed(1),
+                halo_az_km: +(zMaxHalo * lStarKm).toFixed(1),
+                perilune_alt_km: +periluneAltKm.toFixed(1),
+                jacobi_c: +cjHalo0.toFixed(8),
+                delta_cj_rel: +maxRelCjErr.toExponential(3)
+            },
+            traj_cislunar_transfer: trajTransfer,
+            traj_halo_orbit: trajHalo
+        };
+    }
+
     document.getElementById('btnRunCustomMission').addEventListener('click', function() {
         const mass0 = parseFloat(document.getElementById('inMass').value) || 500;
         const propParts = document.getElementById('inPropellant').value.split('|');
@@ -6025,6 +6840,13 @@
             kepTarg.a, repTarget.decay_m_day, finalMass, isp, eolFpaDeg, eolNoseRadiusM
         );
 
+        // Sprint 21: Cislunar CR3BP Astrodynamics, Lagrange Points (L1-L5) & 3D Halo Orbit
+        const cisRegime   = parseInt(document.getElementById('cislunarRegime').value, 10) || 0;
+        const cisHaloAzKm = Math.max(1000.0, Math.min(60000.0, parseFloat(document.getElementById('cislunarHaloAzKm').value) || 15000.0));
+        const cisRes      = simulateCislunarCr3bpJS(
+            kepInit.a, finalMass, fuelUsed, isp, cisRegime, cisHaloAzKm
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -6052,6 +6874,7 @@
             ekf_summary: ekfRes.ekf_summary,
             ssa_cam_summary: camRes.ssa_cam_summary,
             eol_reentry_summary: eolRes.eol_reentry_summary,
+            cislunar_summary: cisRes.cislunar_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -6061,7 +6884,9 @@
             traj_telecom: rfRes.traj_telecom,
             traj_ekf: ekfRes.traj_ekf,
             cam_tradeoff: camRes.cam_tradeoff,
-            traj_reentry: eolRes.traj_reentry
+            traj_reentry: eolRes.traj_reentry,
+            traj_cislunar_transfer: cisRes.traj_cislunar_transfer,
+            traj_halo_orbit: cisRes.traj_halo_orbit
         };
 
         document.getElementById('inputModal').classList.remove('open');

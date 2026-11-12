@@ -138,4 +138,9 @@ EndOfLifeReport simulate_eol_deorbit_and_reentry(KeplerianElements orb_target,
                                                  const SpacecraftConfig *sc,
                                                  double mu);
 
+// Sprint 21: Cislunar Astrodynamics, Circular Restricted Three-Body Problem (CR3BP), Lagrange Points & Lunar Halo
+CislunarReport simulate_cislunar_cr3bp(KeplerianElements orb_init,
+                                       OptimalTransferPlan plan,
+                                       CR3BPSpec spec);
+
 #endif // MISSION_ANALYSIS_H

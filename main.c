@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 20: EoL DEORBIT & ATMOSPHERIC RE-ENTRY \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 21: CISLUNAR CR3BP & LUNAR HALO ORBIT  \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -121,6 +121,14 @@ int main(void) {
     EndOfLifeReport eol = simulate_eol_deorbit_and_reentry(orb_target, rep_target, plan,
                                                            entry_fpa_deg, nose_radius_m, &sc, EARTH_MU);
 
+    // 13. SPRINT 21: CISLUNAR ASTRODYNAMICS, CR3BP, LAGRANGE POINTS & LUNAR HALO ORBIT
+    CR3BPSpec cr3bp_spec = {
+        .target_regime      = CISLUNAR_L2_HALO, // L2 Far-Side Southern Halo (Lunar Gateway)
+        .halo_az_km         = 15000.0,          // Ampiezza verticale Halo A_z = 15000 km
+        .leo_parking_alt_km = 400.0             // Quota LEO pre-TLI [km]
+    };
+    CislunarReport cislunar = simulate_cislunar_cr3bp(orb_initial, plan, cr3bp_spec);
+
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -234,10 +242,22 @@ int main(void) {
     printf("  * Structural Demise     : Breakup Altitude = %.1f km (V = %.2f km/s) | Entry Time = %.0f s | Downrange = %.0f km\n\n",
            eol.breakup_alt_km, eol.breakup_vel_kms, eol.total_entry_time_sec, eol.total_downrange_km);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with EoL Re-Entry, Sutton-Graves Heating & All Subsystems!\n");
+    printf("[CISLUNAR CR3BP ASTRODYNAMICS, LAGRANGE POINTS (L1-L5) & LUNAR HALO ORBIT]\n");
+    printf("  * Cislunar Regime       : %s (mu_EM = %.8f, L* = %.0f km)\n",
+           cislunar.regime_name, cislunar.mu_em, cislunar.l_star_km);
+    printf("  * Collinear L-Points    : L1 = %+.1f km (CJ=%.5f) | L2 = %+.1f km (CJ=%.5f) | L3 = %+.1f km\n",
+           cislunar.l1_x_km, cislunar.cj_l1, cislunar.l2_x_km, cislunar.cj_l2, cislunar.l3_x_km);
+    printf("  * Triangular L-Points   : L4/L5 = [ %+.1f, +/-%.1f ] km (CJ_min = %.5f)\n",
+           cislunar.l4_x_km, cislunar.l4_y_km, cislunar.cj_l4_l5);
+    printf("  * Propulsive Budget     : dV_TLI = %.2f m/s | dV_LOI (Halo) = %.2f m/s | Total = %.2f m/s | TOF = %.2f days\n",
+           cislunar.dv_tli_ms, cislunar.dv_loi_ms, cislunar.total_cislunar_dv_ms, cislunar.tof_days);
+    printf("  * Halo Orbit & Jacobi   : A_z = %.0f km (Period = %.2f d) | Jacobi C_J = %.6f | |dC_J/C_J0| = %.2e (< 1e-8 OK)\n\n",
+           cislunar.halo_az_km, cislunar.halo_period_days, cislunar.jacobi_c, cislunar.delta_cj_rel);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Cislunar CR3BP, Lagrange Points & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

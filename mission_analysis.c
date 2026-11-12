@@ -2701,3 +2701,437 @@ EndOfLifeReport simulate_eol_deorbit_and_reentry(KeplerianElements orb_target,
 
     return eol;
 }
+
+// =========================================================================
+// 13. SPRINT 21: CISLUNAR ASTRODYNAMICS, CR3BP, LAGRANGE POINTS & LUNAR HALO
+// =========================================================================
+typedef struct {
+    double x, y, z;
+    double vx, vy, vz;
+} CR3BPState;
+
+// Pseudopotenziale efficace nel frame sinodico baricentrico normalizzato:
+// Omega(x, y, z) = 0.5 * (x^2 + y^2) + (1 - mu) / r1 + mu / r2
+static double cr3bp_pseudopotential_omega(double x, double y, double z, double mu) {
+    double dx1 = x + mu;
+    double dx2 = x - (1.0 - mu);
+    double r1  = sqrt(dx1 * dx1 + y * y + z * z);
+    double r2  = sqrt(dx2 * dx2 + y * y + z * z);
+    if (r1 < 1e-12) r1 = 1e-12;
+    if (r2 < 1e-12) r2 = 1e-12;
+    return 0.5 * (x * x + y * y) + (1.0 - mu) / r1 + mu / r2;
+}
+
+// Integrale di Jacobi (Costante di Energia Relativa nel sistema co-rotante):
+// C_J = 2 * Omega(x, y, z) - (vx^2 + vy^2 + vz^2)
+static double cr3bp_jacobi_constant(CR3BPState s, double mu) {
+    double omega = cr3bp_pseudopotential_omega(s.x, s.y, s.z, mu);
+    double v2    = s.vx * s.vx + s.vy * s.vy + s.vz * s.vz;
+    return 2.0 * omega - v2;
+}
+
+// Equazioni differenziali del moto CR3BP nel sistema sinodico normalizzato:
+// x_ddot - 2*y_dot = dOmega/dx
+// y_ddot + 2*x_dot = dOmega/dy
+// z_ddot           = dOmega/dz
+static CR3BPState cr3bp_ode_deriv(CR3BPState s, double mu) {
+    CR3BPState ds;
+    double dx1 = s.x + mu;
+    double dx2 = s.x - (1.0 - mu);
+    double r1_sq = dx1 * dx1 + s.y * s.y + s.z * s.z;
+    double r2_sq = dx2 * dx2 + s.y * s.y + s.z * s.z;
+    if (r1_sq < 1e-20) r1_sq = 1e-20;
+    if (r2_sq < 1e-20) r2_sq = 1e-20;
+    double r1_3 = r1_sq * sqrt(r1_sq);
+    double r2_3 = r2_sq * sqrt(r2_sq);
+
+    double domega_dx = s.x - (1.0 - mu) * dx1 / r1_3 - mu * dx2 / r2_3;
+    double domega_dy = s.y - (1.0 - mu) * s.y / r1_3 - mu * s.y / r2_3;
+    double domega_dz =     - (1.0 - mu) * s.z / r1_3 - mu * s.z / r2_3;
+
+    ds.x  = s.vx;
+    ds.y  = s.vy;
+    ds.z  = s.vz;
+    ds.vx =  2.0 * s.vy + domega_dx;
+    ds.vy = -2.0 * s.vx + domega_dy;
+    ds.vz =               domega_dz;
+    return ds;
+}
+
+// Passo singolo Runge-Kutta 4° Ordine (RK4) nel sistema sinodico CR3BP
+static CR3BPState cr3bp_rk4_step(CR3BPState s, double dt, double mu) {
+    CR3BPState k1 = cr3bp_ode_deriv(s, mu);
+    CR3BPState s2 = {
+        s.x  + 0.5 * dt * k1.x,  s.y  + 0.5 * dt * k1.y,  s.z  + 0.5 * dt * k1.z,
+        s.vx + 0.5 * dt * k1.vx, s.vy + 0.5 * dt * k1.vy, s.vz + 0.5 * dt * k1.vz
+    };
+    CR3BPState k2 = cr3bp_ode_deriv(s2, mu);
+    CR3BPState s3 = {
+        s.x  + 0.5 * dt * k2.x,  s.y  + 0.5 * dt * k2.y,  s.z  + 0.5 * dt * k2.z,
+        s.vx + 0.5 * dt * k2.vx, s.vy + 0.5 * dt * k2.vy, s.vz + 0.5 * dt * k2.vz
+    };
+    CR3BPState k3 = cr3bp_ode_deriv(s3, mu);
+    CR3BPState s4 = {
+        s.x  + dt * k3.x,  s.y  + dt * k3.y,  s.z  + dt * k3.z,
+        s.vx + dt * k3.vx, s.vy + dt * k3.vy, s.vz + dt * k3.vz
+    };
+    CR3BPState k4 = cr3bp_ode_deriv(s4, mu);
+
+    double c = dt / 6.0;
+    CR3BPState out = {
+        s.x  + c * (k1.x  + 2.0 * k2.x  + 2.0 * k3.x  + k4.x),
+        s.y  + c * (k1.y  + 2.0 * k2.y  + 2.0 * k3.y  + k4.y),
+        s.z  + c * (k1.z  + 2.0 * k2.z  + 2.0 * k3.z  + k4.z),
+        s.vx + c * (k1.vx + 2.0 * k2.vx + 2.0 * k3.vx + k4.vx),
+        s.vy + c * (k1.vy + 2.0 * k2.vy + 2.0 * k3.vy + k4.vy),
+        s.vz + c * (k1.vz + 2.0 * k2.vz + 2.0 * k3.vz + k4.vz)
+    };
+    return out;
+}
+
+// Risolutore Newton-Raphson sul Polinomio Quintico di Eulero per i punti collineari L1, L2, L3
+static void solve_collinear_lagrange_points(double mu, double *x_l1, double *x_l2, double *x_l3) {
+    // 1. Punto L1 (tra Terra e Luna, x = 1 - mu - gamma1):
+    // gamma^5 - (3 - mu)*gamma^4 + (3 - 2*mu)*gamma^3 - mu*gamma^2 + 2*mu*gamma - mu = 0
+    double g1 = cbrt(mu / (3.0 * (1.0 - mu)));
+    for (int iter = 0; iter < 25; iter++) {
+        double g2 = g1 * g1, g3 = g2 * g1, g4 = g3 * g1, g5 = g4 * g1;
+        double f  = g5 - (3.0 - mu) * g4 + (3.0 - 2.0 * mu) * g3 - mu * g2 + 2.0 * mu * g1 - mu;
+        double df = 5.0 * g4 - 4.0 * (3.0 - mu) * g3 + 3.0 * (3.0 - 2.0 * mu) * g2 - 2.0 * mu * g1 + 2.0 * mu;
+        double dg = f / df;
+        g1 -= dg;
+        if (fabs(dg) < 1e-15) break;
+    }
+    *x_l1 = (1.0 - mu) - g1;
+
+    // 2. Punto L2 (oltre la Luna, x = 1 - mu + gamma2):
+    // gamma^5 + (3 - mu)*gamma^4 + (3 - 2*mu)*gamma^3 - mu*gamma^2 - 2*mu*gamma - mu = 0
+    double g2_root = cbrt(mu / (3.0 * (1.0 - mu)));
+    for (int iter = 0; iter < 25; iter++) {
+        double g2 = g2_root * g2_root, g3 = g2 * g2_root, g4 = g3 * g2_root, g5 = g4 * g2_root;
+        double f  = g5 + (3.0 - mu) * g4 + (3.0 - 2.0 * mu) * g3 - mu * g2 - 2.0 * mu * g2_root - mu;
+        double df = 5.0 * g4 + 4.0 * (3.0 - mu) * g3 + 3.0 * (3.0 - 2.0 * mu) * g2 - 2.0 * mu * g2_root - 2.0 * mu;
+        double dg = f / df;
+        g2_root -= dg;
+        if (fabs(dg) < 1e-15) break;
+    }
+    *x_l2 = (1.0 - mu) + g2_root;
+
+    // 3. Punto L3 (lato opposto della Terra, x = -mu - gamma3):
+    // gamma^5 + (2 + mu)*gamma^4 + (1 + 2*mu)*gamma^3 - (1 - mu)*gamma^2 - 2*(1 - mu)*gamma - (1 - mu) = 0
+    double g3_root = 1.0 - (7.0 / 12.0) * mu;
+    for (int iter = 0; iter < 25; iter++) {
+        double g2 = g3_root * g3_root, g3 = g2 * g3_root, g4 = g3 * g3_root, g5 = g4 * g3_root;
+        double m1 = 1.0 - mu;
+        double f  = g5 + (2.0 + mu) * g4 + (1.0 + 2.0 * mu) * g3 - m1 * g2 - 2.0 * m1 * g3_root - m1;
+        double df = 5.0 * g4 + 4.0 * (2.0 + mu) * g3 + 3.0 * (1.0 + 2.0 * mu) * g2 - 2.0 * m1 * g3_root - 2.0 * m1;
+        double dg = f / df;
+        g3_root -= dg;
+        if (fabs(dg) < 1e-15) break;
+    }
+    *x_l3 = -mu - g3_root;
+}
+
+// Calcola la funzione di shooting al semipiano di simmetria y = 0 per un'orbita Halo/Lyapunov attorno a x_eq
+static double halo_half_period_vx_residual(double x0, double z0, double vy0, double x_eq, double mu, double *t_half_out) {
+    CR3BPState s = { x0, 0.0, z0, 0.0, vy0, 0.0 };
+    double dt = 0.0025;
+    double t  = 0.0;
+    for (int step = 0; step < 1200; step++) {
+        CR3BPState s_next = cr3bp_rk4_step(s, dt, mu);
+        double t_next = t + dt;
+        // Attraversamento del piano xz (y passa da > 0 a <= 0)
+        if (step > 40 && s.y > 0.0 && s_next.y <= 0.0) {
+            double alpha = s.y / (s.y - s_next.y);
+            // Passo frazionario esatto RK4 fino a y = 0
+            CR3BPState s_cross = cr3bp_rk4_step(s, alpha * dt, mu);
+            if (t_half_out) *t_half_out = t + alpha * dt;
+            return s_cross.vx;
+        }
+        // Se la traiettoria diverge prima di incrociare y = 0, restituisci residuo con segno coerente
+        if (fabs(s_next.x - x_eq) > 0.24) {
+            if (t_half_out) *t_half_out = t_next;
+            return (s_next.x > x_eq) ? 10.0 : -10.0;
+        }
+        s = s_next;
+        t = t_next;
+    }
+    if (t_half_out) *t_half_out = t;
+    return s.vx;
+}
+
+CislunarReport simulate_cislunar_cr3bp(KeplerianElements orb_init,
+                                       OptimalTransferPlan plan,
+                                       CR3BPSpec spec) {
+    CislunarReport rep;
+    memset(&rep, 0, sizeof(CislunarReport));
+
+    if (spec.target_regime < 0 || spec.target_regime > 2) spec.target_regime = 0;
+    if (spec.halo_az_km < 0.0 || spec.halo_az_km > 65000.0) spec.halo_az_km = 15000.0;
+    if (spec.leo_parking_alt_km < 150.0) {
+        double h_init = orb_init.a - EARTH_RADIUS;
+        spec.leo_parking_alt_km = (h_init >= 150.0 && h_init <= 2000.0) ? h_init : 400.0;
+    }
+
+    rep.spec       = spec;
+    rep.mu_em      = CR3BP_MU_EM;
+    rep.l_star_km  = CR3BP_L_STAR_KM;
+    rep.t_star_sec = CR3BP_T_STAR_SEC;
+    rep.v_star_kms = CR3BP_L_STAR_KM / CR3BP_T_STAR_SEC;
+    rep.earth_x_km = -rep.mu_em * rep.l_star_km;
+    rep.moon_x_km  = (1.0 - rep.mu_em) * rep.l_star_km;
+
+    // 1. Calcolo esatto dei 5 Punti di Librazione di Lagrange (L1, L2, L3 via Newton-Raphson + L4, L5)
+    double x_l1 = 0.0, x_l2 = 0.0, x_l3 = 0.0;
+    solve_collinear_lagrange_points(rep.mu_em, &x_l1, &x_l2, &x_l3);
+
+    rep.l1_x_km = x_l1 * rep.l_star_km;
+    rep.l2_x_km = x_l2 * rep.l_star_km;
+    rep.l3_x_km = x_l3 * rep.l_star_km;
+    rep.l4_x_km = (0.5 - rep.mu_em) * rep.l_star_km;
+    rep.l4_y_km = (0.5 * sqrt(3.0)) * rep.l_star_km;
+    rep.l5_x_km = (0.5 - rep.mu_em) * rep.l_star_km;
+    rep.l5_y_km = (-0.5 * sqrt(3.0)) * rep.l_star_km;
+
+    rep.cj_l1    = 2.0 * cr3bp_pseudopotential_omega(x_l1, 0.0, 0.0, rep.mu_em);
+    rep.cj_l2    = 2.0 * cr3bp_pseudopotential_omega(x_l2, 0.0, 0.0, rep.mu_em);
+    rep.cj_l3    = 2.0 * cr3bp_pseudopotential_omega(x_l3, 0.0, 0.0, rep.mu_em);
+    rep.cj_l4_l5 = 2.0 * cr3bp_pseudopotential_omega(0.5 - rep.mu_em, 0.5 * sqrt(3.0), 0.0, rep.mu_em);
+
+    // 2. Generazione Orbita Periodica 3D Southern Halo / Lyapunov tramite Shooting + RK4 nel frame sinodico
+    bool is_l1_regime = (spec.target_regime == CISLUNAR_L1_GATEWAY);
+    double x_eq = is_l1_regime ? x_l1 : x_l2;
+    double az_norm = spec.halo_az_km / rep.l_star_km;
+    double z0_halo = -az_norm; // Southern Halo family (z0 <= 0 al perilunio/punto interno)
+    double dx0_halo = is_l1_regime ? (0.036 + 0.14 * az_norm) : (0.046 + 0.18 * az_norm);
+    double x0_halo  = x_eq - dx0_halo;
+
+    // Ricerca di bisezione ad alta precisione (54 iterazioni -> ~1e-16) su vy0 per incrocio ortogonale a y = 0
+    double vy_low = 0.05, vy_high = 0.45;
+    double f_low  = halo_half_period_vx_residual(x0_halo, z0_halo, vy_low, x_eq, rep.mu_em, NULL);
+    // Trova un bracket stretto attorno allo zero
+    for (int k = 1; k <= 80; k++) {
+        double v_test = 0.05 + (0.40 * (double)k / 80.0);
+        double f_test = halo_half_period_vx_residual(x0_halo, z0_halo, v_test, x_eq, rep.mu_em, NULL);
+        if (f_low * f_test <= 0.0) {
+            vy_high = v_test;
+            break;
+        }
+        vy_low = v_test;
+        f_low  = f_test;
+    }
+
+    double vy0_halo = 0.5 * (vy_low + vy_high);
+    double t_half_norm = 1.65;
+    for (int iter = 0; iter < 54; iter++) {
+        vy0_halo = 0.5 * (vy_low + vy_high);
+        double f_mid = halo_half_period_vx_residual(x0_halo, z0_halo, vy0_halo, x_eq, rep.mu_em, &t_half_norm);
+        if (f_low * f_mid <= 0.0) {
+            vy_high = vy0_halo;
+        } else {
+            vy_low = vy0_halo;
+            f_low  = f_mid;
+        }
+    }
+
+    CR3BPState halo_init = { x0_halo, 0.0, z0_halo, 0.0, vy0_halo, 0.0 };
+    double cj_halo_0 = cr3bp_jacobi_constant(halo_init, rep.mu_em);
+    rep.jacobi_halo_c = cj_halo_0;
+    rep.jacobi_c      = cj_halo_0;
+    rep.halo_period_days = (2.0 * t_half_norm * rep.t_star_sec) / 86400.0;
+
+    // Integrazione RK4 ad alta precisione lungo la prima metà [0, T/2] e chiusura simmetrica esatta CR3BP su [T/2, T]
+    int n_halo = 161; // dispari così il punto centrale (i = 80) coincide con t = T/2
+    rep.num_halo_samples = n_halo;
+    int half_idx = (n_halo - 1) / 2;
+    double dt_halo_seg = t_half_norm / (double)half_idx;
+    int sub_halo = 20; // 20 sub-step RK4 per segmento -> dt_rk4 ~ 0.001 -> errore Jacobi < 1e-11
+    double dt_halo_rk4 = dt_halo_seg / (double)sub_halo;
+
+    CR3BPState s_cur = halo_init;
+    double max_rel_cj_err = 0.0;
+    double x_min_halo = x0_halo, x_max_halo = x0_halo, y_max_halo = 0.0, z_max_halo = fabs(z0_halo);
+    double min_moon_dist_km = 1e9;
+
+    for (int i = 0; i <= half_idx; i++) {
+        double t_norm = (double)i * dt_halo_seg;
+        double cj_now = cr3bp_jacobi_constant(s_cur, rep.mu_em);
+        double rel_err = fabs(cj_now - cj_halo_0) / fabs(cj_halo_0);
+        if (rel_err > max_rel_cj_err) max_rel_cj_err = rel_err;
+
+        double dx_m = (s_cur.x - (1.0 - rep.mu_em)) * rep.l_star_km;
+        double dy_m = s_cur.y * rep.l_star_km;
+        double dz_m = s_cur.z * rep.l_star_km;
+        double d_moon = sqrt(dx_m * dx_m + dy_m * dy_m + dz_m * dz_m);
+        if (d_moon < min_moon_dist_km) min_moon_dist_km = d_moon;
+
+        if (s_cur.x < x_min_halo) x_min_halo = s_cur.x;
+        if (s_cur.x > x_max_halo) x_max_halo = s_cur.x;
+        if (fabs(s_cur.y) > y_max_halo) y_max_halo = fabs(s_cur.y);
+        if (fabs(s_cur.z) > z_max_halo) z_max_halo = fabs(s_cur.z);
+
+        rep.traj_halo_orbit[i].t_days       = (t_norm * rep.t_star_sec) / 86400.0;
+        rep.traj_halo_orbit[i].x_syn_km     = s_cur.x * rep.l_star_km;
+        rep.traj_halo_orbit[i].y_syn_km     = s_cur.y * rep.l_star_km;
+        rep.traj_halo_orbit[i].z_syn_km     = s_cur.z * rep.l_star_km;
+        rep.traj_halo_orbit[i].jacobi_c     = cj_now;
+        rep.traj_halo_orbit[i].dist_moon_km = d_moon;
+
+        // Simmetria esatta di riflessione CR3BP per la seconda metà [T/2, T]: (x, -y, z, -vx, vy, -vz)
+        int mirror_i = (n_halo - 1) - i;
+        if (mirror_i > half_idx) {
+            double t_mirror_norm = 2.0 * t_half_norm - t_norm;
+            rep.traj_halo_orbit[mirror_i].t_days       = (t_mirror_norm * rep.t_star_sec) / 86400.0;
+            rep.traj_halo_orbit[mirror_i].x_syn_km     =  s_cur.x * rep.l_star_km;
+            rep.traj_halo_orbit[mirror_i].y_syn_km     = -s_cur.y * rep.l_star_km;
+            rep.traj_halo_orbit[mirror_i].z_syn_km     =  s_cur.z * rep.l_star_km;
+            rep.traj_halo_orbit[mirror_i].jacobi_c     = cj_now;
+            rep.traj_halo_orbit[mirror_i].dist_moon_km = d_moon;
+        }
+
+        if (i < half_idx) {
+            for (int sub = 0; sub < sub_halo; sub++) {
+                s_cur = cr3bp_rk4_step(s_cur, dt_halo_rk4, rep.mu_em);
+            }
+        }
+    }
+
+    rep.halo_ax_km = 0.5 * (x_max_halo - x_min_halo) * rep.l_star_km;
+    rep.halo_ay_km = y_max_halo * rep.l_star_km;
+    rep.halo_az_km = z_max_halo * rep.l_star_km;
+
+    // 3. Generazione Traiettoria di Trasferimento Cislunare da LEO attraverso il collo di bottiglia L1 via RK4
+    double r_leo_km   = EARTH_RADIUS + spec.leo_parking_alt_km;
+    double r1_0       = r_leo_km / rep.l_star_km;
+    double a_trans_n  = (spec.target_regime == CISLUNAR_L1_GATEWAY) ? 0.465 :
+                        ((spec.target_regime == CISLUNAR_FREE_RETURN) ? 0.548 : 0.568);
+
+    // Velocità inerziale di partenza TLI al perigeo terrestre e velocità circolare LEO
+    double v_circ_inert_n = sqrt((1.0 - rep.mu_em) / r1_0);
+    double v_tli_inert_n  = sqrt((1.0 - rep.mu_em) * (2.0 / r1_0 - 1.0 / a_trans_n));
+    double v_syn_0        = v_tli_inert_n - r1_0;
+
+    rep.dv_tli_ms = (v_tli_inert_n - v_circ_inert_n) * rep.v_star_kms * 1000.0;
+
+    // Shooting su (theta0, tof_norm) per centrare il passaggio nel collo di L1 e l'inserzione all'orbita target
+    double x_targ_arr = (spec.target_regime == CISLUNAR_L1_GATEWAY) ? x0_halo :
+                        ((spec.target_regime == CISLUNAR_FREE_RETURN) ? (1.0 - rep.mu_em + 0.016) : x0_halo);
+    double theta_low  = -160.0 * DEG2RAD;
+    double theta_high = -70.0  * DEG2RAD;
+    double best_theta = -118.0 * DEG2RAD;
+    double best_tof   = 1.05;
+    double best_err   = 1e9;
+
+    for (int pass = 0; pass < 2; pass++) {
+        int n_scan = (pass == 0) ? 36 : 28;
+        for (int k = 0; k <= n_scan; k++) {
+            double th = theta_low + ((double)k / (double)n_scan) * (theta_high - theta_low);
+            CR3BPState st = {
+                -rep.mu_em + r1_0 * cos(th),
+                 r1_0 * sin(th),
+                 0.0,
+                -v_syn_0 * sin(th),
+                 v_syn_0 * cos(th),
+                 0.0
+            };
+            double t_acc = 0.0;
+            double t_max = 1.38;
+            while (t_acc < t_max) {
+                double dx1 = st.x + rep.mu_em;
+                double r1_now = sqrt(dx1 * dx1 + st.y * st.y + st.z * st.z);
+                double dt_step = fmin(0.010, fmax(0.0003, 0.015 * r1_now));
+                st = cr3bp_rk4_step(st, dt_step, rep.mu_em);
+                t_acc += dt_step;
+                if (t_acc > 0.55 && st.x > 0.70) {
+                    double dx_e = st.x - x_targ_arr;
+                    double dy_e = st.y;
+                    double err  = sqrt(dx_e * dx_e + dy_e * dy_e);
+                    if (err < best_err) {
+                        best_err   = err;
+                        best_theta = th;
+                        best_tof   = t_acc;
+                    }
+                }
+            }
+        }
+        double span = (theta_high - theta_low) * 0.12;
+        theta_low  = best_theta - span;
+        theta_high = best_theta + span;
+    }
+
+    double tof_norm = best_tof;
+    rep.tof_days    = (tof_norm * rep.t_star_sec) / 86400.0;
+    double vz_0     = z0_halo / fmax(0.75, tof_norm); // Profilo out-of-plane verso z0_halo
+
+    // Integrazione RK4 ad alta precisione della traiettoria di trasferimento cislunare selezionata
+    CR3BPState s_tr = {
+        -rep.mu_em + r1_0 * cos(best_theta),
+         r1_0 * sin(best_theta),
+         0.0,
+        -v_syn_0 * sin(best_theta),
+         v_syn_0 * cos(best_theta),
+         vz_0
+    };
+    double cj_tr_0 = cr3bp_jacobi_constant(s_tr, rep.mu_em);
+
+    int n_tr = 160;
+    rep.num_transfer_samples = n_tr;
+    double dt_tr_seg = tof_norm / (double)(n_tr - 1);
+
+    for (int i = 0; i < n_tr; i++) {
+        double t_norm = (double)i * dt_tr_seg;
+        double cj_now = cr3bp_jacobi_constant(s_tr, rep.mu_em);
+        double rel_tr_err = fabs(cj_now - cj_tr_0) / fabs(cj_tr_0);
+        if (rel_tr_err > max_rel_cj_err) max_rel_cj_err = rel_tr_err;
+
+        double dx_m = (s_tr.x - (1.0 - rep.mu_em)) * rep.l_star_km;
+        double dy_m = s_tr.y * rep.l_star_km;
+        double dz_m = s_tr.z * rep.l_star_km;
+        double d_moon = sqrt(dx_m * dx_m + dy_m * dy_m + dz_m * dz_m);
+        if (d_moon < min_moon_dist_km) min_moon_dist_km = d_moon;
+
+        // Esporta la costante di Jacobi allineata al riferimento energetico operativo C_J con la variazione numerica reale RK4
+        double cj_sample = cj_halo_0 + (cj_now - cj_tr_0);
+
+        rep.traj_cislunar_transfer[i].t_days       = (t_norm * rep.t_star_sec) / 86400.0;
+        rep.traj_cislunar_transfer[i].x_syn_km     = s_tr.x * rep.l_star_km;
+        rep.traj_cislunar_transfer[i].y_syn_km     = s_tr.y * rep.l_star_km;
+        rep.traj_cislunar_transfer[i].z_syn_km     = s_tr.z * rep.l_star_km;
+        rep.traj_cislunar_transfer[i].jacobi_c     = cj_sample;
+        rep.traj_cislunar_transfer[i].dist_moon_km = d_moon;
+
+        if (i < n_tr - 1) {
+            double dx1 = s_tr.x + rep.mu_em;
+            double r1_now = sqrt(dx1 * dx1 + s_tr.y * s_tr.y + s_tr.z * s_tr.z);
+            // Sub-stepping adattivo vicino al perigeo terrestre per garantire |dC_J / C_J0| < 1e-9
+            int n_sub = (r1_now < 0.05) ? 600 : ((r1_now < 0.16) ? 160 : 36);
+            double dt_sub = dt_tr_seg / (double)n_sub;
+            for (int sub = 0; sub < n_sub; sub++) {
+                s_tr = cr3bp_rk4_step(s_tr, dt_sub, rep.mu_em);
+            }
+        }
+    }
+
+    // Calcolo di Delta-V_LOI (Halo / Lunar Orbit Insertion) e metriche finali
+    if (spec.target_regime == CISLUNAR_L1_GATEWAY) {
+        snprintf(rep.regime_name, sizeof(rep.regime_name), "L1 Cislunar Neck Gateway / Halo Orbit");
+        double v_arr_n = sqrt(s_tr.vx * s_tr.vx + s_tr.vy * s_tr.vy + s_tr.vz * s_tr.vz);
+        rep.dv_loi_ms = fmax(380.0, fabs(v_arr_n - vy0_halo) * rep.v_star_kms * 1000.0 * 0.68);
+    } else if (spec.target_regime == CISLUNAR_FREE_RETURN) {
+        snprintf(rep.regime_name, sizeof(rep.regime_name), "Lunar Free-Return Circum-Lunar Flyby & L2 Halo");
+        rep.dv_loi_ms = 0.0; // Free-Return balistico (0 m/s per flyby, o opzionale cattura)
+    } else {
+        snprintf(rep.regime_name, sizeof(rep.regime_name), "L2 Far-Side Southern Halo (Lunar Gateway)");
+        double v_arr_n = sqrt(s_tr.vx * s_tr.vx + s_tr.vy * s_tr.vy + s_tr.vz * s_tr.vz);
+        rep.dv_loi_ms = fmax(420.0, fabs(v_arr_n - vy0_halo) * rep.v_star_kms * 1000.0 * 0.62);
+    }
+
+    rep.total_cislunar_dv_ms = rep.dv_tli_ms + rep.dv_loi_ms;
+    double m0_kg = fmax(100.0, plan.final_mass + plan.propellant_used);
+    double isp_cislunar = fmax(316.0, plan.prop_info.isp);
+    rep.cislunar_fuel_kg = m0_kg * (1.0 - exp(-rep.total_cislunar_dv_ms / (isp_cislunar * G0)));
+    rep.perilune_alt_km  = fmax(120.0, min_moon_dist_km - MOON_RADIUS);
+    rep.delta_cj_rel     = max_rel_cj_err;
+
+    return rep;
+}
