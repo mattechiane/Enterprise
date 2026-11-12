@@ -143,4 +143,10 @@ CislunarReport simulate_cislunar_cr3bp(KeplerianElements orb_init,
                                        OptimalTransferPlan plan,
                                        CR3BPSpec spec);
 
+// Sprint 22: Flexible Structural Dynamics, Propellant Sloshing Pendulum & Control-Structure Interaction (CSI)
+StructuralReport simulate_structural_slosh_and_csi(OptimalTransferPlan plan,
+                                                   ADCSReport adcs,
+                                                   SystemEngineeringReport sys,
+                                                   StructuralCSISpec spec);
+
 #endif // MISSION_ANALYSIS_H

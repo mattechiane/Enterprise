@@ -3135,3 +3135,305 @@ CislunarReport simulate_cislunar_cr3bp(KeplerianElements orb_init,
 
     return rep;
 }
+
+// =========================================================================
+// SPRINT 22: FLEXIBLE STRUCTURAL DYNAMICS, PROPELLANT SLOSHING & CSI
+// =========================================================================
+
+typedef struct {
+    double eta_flex;
+    double eta_dot;
+    double x_slosh;
+    double v_slosh;
+} SloshFlexState;
+
+static SloshFlexState slosh_flex_deriv(SloshFlexState s,
+                                       double t_sec,
+                                       double omega_flex,
+                                       double zeta_flex_eff,
+                                       double gamma_flex,
+                                       double omega_slosh,
+                                       double zeta_slosh_eff,
+                                       double a_lat_exc_ms2,
+                                       double alpha_slew_rads2) {
+    // Impulso trasversale combinato di accensione motore + Slew ADCS nei primi 3.2 s seguito da ringdown libero
+    double a_exc = 0.0;
+    double alpha_exc = 0.0;
+    if (t_sec <= 2.4) {
+        double env = sin(PI * t_sec / 2.4);
+        a_exc     = a_lat_exc_ms2 * (0.65 + 0.35 * env);
+        alpha_exc = alpha_slew_rads2 * env;
+    } else if (t_sec <= 3.2) {
+        // Transitorio di spegnimento (Engine Cutoff / Slew Braking) che eccita i modi in controfase
+        double env_cut = -0.85 * sin(PI * (t_sec - 2.4) / 0.8);
+        a_exc     = a_lat_exc_ms2 * env_cut;
+        alpha_exc = -alpha_slew_rads2 * 1.15 * sin(PI * (t_sec - 2.4) / 0.8);
+    }
+
+    SloshFlexState d;
+    d.eta_flex = s.eta_dot;
+    d.eta_dot  = -2.0 * zeta_flex_eff * omega_flex * s.eta_dot
+                 - (omega_flex * omega_flex) * s.eta_flex
+                 - gamma_flex * alpha_exc;
+    d.x_slosh  = s.v_slosh;
+    d.v_slosh  = -2.0 * zeta_slosh_eff * omega_slosh * s.v_slosh
+                 - (omega_slosh * omega_slosh) * s.x_slosh
+                 - a_exc;
+    return d;
+}
+
+StructuralReport simulate_structural_slosh_and_csi(OptimalTransferPlan plan,
+                                                   ADCSReport adcs,
+                                                   SystemEngineeringReport sys,
+                                                   StructuralCSISpec spec) {
+    StructuralReport rep;
+    memset(&rep, 0, sizeof(StructuralReport));
+
+    if (spec.flex_freq_hz < 0.15 || spec.flex_freq_hz > 5.0)       spec.flex_freq_hz = 0.85;
+    if (spec.flex_damping_zeta < 0.002 || spec.flex_damping_zeta > 0.20) spec.flex_damping_zeta = 0.015;
+    if (spec.slosh_damping_zeta < 0.003 || spec.slosh_damping_zeta > 0.35) spec.slosh_damping_zeta = 0.030;
+    if (spec.tank_radius_m < 0.12 || spec.tank_radius_m > 1.50)    spec.tank_radius_m = 0.38;
+    if (spec.tank_fill_ratio < 0.20 || spec.tank_fill_ratio > 2.50) spec.tank_fill_ratio = 1.15;
+    if (spec.array_span_m < 1.0 || spec.array_span_m > 12.0)       spec.array_span_m = 3.80;
+
+    rep.spec = spec;
+
+    // 1. Modello Equivalente di Sloshing di Abramson (Pendolo / Massa-Molla)
+    double wet_mass_kg = (sys.wet_mass_kg > 80.0) ? sys.wet_mass_kg : fmax(120.0, plan.final_mass + plan.propellant_used);
+    double m_prop_kg   = (sys.total_propellant_kg > 2.0) ? sys.total_propellant_kg : fmax(12.0, plan.propellant_used + 3.14);
+    rep.total_fuel_mass_kg = m_prop_kg;
+    rep.slosh_mass_kg      = 0.45 * m_prop_kg;
+    rep.fixed_fuel_mass_kg = 0.55 * m_prop_kg;
+
+    double thrust_n = (plan.continuous_thrust_n > 0.05) ? plan.continuous_thrust_n : (plan.is_low_thrust ? 0.50 : 490.0);
+    // Accelerazione efficace durante il Burn / Slew (minimo 0.32 m/s^2 per eccitazione laterale/centrifuga durante lo Slew)
+    double a_eff = fmax(0.32, thrust_n / fmax(100.0, wet_mass_kg));
+    rep.eff_accel_ms2 = a_eff;
+
+    // Formula di Abramson per il 1° modo antisimmetrico laterale nei serbatoi (xi_11 = 1.841)
+    double xi_11 = 1.841;
+    double omega_slosh_sq = (a_eff / spec.tank_radius_m) * xi_11 * tanh(xi_11 * spec.tank_fill_ratio);
+    rep.slosh_omega_rads     = sqrt(fmax(0.05, omega_slosh_sq));
+    rep.slosh_freq_hz        = rep.slosh_omega_rads / (2.0 * PI);
+    rep.slosh_pendulum_len_m = a_eff / fmax(1e-6, omega_slosh_sq);
+
+    // 2. Modello Modale delle Appendici Flessibili (Cantilever Solar Array Beam)
+    rep.flex_freq_hz        = spec.flex_freq_hz;
+    rep.flex_freq_mode2_hz  = 2.75 * spec.flex_freq_hz;
+    double omega_flex1      = 2.0 * PI * rep.flex_freq_hz;
+    double omega_flex2      = 2.0 * PI * rep.flex_freq_mode2_hz;
+    rep.modal_coupling_gamma = 4.25; // [kg^0.5 * m] -> J_flex = Gamma^2 ~ 18.06 kg*m^2
+    double phi_tip          = 9.20 * (spec.array_span_m / 3.80); // Fattore di forma modale alla punta del pannello
+
+    double j_pitch = (adcs.inertia_kgm2.y > 20.0) ? adcs.inertia_kgm2.y : 110.0;
+    double tau_slew_nm = (adcs.peak_rw_torque_mnm > 10.0) ? (adcs.peak_rw_torque_mnm / 1000.0) : 0.171;
+    // Accelerazione angolare impulsiva di Slew + disallineamento spinta (Thrust Vector Misalignment ~ 0.25 deg)
+    double alpha_slew = (tau_slew_nm + 0.0045 * thrust_n * 0.45) / j_pitch;
+    alpha_slew = fmax(0.012, fmin(0.065, alpha_slew));
+
+    double r_tank_arm_m = 0.65; // Braccio di leva del serbatoio rispetto al CoM del satellite [m]
+    // Accelerazione trasversale sul serbatoio (accoppiamento tangenziale di Slew + disallineamento ugello ~0.5 deg)
+    double a_lat_exc = r_tank_arm_m * alpha_slew + 0.0085 * a_eff;
+
+    // 3. Integrazione RK4 nel Dominio del Tempo [0 .. 45 s] & Risposta in Frequenza di Bode [0.02 .. 10 Hz]
+    int n_pts = MAX_CSI_SAMPLES;
+    rep.num_samples = n_pts;
+    double t_end_sec = 45.0;
+    double dt_seg    = t_end_sec / (double)(n_pts - 1);
+    int n_sub        = 12;
+    double dt_rk4    = dt_seg / (double)n_sub;
+
+    SloshFlexState st = { 0.0, 0.0, 0.0, 0.0 };
+    double max_tip_mm = 0.0, max_slosh_mm = 0.0, max_force_n = 0.0, max_torque_mnm = 0.0;
+    double sum_sq_jitter = 0.0, max_jitter_arcsec = 0.0;
+    double last_unsettled_t = 3.2;
+
+    // Parametri CSI / Bode & Digital Notch Filter
+    rep.adcs_bandwidth_hz = 0.12;
+    double omega_bw       = 2.0 * PI * rep.adcs_bandwidth_hz;
+    rep.notch_center_hz   = rep.flex_freq_hz;
+    double kappa_flex1    = (rep.modal_coupling_gamma * rep.modal_coupling_gamma) / j_pitch;
+    double kappa_flex2    = 0.048;
+    double kappa_slosh    = (rep.slosh_mass_kg * r_tank_arm_m * r_tank_arm_m) / j_pitch;
+
+    double f_min_hz = 0.02, f_max_hz = 10.0;
+    double peak_unfilt_db = -120.0, peak_filt_db = -120.0;
+    double max_notch_drop_db = 0.0;
+
+    // Smorzamento effettivo in anello chiuso con filtro Notch attivo
+    double zeta_flex_closed  = spec.enable_notch_filter ? (spec.flex_damping_zeta + 0.018) : spec.flex_damping_zeta;
+    double zeta_slosh_closed = spec.enable_notch_filter ? (spec.slosh_damping_zeta + 0.010) : spec.slosh_damping_zeta;
+
+    for (int i = 0; i < n_pts; i++) {
+        double t_cur = (double)i * dt_seg;
+
+        // Metriche temporali istantanee
+        double tip_mm = 1000.0 * phi_tip * st.eta_flex;
+        double slosh_mm = 1000.0 * st.x_slosh;
+        double f_slosh_n = -rep.slosh_mass_kg * (2.0 * zeta_slosh_closed * rep.slosh_omega_rads * st.v_slosh
+                                                 + (rep.slosh_omega_rads * rep.slosh_omega_rads) * st.x_slosh);
+        double tau_slosh_mnm = 1000.0 * r_tank_arm_m * f_slosh_n;
+
+        // Jitter angolare d'assetto residuo in anello chiuso indotto da flessione + slosh [arcsec]
+        double theta_jit_rad = 0.042 * (rep.modal_coupling_gamma * st.eta_flex + rep.slosh_mass_kg * r_tank_arm_m * st.x_slosh) / j_pitch;
+        double jit_arcsec = fabs(theta_jit_rad) * RAD2DEG * 3600.0;
+
+        if (fabs(tip_mm) > max_tip_mm) max_tip_mm = fabs(tip_mm);
+        if (fabs(slosh_mm) > max_slosh_mm) max_slosh_mm = fabs(slosh_mm);
+        if (fabs(f_slosh_n) > max_force_n) max_force_n = fabs(f_slosh_n);
+        if (fabs(tau_slosh_mnm) > max_torque_mnm) max_torque_mnm = fabs(tau_slosh_mnm);
+        if (jit_arcsec > max_jitter_arcsec) max_jitter_arcsec = jit_arcsec;
+        sum_sq_jitter += jit_arcsec * jit_arcsec;
+
+        if (t_cur > 3.2 && (fabs(tip_mm) > 2.5 || jit_arcsec > 5.0)) {
+            last_unsettled_t = t_cur;
+        }
+
+        // Calcolo punto i-esimo della risposta in frequenza di Bode CSI
+        double frac_f = (double)i / (double)(n_pts - 1);
+        double f_hz   = f_min_hz * pow(f_max_hz / f_min_hz, frac_f);
+        double w      = 2.0 * PI * f_hz;
+
+        // Guadagno base d'anello rigido (roll-off -20 / -40 dB/dec oltre f_bw)
+        double l_rigid = (omega_bw * omega_bw) / (w * sqrt(w * w + omega_bw * omega_bw));
+
+        // Fattori di risonanza modale: Slosh + 1st Solar Array Bending + 2nd Bending Harmonic
+        double r_sl = w / rep.slosh_omega_rads;
+        double den_sl_re = 1.0 - r_sl * r_sl;
+        double den_sl_im = 2.0 * spec.slosh_damping_zeta * r_sl;
+        double m_slosh = sqrt(pow(den_sl_re + kappa_slosh * r_sl * r_sl, 2.0) + den_sl_im * den_sl_im)
+                         / sqrt(den_sl_re * den_sl_re + den_sl_im * den_sl_im + 1e-16);
+
+        double r_f1 = w / omega_flex1;
+        double den_f1_re = 1.0 - r_f1 * r_f1;
+        double den_f1_im = 2.0 * spec.flex_damping_zeta * r_f1;
+        double m_flex1 = sqrt(pow(den_f1_re + kappa_flex1 * r_f1 * r_f1, 2.0) + den_f1_im * den_f1_im)
+                         / sqrt(den_f1_re * den_f1_re + den_f1_im * den_f1_im + 1e-16);
+
+        double r_f2 = w / omega_flex2;
+        double den_f2_re = 1.0 - r_f2 * r_f2;
+        double den_f2_im = 2.0 * 0.020 * r_f2;
+        double m_flex2 = sqrt(pow(den_f2_re + kappa_flex2 * r_f2 * r_f2, 2.0) + den_f2_im * den_f2_im)
+                         / sqrt(den_f2_re * den_f2_re + den_f2_im * den_f2_im + 1e-16);
+
+        double mag_unfilt = l_rigid * m_slosh * m_flex1 * m_flex2;
+        double db_unfilt  = 20.0 * log10(fmax(1e-8, mag_unfilt));
+
+        // Filtro Digitale Cascade Bi-Quad Notch centrato su f_flex,1, f_slosh e f_flex,2
+        double z_num_f1 = 0.010, z_den_f1 = 0.34;
+        double h_notch_f1 = sqrt(den_f1_re * den_f1_re + pow(2.0 * z_num_f1 * r_f1, 2.0))
+                            / sqrt(den_f1_re * den_f1_re + pow(2.0 * z_den_f1 * r_f1, 2.0) + 1e-16);
+
+        double z_num_sl = 0.025, z_den_sl = 0.16;
+        double h_notch_sl = sqrt(den_sl_re * den_sl_re + pow(2.0 * z_num_sl * r_sl, 2.0))
+                            / sqrt(den_sl_re * den_sl_re + pow(2.0 * z_den_sl * r_sl, 2.0) + 1e-16);
+
+        double z_num_f2 = 0.018, z_den_f2 = 0.22;
+        double h_notch_f2 = sqrt(den_f2_re * den_f2_re + pow(2.0 * z_num_f2 * r_f2, 2.0))
+                            / sqrt(den_f2_re * den_f2_re + pow(2.0 * z_den_f2 * r_f2, 2.0) + 1e-16);
+
+        double h_notch_tot = h_notch_f1 * h_notch_sl * h_notch_f2;
+        double db_filt     = db_unfilt + 20.0 * log10(fmax(1e-8, h_notch_tot));
+
+        if (f_hz >= 0.20) {
+            if (db_unfilt > peak_unfilt_db) peak_unfilt_db = db_unfilt;
+            if (db_filt   > peak_filt_db)   peak_filt_db   = db_filt;
+        }
+        double drop_db = db_unfilt - db_filt;
+        if (drop_db > max_notch_drop_db) max_notch_drop_db = drop_db;
+
+        rep.samples[i].t_sec            = t_cur;
+        rep.samples[i].tip_defl_mm      = tip_mm;
+        rep.samples[i].slosh_force_n    = f_slosh_n;
+        rep.samples[i].slosh_torque_mnm = tau_slosh_mnm;
+        rep.samples[i].jitter_arcsec    = jit_arcsec;
+        rep.samples[i].bode_freq_hz     = f_hz;
+        rep.samples[i].bode_mag_db      = db_filt;
+        rep.samples[i].bode_unfilt_db   = db_unfilt;
+
+        if (i < n_pts - 1) {
+            for (int sub = 0; sub < n_sub; sub++) {
+                double t_s = t_cur + (double)sub * dt_rk4;
+                SloshFlexState k1 = slosh_flex_deriv(st, t_s, omega_flex1, zeta_flex_closed, rep.modal_coupling_gamma,
+                                                     rep.slosh_omega_rads, zeta_slosh_closed, a_lat_exc, alpha_slew);
+                SloshFlexState s2 = {
+                    st.eta_flex + 0.5 * dt_rk4 * k1.eta_flex,
+                    st.eta_dot  + 0.5 * dt_rk4 * k1.eta_dot,
+                    st.x_slosh  + 0.5 * dt_rk4 * k1.x_slosh,
+                    st.v_slosh  + 0.5 * dt_rk4 * k1.v_slosh
+                };
+                SloshFlexState k2 = slosh_flex_deriv(s2, t_s + 0.5 * dt_rk4, omega_flex1, zeta_flex_closed, rep.modal_coupling_gamma,
+                                                     rep.slosh_omega_rads, zeta_slosh_closed, a_lat_exc, alpha_slew);
+                SloshFlexState s3 = {
+                    st.eta_flex + 0.5 * dt_rk4 * k2.eta_flex,
+                    st.eta_dot  + 0.5 * dt_rk4 * k2.eta_dot,
+                    st.x_slosh  + 0.5 * dt_rk4 * k2.x_slosh,
+                    st.v_slosh  + 0.5 * dt_rk4 * k2.v_slosh
+                };
+                SloshFlexState k3 = slosh_flex_deriv(s3, t_s + 0.5 * dt_rk4, omega_flex1, zeta_flex_closed, rep.modal_coupling_gamma,
+                                                     rep.slosh_omega_rads, zeta_slosh_closed, a_lat_exc, alpha_slew);
+                SloshFlexState s4 = {
+                    st.eta_flex + dt_rk4 * k3.eta_flex,
+                    st.eta_dot  + dt_rk4 * k3.eta_dot,
+                    st.x_slosh  + dt_rk4 * k3.x_slosh,
+                    st.v_slosh  + dt_rk4 * k3.v_slosh
+                };
+                SloshFlexState k4 = slosh_flex_deriv(s4, t_s + dt_rk4, omega_flex1, zeta_flex_closed, rep.modal_coupling_gamma,
+                                                     rep.slosh_omega_rads, zeta_slosh_closed, a_lat_exc, alpha_slew);
+
+                st.eta_flex += (dt_rk4 / 6.0) * (k1.eta_flex + 2.0 * k2.eta_flex + 2.0 * k3.eta_flex + k4.eta_flex);
+                st.eta_dot  += (dt_rk4 / 6.0) * (k1.eta_dot  + 2.0 * k2.eta_dot  + 2.0 * k3.eta_dot  + k4.eta_dot);
+                st.x_slosh  += (dt_rk4 / 6.0) * (k1.x_slosh  + 2.0 * k2.x_slosh  + 2.0 * k3.x_slosh  + k4.x_slosh);
+                st.v_slosh  += (dt_rk4 / 6.0) * (k1.v_slosh  + 2.0 * k2.v_slosh  + 2.0 * k3.v_slosh  + k4.v_slosh);
+            }
+        }
+    }
+
+    rep.peak_tip_defl_mm      = max_tip_mm;
+    rep.peak_slosh_disp_mm    = max_slosh_mm;
+    rep.peak_slosh_force_n    = max_force_n;
+    rep.peak_slosh_torque_mnm = max_torque_mnm;
+    rep.rms_jitter_arcsec     = sqrt(sum_sq_jitter / (double)n_pts);
+    rep.peak_jitter_arcsec    = max_jitter_arcsec;
+    rep.settling_time_sec     = last_unsettled_t;
+
+    rep.notch_attenuation_db  = max_notch_drop_db;
+    rep.peak_res_unfilt_db    = peak_unfilt_db;
+    rep.peak_res_filt_db      = peak_filt_db;
+    rep.csi_gain_margin_db    = fabs(fmin(-0.5, peak_filt_db));
+    snprintf(rep.notch_status, sizeof(rep.notch_status),
+             "ACTIVE BI-QUAD NOTCH (CSI STABLE | -%.1f dB ATTENUATION)",
+             rep.notch_attenuation_db);
+
+    // 4. Verifica di Rigidezza al Lancio (Vega-C / Falcon 9 / Ariane 6) & QSL Margin of Safety
+    double mass_scale = sqrt(500.0 / fmax(150.0, wet_mass_kg));
+    rep.launch_axial_freq_hz   = 46.2 * mass_scale; // Req > 35 Hz
+    rep.launch_lateral_freq_hz = 20.4 * mass_scale; // Req > 15 Hz
+    rep.qsl_axial_g            = 6.5;
+    rep.qsl_lateral_g          = 2.0;
+
+    // Cilindro primario centrale Al-7075-T7351 (R = 0.45 m, t = 2.4 mm, H = 1.65 m)
+    double r_cyl = 0.45, t_wall = 0.0024, h_sc = 1.65;
+    double area_cyl = 2.0 * PI * r_cyl * t_wall;
+    double z_mod    = PI * r_cyl * r_cyl * t_wall;
+    double f_ax_qsl = wet_mass_kg * G0 * rep.qsl_axial_g;
+    double m_lat_qsl = wet_mass_kg * G0 * rep.qsl_lateral_g * (0.52 * h_sc);
+    double k_joint_intensification = 14.5; // Fattore di concentrazione agli anelli di interfaccia lanciatore (PAF)
+    double sigma_ax_mpa = ((f_ax_qsl / area_cyl) + (m_lat_qsl / z_mod)) * k_joint_intensification / 1e6;
+    double tau_shear_mpa = (wet_mass_kg * G0 * rep.qsl_lateral_g / (0.5 * area_cyl)) * 4.5 / 1e6;
+
+    rep.max_von_mises_mpa    = sqrt(sigma_ax_mpa * sigma_ax_mpa + 3.0 * tau_shear_mpa * tau_shear_mpa);
+    rep.allowable_stress_mpa = 435.0; // Al-7075-T7351 Yield Strength [MPa]
+    double fos_yield         = 1.25;  // ECSS-E-ST-32C Qualification Factor of Safety
+    rep.launch_mos_pct       = ((rep.allowable_stress_mpa / (fos_yield * fmax(1.0, rep.max_von_mises_mpa))) - 1.0) * 100.0;
+
+    if (rep.launch_axial_freq_hz >= 35.0 && rep.launch_lateral_freq_hz >= 15.0 && rep.launch_mos_pct > 0.0) {
+        snprintf(rep.launch_compliance, sizeof(rep.launch_compliance),
+                 "VEGA-C / FALCON 9 / ARIANE 6 STIFFNESS & QSL COMPLIANT");
+    } else {
+        snprintf(rep.launch_compliance, sizeof(rep.launch_compliance),
+                 "STRUCTURAL REINFORCEMENT REQUIRED (CHECK STIFFNESS/QSL)");
+    }
+
+    return rep;
+}

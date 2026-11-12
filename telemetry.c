@@ -285,6 +285,18 @@ static void write_cr3bp_trajectory_json_array(FILE *fp, const CR3BPSample *sampl
     fprintf(fp, "  ]");
 }
 
+static void write_csi_trajectory_json_array(FILE *fp, StructuralReport csi) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < csi.num_samples; i++) {
+        SloshFlexSample s = csi.samples[i];
+        fprintf(fp, "    {\"t_sec\":%.2f,\"tip_defl_mm\":%.3f,\"slosh_force_n\":%.3f,\"slosh_torque_mnm\":%.3f,\"jitter_arcsec\":%.2f,\"bode_freq_hz\":%.4f,\"bode_mag_db\":%.2f,\"bode_unfilt_db\":%.2f}%s\n",
+                s.t_sec, s.tip_defl_mm, s.slosh_force_n, s.slosh_torque_mnm, s.jitter_arcsec,
+                s.bode_freq_hz, s.bode_mag_db, s.bode_unfilt_db,
+                (i < csi.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 bool export_web_mission_json(const char *filename,
                              OrbitReport rep_init,
                              OptimalTransferPlan plan,
@@ -299,6 +311,7 @@ bool export_web_mission_json(const char *filename,
                              CAMReport cam,
                              EndOfLifeReport eol,
                              CislunarReport cislunar,
+                             StructuralReport csi,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -557,6 +570,34 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"jacobi_c\": %.8f, \"jacobi_halo_c\": %.8f, \"delta_cj\": %.3e, \"delta_cj_rel\": %.3e\n  },\n",
             cislunar.jacobi_c, cislunar.jacobi_halo_c, cislunar.delta_cj_rel * cislunar.jacobi_c, cislunar.delta_cj_rel);
 
+    fprintf(fp, "  \"structural_csi_summary\": {\n");
+    fprintf(fp, "    \"flex_freq_hz\": %.3f, \"flex_freq_mode2_hz\": %.3f, \"flex_damping_zeta\": %.4f,\n",
+            csi.flex_freq_hz, csi.flex_freq_mode2_hz, csi.spec.flex_damping_zeta);
+    fprintf(fp, "    \"slosh_freq_hz\": %.3f, \"slosh_omega_rads\": %.3f, \"slosh_damping_zeta\": %.4f,\n",
+            csi.slosh_freq_hz, csi.slosh_omega_rads, csi.spec.slosh_damping_zeta);
+    fprintf(fp, "    \"total_fuel_mass_kg\": %.2f, \"slosh_mass_kg\": %.2f, \"fixed_fuel_mass_kg\": %.2f,\n",
+            csi.total_fuel_mass_kg, csi.slosh_mass_kg, csi.fixed_fuel_mass_kg);
+    fprintf(fp, "    \"tank_radius_m\": %.2f, \"tank_fill_ratio\": %.2f, \"slosh_pendulum_len_m\": %.3f, \"eff_accel_ms2\": %.3f,\n",
+            csi.spec.tank_radius_m, csi.spec.tank_fill_ratio, csi.slosh_pendulum_len_m, csi.eff_accel_ms2);
+    fprintf(fp, "    \"array_span_m\": %.2f, \"modal_coupling_gamma\": %.2f,\n",
+            csi.spec.array_span_m, csi.modal_coupling_gamma);
+    fprintf(fp, "    \"peak_tip_defl_mm\": %.2f, \"peak_slosh_disp_mm\": %.2f, \"peak_slosh_force_n\": %.2f, \"peak_slosh_torque_mnm\": %.2f,\n",
+            csi.peak_tip_defl_mm, csi.peak_slosh_disp_mm, csi.peak_slosh_force_n, csi.peak_slosh_torque_mnm);
+    fprintf(fp, "    \"rms_jitter_arcsec\": %.2f, \"peak_jitter_arcsec\": %.2f, \"settling_time_sec\": %.1f,\n",
+            csi.rms_jitter_arcsec, csi.peak_jitter_arcsec, csi.settling_time_sec);
+    fprintf(fp, "    \"adcs_bandwidth_hz\": %.2f, \"notch_center_hz\": %.3f, \"notch_attenuation_db\": %.2f,\n",
+            csi.adcs_bandwidth_hz, csi.notch_center_hz, csi.notch_attenuation_db);
+    fprintf(fp, "    \"peak_res_unfilt_db\": %.2f, \"peak_res_filt_db\": %.2f, \"csi_gain_margin_db\": %.2f,\n",
+            csi.peak_res_unfilt_db, csi.peak_res_filt_db, csi.csi_gain_margin_db);
+    fprintf(fp, "    \"notch_status\": \"%s\",\n", csi.notch_status);
+    fprintf(fp, "    \"launch_axial_freq_hz\": %.1f, \"launch_lateral_freq_hz\": %.1f,\n",
+            csi.launch_axial_freq_hz, csi.launch_lateral_freq_hz);
+    fprintf(fp, "    \"qsl_axial_g\": %.1f, \"qsl_lateral_g\": %.1f,\n",
+            csi.qsl_axial_g, csi.qsl_lateral_g);
+    fprintf(fp, "    \"max_von_mises_mpa\": %.1f, \"allowable_stress_mpa\": %.1f, \"launch_mos_pct\": %.1f,\n",
+            csi.max_von_mises_mpa, csi.allowable_stress_mpa, csi.launch_mos_pct);
+    fprintf(fp, "    \"launch_compliance\": \"%s\"\n  },\n", csi.launch_compliance);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -648,6 +689,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_halo_orbit\": ");
     write_cr3bp_trajectory_json_array(fp, cislunar.traj_halo_orbit, cislunar.num_halo_samples);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_csi\": ");
+    write_csi_trajectory_json_array(fp, csi);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

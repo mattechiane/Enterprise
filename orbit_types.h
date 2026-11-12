@@ -654,6 +654,78 @@ typedef struct {
     CR3BPSample traj_halo_orbit[MAX_CR3BP_SAMPLES];
 } CislunarReport;
 
+// ==========================================
+// 5K. SPRINT 22: FLEXIBLE STRUCTURAL DYNAMICS, PROPELLANT SLOSHING & CSI
+// ==========================================
+#define MAX_CSI_SAMPLES 140
+
+typedef struct {
+    double flex_freq_hz;       // Frequenza 1° modo flessionale pannelli solari f_flex,1 [Hz] (default 0.85 Hz)
+    double flex_damping_zeta;  // Smorzamento strutturale modale zeta_flex [-] (default 0.015)
+    double slosh_damping_zeta; // Smorzamento setti antisciacquio serbatoio (Baffle Damping) zeta_slosh [-] (default 0.030)
+    double tank_radius_m;      // Raggio interno serbatoio propellente R_tank [m] (default 0.38 m)
+    double tank_fill_ratio;    // Rapporto riempimento liquido h_f / R_tank [-] (default 1.15)
+    double array_span_m;       // Lunghezza singola ala pannello solare dispiegato L_wing [m] (default 3.80 m)
+    bool   enable_notch_filter;// Stato filtro digitale Notch GNC anti-risonanza CSI (default true)
+} StructuralCSISpec;
+
+typedef struct {
+    double t_sec;              // Tempo dal transitorio di accensione motore / Slew ADCS [s]
+    double tip_defl_mm;        // Deflessione trasversale punta pannello solare delta_tip(t) [mm]
+    double slosh_force_n;      // Forza laterale d'onda di sloshing sul serbatoio F_slosh(t) [N]
+    double slosh_torque_mnm;   // Coppia di disturbo di sloshing sull'assetto tau_slosh(t) [mN*m]
+    double jitter_arcsec;      // Micro-vibrazione / Pointing Jitter residuo sull'asse ottico [arcsec]
+    double bode_freq_hz;       // Frequenza nel diagramma di Bode della risposta CSI [Hz]
+    double bode_mag_db;        // Ampiezza Bode ad anello aperto/compensato con Notch Filter [dB]
+    double bode_unfilt_db;     // Ampiezza Bode pianta flessibile non filtrata (senza Notch) [dB]
+} SloshFlexSample;
+
+typedef struct {
+    StructuralCSISpec spec;
+    // Parametri Modello Equivalente di Abramson (Sloshing) & Trave a Sbalzo (Pannelli Solari)
+    double total_fuel_mass_kg;       // Massa totale di propellente liquido a bordo m_prop [kg]
+    double slosh_mass_kg;            // Massa liquida oscillante (1° modo di Abramson ~0.45 * m_prop) [kg]
+    double fixed_fuel_mass_kg;       // Massa liquida solidale al serbatoio (~0.55 * m_prop) [kg]
+    double eff_accel_ms2;            // Accelerazione efficace di eccitazione a_eff (spinta/slew) [m/s^2]
+    double slosh_freq_hz;            // Frequenza naturale di sloshing f_slosh = omega_slosh / (2*pi) [Hz]
+    double slosh_omega_rads;         // Pulsazione naturale di sloshing di Abramson omega_slosh [rad/s]
+    double slosh_pendulum_len_m;     // Lunghezza del pendolo equivalente di Abramson L_pend [m]
+    double flex_freq_hz;             // Frequenza fondamentale 1° modo flessionale f_flex,1 [Hz]
+    double flex_freq_mode2_hz;       // Frequenza 2° modo flessionale (torsione/flessione superiore) [Hz]
+    double modal_coupling_gamma;     // Coefficiente di partecipazione/accoppiamento modale rotazionale Gamma_flex [kg^0.5*m]
+
+    // Risposta Temporale Smorzata post-Burn/Slew e Pointing Jitter
+    double peak_tip_defl_mm;         // Deflessione massima punta pannelli solari max|delta_tip(t)| [mm]
+    double peak_slosh_disp_mm;       // Spostamento massimo centro di massa onda sloshing max|x_slosh(t)| [mm]
+    double peak_slosh_force_n;       // Forza massima laterale di sloshing sulle pareti/baffle [N]
+    double peak_slosh_torque_mnm;    // Coppia massima di disturbo di sloshing tau_slosh,max [mN*m]
+    double rms_jitter_arcsec;        // Pointing Jitter RMS durante il transitorio [arcsec]
+    double peak_jitter_arcsec;       // Pointing Jitter di picco [arcsec]
+    double settling_time_sec;        // Tempo di assestamento al di sotto della soglia di fine-pointing [s]
+
+    // Control-Structure Interaction (CSI) & GNC Digital Notch Filter
+    double adcs_bandwidth_hz;        // Banda passante anello di controllo d'assetto ADCS f_bw [Hz]
+    double notch_center_hz;          // Frequenza centrale del filtro Notch digitale GNC [Hz]
+    double notch_attenuation_db;     // Attenuazione del picco di risonanza introdotta dal Notch Filter [dB]
+    double peak_res_unfilt_db;       // Picco di risonanza strutturale Bode senza filtro Notch [dB]
+    double peak_res_filt_db;         // Picco residuo Bode dopo compensazione con filtro Notch [dB]
+    double csi_gain_margin_db;       // Margine di guadagno di stabilità CSI [dB]
+    char   notch_status[64];         // Stato del filtro Notch ADCS e stabilità CSI
+
+    // Verifica di Rigidezza Strutturale al Lancio (Vega-C / Falcon 9 / Ariane 6) & QSL Margin of Safety
+    double launch_axial_freq_hz;     // Frequenza fondamentale assiale satellite ripiegato f_ax [Hz] (> 35 Hz)
+    double launch_lateral_freq_hz;   // Frequenza fondamentale laterale satellite ripiegato f_lat [Hz] (> 15 Hz)
+    double qsl_axial_g;              // Carico Quasi-Statico (QSL) assiale di progetto al lancio [g]
+    double qsl_lateral_g;            // Carico Quasi-Statico (QSL) laterale di progetto al lancio [g]
+    double max_von_mises_mpa;        // Tensione equivalente massima di von Mises nel cilindro primario [MPa]
+    double allowable_stress_mpa;     // Tensione ammissibile lega aerospaziale Al-7075-T7351 [MPa]
+    double launch_mos_pct;           // Margin of Safety strutturale ai carichi di lancio MoS [%] (> 0%)
+    char   launch_compliance[64];    // Conformità inviluppo lanciatori (Vega-C / Falcon 9 / Ariane 6)
+
+    int    num_samples;
+    SloshFlexSample samples[MAX_CSI_SAMPLES];
+} StructuralReport;
+
 typedef struct {
     KeplerianElements initial_kep;
     double period_min;

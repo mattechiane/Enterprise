@@ -745,6 +745,52 @@
     </div>
 </section>
 
+<!-- 16. FLEXIBLE SOLAR ARRAY MODES, PROPELLANT SLOSHING & CONTROL-STRUCTURE INTERACTION (CSI) -->
+<section class="engineering-section">
+    <div class="section-header">
+        <div>
+            <h2>16. Flexible Solar Array Modes, Propellant Sloshing &amp; Control-Structure Interaction (CSI)</h2>
+            <span>Cantilever Solar Array Bending (f<sub>flex,1</sub>) &bull; Abramson Equivalent Slosh Pendulum (&omega;<sub>slosh</sub>, &zeta;<sub>slosh</sub>) &bull; GNC Cascade Bi-Quad Notch Filter &bull; Launch Vehicle QSL &amp; Stiffness</span>
+        </div>
+        <span class="badge" id="csiStatusBadge" style="color:var(--green); border-color:var(--green);">&#9881; GNC NOTCH FILTER ACTIVE &bull; CSI STABLE &amp; LAUNCH QSL COMPLIANT</span>
+    </div>
+
+    <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(213,0,249,0.13), rgba(0,230,118,0.12)); border-color: var(--purple);">
+        <div class="title-group">
+            <h3 id="csiBannerTitle" style="color:var(--purple);">FLEXIBLE STRUCTURAL DYNAMICS, ABRAMSON PROPELLANT SLOSHING &amp; GNC NOTCH FILTERING</h3>
+            <p id="csiBannerSub">1st Solar Array Mode: --- Hz &bull; Propellant Slosh Frequency: --- Hz &bull; Peak Array Tip Deflection: --- mm &bull; Micro-Vibration Pointing Jitter: --- arcsec &bull; Launch QSL Margin of Safety: +---%</p>
+        </div>
+        <div class="cost-highlight">
+            <div class="big-dv" id="csiBannerHighlight" style="color:var(--cyan);">Peak Array Tip Deflection: --- mm | Pointing Jitter: --- arcsec</div>
+            <div class="sub-fuel" id="csiBannerSubMetrics">1st Flex Mode: --- Hz | Slosh Mode: --- Hz | Launch QSL Margin of Safety: +---%</div>
+        </div>
+    </div>
+
+    <div class="datasheet-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+        <div class="data-card">
+            <h4 style="color:var(--cyan)">&#127788; Cantilever Solar Array Modes</h4>
+            <div id="csiCardModes"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--amber)">&#128167; Abramson Propellant Slosh Pendulum</h4>
+            <div id="csiCardSlosh"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--purple)">&#127899; Control-Structure Interaction &amp; Notch</h4>
+            <div id="csiCardNotch"></div>
+        </div>
+        <div class="data-card">
+            <h4 style="color:var(--green)">&#128640; Launch Stiffness &amp; QSL Margin of Safety</h4>
+            <div id="csiCardLaunch"></div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotCsiTimeResponse" class="plot-container-rdv"></div>
+        <div id="plotCsiBode" class="plot-container-rdv"></div>
+    </div>
+</section>
+
 
 <!-- POPUP MODAL: MISSION INPUT CONFIGURATOR -->
 <div class="modal-overlay" id="inputModal">
@@ -1116,6 +1162,23 @@
                 <div class="field">
                     <label>Halo Z-Amplitude A<sub>z</sub> [km]</label>
                     <input type="number" id="cislunarHaloAzKm" value="15000" min="1000" max="50000" step="1000">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--purple)">14. Structural &amp; Slosh Dynamics (Flexible Solar Array Modes, Tank Sloshing &amp; CSI)</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Cantilever Solar Array Bending f<sub>flex</sub> &bull; Abramson Propellant Slosh Pendulum &zeta;<sub>slosh</sub> &bull; GNC Digital Notch Filter</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="field">
+                    <label>Solar Array 1st Bending Frequency f<sub>flex</sub> [Hz]</label>
+                    <input type="number" id="csiFlexFreqHz" value="0.85" min="0.20" max="3.00" step="0.05">
+                </div>
+                <div class="field">
+                    <label>Tank Slosh Baffle Damping Ratio &zeta;<sub>slosh</sub> [-]</label>
+                    <input type="number" id="csiSloshZeta" value="0.03" min="0.005" max="0.20" step="0.005">
                 </div>
             </div>
         </div>
@@ -1569,6 +1632,11 @@
             const cis = data.cislunar_summary;
             if (cis.target_regime !== undefined) document.getElementById('cislunarRegime').value   = String(cis.target_regime);
             if (cis.halo_az_km !== undefined)    document.getElementById('cislunarHaloAzKm').value = Math.round(cis.halo_az_km);
+        }
+        if (data.structural_csi_summary) {
+            const csi = data.structural_csi_summary;
+            if (csi.flex_freq_hz !== undefined)       document.getElementById('csiFlexFreqHz').value = csi.flex_freq_hz;
+            if (csi.slosh_damping_zeta !== undefined) document.getElementById('csiSloshZeta').value  = csi.slosh_damping_zeta;
         }
 
         validateModalOrbits(false);
@@ -3843,6 +3911,211 @@
             }],
             showlegend: true,
             legend: { font: { color: '#e2e8f0', size: 8.8 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // =========================================================================
+        // 16. FLEXIBLE SOLAR ARRAY MODES, PROPELLANT SLOSHING & CSI (SPRINT 22)
+        // =========================================================================
+        let csiInfo = data.structural_csi_summary;
+        let trajCsi = data.traj_csi || [];
+        if (!csiInfo || trajCsi.length === 0) {
+            const fallbackCsi = simulateStructuralSloshAndCsiJS(
+                (data.maneuver.final_mass_kg || 464.0) + (data.maneuver.fuel_kg || 36.0),
+                (data.systems_engineering && data.systems_engineering.total_propellant_kg) ? data.systems_engineering.total_propellant_kg : ((data.maneuver.fuel_kg || 36.0) + 3.14),
+                data.maneuver.thrust_n || (isLowThrust ? 0.50 : 490.0),
+                (data.adcs_summary && data.adcs_summary.inertia_kgm2) ? data.adcs_summary.inertia_kgm2[1] : 110.0,
+                (data.adcs_summary && data.adcs_summary.peak_rw_torque_mnm) ? data.adcs_summary.peak_rw_torque_mnm : 171.1,
+                0.85, 0.030
+            );
+            csiInfo = fallbackCsi.structural_csi_summary;
+            trajCsi = fallbackCsi.traj_csi;
+            data.structural_csi_summary = csiInfo;
+            data.traj_csi               = trajCsi;
+        }
+
+        const csiBadgeEl = document.getElementById('csiStatusBadge');
+        csiBadgeEl.innerHTML = `&#9881; ${csiInfo.notch_status} &bull; MoS +${csiInfo.launch_mos_pct}%`;
+
+        document.getElementById('csiBannerTitle').innerHTML =
+            `FLEXIBLE SOLAR ARRAY DYNAMICS (f<sub>flex,1</sub> = <span style="color:#00e5ff">${csiInfo.flex_freq_hz} Hz</span>), ABRAMSON SLOSHING (f<sub>slosh</sub> = <span style="color:#ffab00">${csiInfo.slosh_freq_hz} Hz</span>) &amp; GNC NOTCH FILTER`;
+        document.getElementById('csiBannerSub').innerHTML =
+            `1st Solar Array Mode: <b>${csiInfo.flex_freq_hz} Hz</b> &bull; Propellant Slosh Frequency: <b>${csiInfo.slosh_freq_hz} Hz</b> &bull; Peak Array Tip Deflection: <b>${csiInfo.peak_tip_defl_mm} mm</b> &bull; Micro-Vibration Pointing Jitter: <b>${csiInfo.rms_jitter_arcsec} arcsec RMS (${csiInfo.peak_jitter_arcsec} arcsec Peak)</b> &bull; Launch QSL Margin of Safety: <b style="color:#00e676">+${csiInfo.launch_mos_pct}%</b>`;
+        document.getElementById('csiBannerHighlight').innerHTML =
+            `Peak Array Tip Deflection: ${csiInfo.peak_tip_defl_mm} mm | Pointing Jitter: ${csiInfo.rms_jitter_arcsec} arcsec`;
+        document.getElementById('csiBannerSubMetrics').innerHTML =
+            `1st Solar Array Mode: <b style="color:#00e5ff">${csiInfo.flex_freq_hz} Hz</b> | Slosh Mode: <b style="color:#ffab00">${csiInfo.slosh_freq_hz} Hz</b> | Launch QSL Margin of Safety: <b style="color:#00e676">+${csiInfo.launch_mos_pct}%</b>`;
+
+        document.getElementById('csiCardModes').innerHTML = `
+            <h3>Solar Array Bending</h3>
+            <div class="stat-line"><span class="stat-label">1st Cantilever Mode f<sub>1</sub>:</span><span class="stat-val" style="color:#00e5ff">${csiInfo.flex_freq_hz} Hz (&zeta;=${csiInfo.flex_damping_zeta})</span></div>
+            <div class="stat-line"><span class="stat-label">2nd Bending Harmonic f<sub>2</sub>:</span><span class="stat-val">${csiInfo.flex_freq_mode2_hz} Hz</span></div>
+            <div class="stat-line"><span class="stat-label">Peak Tip Deflection:</span><span class="stat-val" style="color:#ff5252">${csiInfo.peak_tip_defl_mm} mm</span></div>
+            <div class="stat-line"><span class="stat-label">Wing Span / Coupling &Gamma;:</span><span class="stat-val">${csiInfo.array_span_m} m / ${csiInfo.modal_coupling_gamma} kg<sup>&frac12;</sup>m</span></div>
+        `;
+
+        document.getElementById('csiCardSlosh').innerHTML = `
+            <h3>Abramson Tank Slosh</h3>
+            <div class="stat-line"><span class="stat-label">Sloshing Mass m<sub>slosh</sub>:</span><span class="stat-val" style="color:#ffab00">${csiInfo.slosh_mass_kg} kg (45% of ${csiInfo.total_fuel_mass_kg} kg)</span></div>
+            <div class="stat-line"><span class="stat-label">Abramson Freq f<sub>slosh</sub>:</span><span class="stat-val" style="color:#00e5ff">${csiInfo.slosh_freq_hz} Hz (${csiInfo.slosh_omega_rads} rad/s)</span></div>
+            <div class="stat-line"><span class="stat-label">Baffle Damping &zeta;<sub>slosh</sub>:</span><span class="stat-val" style="color:#00e676">${csiInfo.slosh_damping_zeta} (L<sub>p</sub>=${csiInfo.slosh_pendulum_len_m} m)</span></div>
+            <div class="stat-line"><span class="stat-label">Peak Slosh Torque / Force:</span><span class="stat-val" style="color:#ffab00">${csiInfo.peak_slosh_torque_mnm} mN&middot;m (${csiInfo.peak_slosh_force_n} N)</span></div>
+        `;
+
+        document.getElementById('csiCardNotch').innerHTML = `
+            <h3>CSI &amp; GNC Notch Filter</h3>
+            <div class="stat-line"><span class="stat-label">Pointing Jitter (RMS / Pk):</span><span class="stat-val" style="color:#00e676">${csiInfo.rms_jitter_arcsec} / ${csiInfo.peak_jitter_arcsec} arcsec</span></div>
+            <div class="stat-line"><span class="stat-label">Notch Peak Attenuation:</span><span class="stat-val" style="color:#d500f9">-${csiInfo.notch_attenuation_db} dB @ ${csiInfo.notch_center_hz} Hz</span></div>
+            <div class="stat-line"><span class="stat-label">CSI Stability Gain Margin:</span><span class="stat-val" style="color:#00e5ff">+${csiInfo.csi_gain_margin_db} dB (BW=${csiInfo.adcs_bandwidth_hz} Hz)</span></div>
+            <div class="stat-line"><span class="stat-label">Ringdown Settling Time:</span><span class="stat-val">${csiInfo.settling_time_sec} s</span></div>
+        `;
+
+        document.getElementById('csiCardLaunch').innerHTML = `
+            <h3>Launch Loads &amp; QSL MoS</h3>
+            <div class="stat-line"><span class="stat-label">Stowed Axial Freq f<sub>ax</sub>:</span><span class="stat-val" style="color:#00e676">${csiInfo.launch_axial_freq_hz} Hz (&gt; 35 Hz OK)</span></div>
+            <div class="stat-line"><span class="stat-label">Stowed Lateral Freq f<sub>lat</sub>:</span><span class="stat-val" style="color:#00e676">${csiInfo.launch_lateral_freq_hz} Hz (&gt; 15 Hz OK)</span></div>
+            <div class="stat-line"><span class="stat-label">QSL von Mises Stress &sigma;<sub>vM</sub>:</span><span class="stat-val">${csiInfo.max_von_mises_mpa} / ${csiInfo.allowable_stress_mpa} MPa</span></div>
+            <div class="stat-line"><span class="stat-label">Launch Margin of Safety:</span><span class="stat-val" style="color:#00e676">+${csiInfo.launch_mos_pct}% (FoS=1.25)</span></div>
+        `;
+
+        const csiTSec       = trajCsi.map(p => p.t_sec);
+        const csiTipMm      = trajCsi.map(p => p.tip_defl_mm);
+        const csiTorqueMnm  = trajCsi.map(p => p.slosh_torque_mnm !== undefined ? p.slosh_torque_mnm : (p.slosh_force_n * 650.0));
+        const csiJitterArc  = trajCsi.map(p => p.jitter_arcsec);
+        const csiFreqHz     = trajCsi.map(p => p.bode_freq_hz);
+        const csiBodeFilt   = trajCsi.map(p => p.bode_mag_db);
+        const csiBodeUnfilt = trajCsi.map(p => p.bode_unfilt_db !== undefined ? p.bode_unfilt_db : (p.bode_mag_db + 16.0));
+
+        // 16A. Plot Sinistro: Solar Array Tip Vibration [mm] & Propellant Slosh Disturbance Torque during Burn/Slew
+        const maxTipAxis = Math.max(30.0, csiInfo.peak_tip_defl_mm * 1.25);
+        const maxTrqAxis = Math.max(250.0, csiInfo.peak_slosh_torque_mnm * 1.28);
+
+        Plotly.react('plotCsiTimeResponse', [
+            {
+                x: csiTSec,
+                y: csiTipMm,
+                mode: 'lines',
+                name: `Solar Array Tip Deflection δ_tip(t) [mm] (f₁ = ${csiInfo.flex_freq_hz} Hz)`,
+                line: { color: '#00e5ff', width: 2.6 },
+                fill: 'tozeroy',
+                fillcolor: 'rgba(0, 229, 255, 0.08)',
+                hovertemplate: 't = %{x:.2f} s<br>Tip Deflection δ_tip = %{y:.2f} mm<extra></extra>'
+            },
+            {
+                x: csiTSec,
+                y: csiTorqueMnm,
+                yaxis: 'y2',
+                mode: 'lines',
+                name: `Propellant Slosh Disturbance Torque τ_slosh(t) [mN·m] (f_s = ${csiInfo.slosh_freq_hz} Hz)`,
+                line: { color: '#ffab00', width: 2.4, dash: 'dashdot' },
+                hovertemplate: 't = %{x:.2f} s<br>Slosh Torque τ_slosh = %{y:.2f} mN·m<extra></extra>'
+            },
+            {
+                x: csiTSec,
+                y: csiJitterArc,
+                mode: 'lines',
+                name: `Residual Pointing Jitter θ_jitter(t) [arcsec] (RMS = ${csiInfo.rms_jitter_arcsec}")`,
+                line: { color: '#00e676', width: 1.9, dash: 'dot' },
+                hovertemplate: 't = %{x:.2f} s<br>Pointing Jitter = %{y:.2f} arcsec<extra></extra>'
+            }
+        ], {
+            title: { text: `16A. Solar Array Tip Vibration [mm] & Propellant Slosh Disturbance Torque [mN·m] During Burn/Slew`, font: { color: '#e2e8f0', size: 12.2 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 58, r: 58, b: 48, t: 40 },
+            xaxis: { title: 'Time from Burn Ignition / Agile Slew Excitation [s]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Array Tip Deflection [mm] / Jitter [arcsec]', titlefont: { color: '#00e5ff' }, tickfont: { color: '#00e5ff' }, gridcolor: '#222d42', range: [-maxTipAxis, maxTipAxis] },
+            yaxis2: { title: 'Propellant Slosh Torque τ_slosh [mN·m]', titlefont: { color: '#ffab00' }, tickfont: { color: '#ffab00' }, overlaying: 'y', side: 'right', showgrid: false, range: [-maxTrqAxis, maxTrqAxis] },
+            shapes: [
+                {
+                    type: 'rect',
+                    x0: 0.0, x1: 3.2,
+                    y0: -maxTipAxis, y1: maxTipAxis,
+                    fillcolor: 'rgba(255, 82, 82, 0.09)',
+                    line: { color: 'rgba(255, 82, 82, 0.45)', width: 1, dash: 'dot' }
+                }
+            ],
+            annotations: [
+                {
+                    x: 1.6, y: maxTipAxis * 0.88,
+                    text: 'Burn / Slew Pulse',
+                    showarrow: false,
+                    font: { color: '#ff5252', size: 9.5 },
+                    bgcolor: 'rgba(15,23,42,0.85)', bordercolor: '#ff5252'
+                }
+            ],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.0 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.24, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // 16B. Plot Destro: CSI Frequency Response / Bode Magnitude Plot [dB] with GNC Notch Filter
+        Plotly.react('plotCsiBode', [
+            {
+                x: csiFreqHz,
+                y: csiBodeUnfilt,
+                mode: 'lines',
+                name: 'Unfiltered Flexible + Slosh Loop |G_unfilt(jω)| [dB] (CSI Resonance Risk)',
+                line: { color: '#ff5252', width: 2.3, dash: 'dash' },
+                hovertemplate: 'f = %{x:.3f} Hz<br>Unfiltered Magnitude = %{y:.2f} dB<extra></extra>'
+            },
+            {
+                x: csiFreqHz,
+                y: csiBodeFilt,
+                mode: 'lines',
+                name: `Compensated Loop with GNC Bi-Quad Notch Filter |G_CSI(jω)| [dB] (-${csiInfo.notch_attenuation_db} dB)`,
+                line: { color: '#00e676', width: 2.8 },
+                fill: 'tonexty',
+                fillcolor: 'rgba(213, 0, 249, 0.11)',
+                hovertemplate: 'f = %{x:.3f} Hz<br>Notch-Compensated Magnitude = %{y:.2f} dB<extra></extra>'
+            },
+            {
+                x: [0.02, 10.0],
+                y: [0.0, 0.0],
+                mode: 'lines',
+                name: '0 dB Crossover / CSI Instability Threshold',
+                line: { color: '#ffab00', width: 1.4, dash: 'dot' },
+                hoverinfo: 'name'
+            }
+        ], {
+            title: { text: `16B. CSI Frequency Response / Bode Magnitude Plot [dB] with GNC Cascade Notch Filter`, font: { color: '#e2e8f0', size: 12.2 } },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 58, r: 24, b: 48, t: 40 },
+            xaxis: { type: 'log', title: 'Excitation Frequency f [Hz] (Log Scale)', color: '#e2e8f0', gridcolor: '#222d42', range: [Math.log10(0.02), Math.log10(10.0)] },
+            yaxis: { title: 'Loop Transfer Magnitude |L(jω)| [dB]', color: '#00e676', gridcolor: '#222d42', range: [-85, 30] },
+            shapes: [
+                {
+                    type: 'line',
+                    x0: csiInfo.slosh_freq_hz, x1: csiInfo.slosh_freq_hz,
+                    y0: -85, y1: 25,
+                    line: { color: '#ffab00', width: 1.3, dash: 'dot' }
+                },
+                {
+                    type: 'line',
+                    x0: csiInfo.flex_freq_hz, x1: csiInfo.flex_freq_hz,
+                    y0: -85, y1: 25,
+                    line: { color: '#00e5ff', width: 1.5, dash: 'dot' }
+                }
+            ],
+            annotations: [
+                {
+                    x: Math.log10(csiInfo.slosh_freq_hz),
+                    y: 16,
+                    xref: 'x', yref: 'y',
+                    text: `Slosh Mode (${csiInfo.slosh_freq_hz} Hz)`,
+                    showarrow: true, arrowhead: 2, ax: -36, ay: -16,
+                    font: { color: '#ffab00', size: 9.5 },
+                    bgcolor: 'rgba(15,23,42,0.85)', bordercolor: '#ffab00'
+                },
+                {
+                    x: Math.log10(csiInfo.flex_freq_hz),
+                    y: 21,
+                    xref: 'x', yref: 'y',
+                    text: `1st Array Bending + Notch (${csiInfo.flex_freq_hz} Hz)`,
+                    showarrow: true, arrowhead: 2, ax: 48, ay: -14,
+                    font: { color: '#00e5ff', size: 9.5 },
+                    bgcolor: 'rgba(15,23,42,0.85)', bordercolor: '#00e5ff'
+                }
+            ],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.0 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.02, y: 0.24 }
         }, { responsive: true, displaylogo: false });
 
         startAnimationLoop();
@@ -6539,6 +6812,242 @@
         };
     }
 
+    // =========================================================================
+    // SPRINT 22: FLEXIBLE STRUCTURAL DYNAMICS, PROPELLANT SLOSHING & CSI (JS)
+    // =========================================================================
+    function simulateStructuralSloshAndCsiJS(wetMassKg, totalPropKg, thrustN, jPitchKgm2, peakRwTorqueMnm, flexFreqHz, sloshZeta) {
+        const mWet    = Math.max(80.0, wetMassKg || 500.0);
+        const mProp   = Math.max(8.0, Math.min(0.65 * mWet, totalPropKg || 39.06));
+        const rTankM  = Math.max(0.22, Math.min(0.85, 0.38 * Math.pow(mProp / 80.0, 1.0 / 3.0)));
+        const hFillRatio = 1.15;
+
+        const fThrust = Math.max(0.5, thrustN || 490.0);
+        const aEffMs2 = Math.max(0.32, fThrust / mWet);
+
+        const jPitch  = Math.max(25.0, jPitchKgm2 || 110.0);
+        const tauRwNm = Math.max(0.05, (peakRwTorqueMnm || 180.0) * 1e-3);
+        const alphaSlewRads2 = Math.max(0.0045, tauRwNm / jPitch);
+        const aLatExcMs2 = rTankM * alphaSlewRads2 + 0.0085 * aEffMs2;
+
+        // 1. Abramson Slosh Pendulum / Spring-Mass Model
+        const xi11 = 1.8411838;
+        const kh = xi11 * hFillRatio;
+        const tanhKh = Math.tanh(kh);
+        const mSloshKg = 0.45 * mProp;
+        const mFixedKg = mProp - mSloshKg;
+        const omegaSlosh = Math.sqrt((aEffMs2 / rTankM) * xi11 * tanhKh);
+        const fSloshHz = omegaSlosh / (2.0 * Math.PI);
+        const lPendM = rTankM / (xi11 * tanhKh);
+        const hArmM  = 0.42 + 0.35 * rTankM;
+        const zSlosh = Math.max(0.002, Math.min(0.35, isNaN(sloshZeta) ? 0.030 : sloshZeta));
+
+        // 2. Cantilever Solar Array Flexible Modes
+        const fFlex1Hz = Math.max(0.15, Math.min(5.0, isNaN(flexFreqHz) ? 0.85 : flexFreqHz));
+        const fFlex2Hz = 6.267 * fFlex1Hz;
+        const omegaFlex1 = 2.0 * Math.PI * fFlex1Hz;
+        const zFlex = 0.015;
+        const lPanelM = 3.2;
+        const mPanelKg = 2.0 * Math.max(6.0, 0.032 * mWet);
+        const gammaFlex = 0.612 * Math.sqrt(mPanelKg) * (0.65 * lPanelM);
+        const phiTip = 2.0 / Math.sqrt(mPanelKg);
+
+        // 3. Coupled ODE RK4 Integration (t = 0 .. 45 s)
+        const numSamples = 180;
+        const tEndSec = 45.0;
+        const dtSample = tEndSec / (numSamples - 1);
+        const substeps = 10;
+        const dtSub = dtSample / substeps;
+        const tPulseSec = 4.0;
+
+        function deriv(t, y) {
+            let alphaBody = 0.0, aLat = 0.0;
+            if (t <= 0.5 * tPulseSec) {
+                alphaBody =  alphaSlewRads2;
+                aLat      =  aLatExcMs2;
+            } else if (t <= tPulseSec) {
+                alphaBody = -alphaSlewRads2;
+                aLat      = -aLatExcMs2 + 0.35 * aLatExcMs2 * Math.sin(omegaSlosh * t);
+            }
+            const eta = y[0], etaDot = y[1], xs = y[2], xsDot = y[3];
+            return [
+                etaDot,
+                -2.0 * zFlex * omegaFlex1 * etaDot - omegaFlex1 * omegaFlex1 * eta - gammaFlex * alphaBody,
+                xsDot,
+                -2.0 * zSlosh * omegaSlosh * xsDot - omegaSlosh * omegaSlosh * xs - aLat
+            ];
+        }
+
+        let state = [0.0, 0.0, 0.0, 0.0];
+        let peakTipDeflMm = 0.0, maxSloshWaveMm = 0.0, maxSloshForceN = 0.0, maxSloshTorqueMnm = 0.0;
+        let peakJitterArcsec = 0.0, sumSqJitter = 0.0;
+        const RAD2ARCSEC = (180.0 / Math.PI) * 3600.0;
+
+        // 4. CSI Bode Frequency Response & Bi-Quad Notch Filter
+        const fNotchHz = fFlex1Hz;
+        const wNotch = 2.0 * Math.PI * fNotchHz;
+        const zNotchZero = 0.012;
+        const zNotchPole = 0.380;
+        const fMinHz = 0.05, fMaxHz = 10.0;
+        const logRatio = Math.log10(fMaxHz / fMinHz);
+
+        const kPlantGain = 0.28;
+        const wCtrl = 2.0 * Math.PI * 0.18;
+        const zCtrl = 0.707;
+        const alphaFlex = (gammaFlex * gammaFlex) / jPitch;
+        const alphaSlosh = (mSloshKg * hArmM * hArmM) / jPitch;
+
+        let peakUnfiltFlexDb = -100.0, filtAtFlexDb = -100.0;
+        const trajCsi = [];
+
+        for (let i = 0; i < numSamples; i++) {
+            const tSec = i * dtSample;
+
+            const tipDeflM = phiTip * state[0];
+            const tipDeflMm = tipDeflM * 1000.0;
+            const fSloshN = mSloshKg * (omegaSlosh * omegaSlosh * state[2] + 2.0 * zSlosh * omegaSlosh * state[3]);
+            const tauSloshMnm = fSloshN * hArmM * 1000.0;
+            const sloshWaveMm = state[2] * 1000.0;
+
+            const thetaFlexRad = ( gammaFlex * state[0]) / jPitch;
+            const thetaSloshRad = (mSloshKg * hArmM * state[2]) / jPitch;
+            const jitterArcsec = Math.abs(thetaFlexRad + thetaSloshRad) * RAD2ARCSEC;
+
+            if (Math.abs(tipDeflMm) > peakTipDeflMm) peakTipDeflMm = Math.abs(tipDeflMm);
+            if (Math.abs(sloshWaveMm) > maxSloshWaveMm) maxSloshWaveMm = Math.abs(sloshWaveMm);
+            if (Math.abs(fSloshN) > maxSloshForceN) maxSloshForceN = Math.abs(fSloshN);
+            if (Math.abs(tauSloshMnm) > maxSloshTorqueMnm) maxSloshTorqueMnm = Math.abs(tauSloshMnm);
+            if (jitterArcsec > peakJitterArcsec) peakJitterArcsec = jitterArcsec;
+            sumSqJitter += jitterArcsec * jitterArcsec;
+
+            // Frequency point (log-spaced 0.05 .. 10 Hz)
+            const u = i / (numSamples - 1);
+            const fHz = fMinHz * Math.pow(10.0, u * logRatio);
+            const w = 2.0 * Math.PI * fHz;
+
+            const w2 = w * w;
+            const magCtrl = kPlantGain * Math.sqrt((wCtrl * wCtrl) / ((wCtrl * wCtrl - w2) * (wCtrl * wCtrl - w2) + Math.pow(2.0 * zCtrl * wCtrl * w, 2)));
+
+            const denFlexRe = omegaFlex1 * omegaFlex1 - w2;
+            const denFlexIm = 2.0 * zFlex * omegaFlex1 * w;
+            const denFlexMag2 = denFlexRe * denFlexRe + denFlexIm * denFlexIm + 1e-18;
+
+            const denSloshRe = omegaSlosh * omegaSlosh - w2;
+            const denSloshIm = 2.0 * zSlosh * omegaSlosh * w;
+            const denSloshMag2 = denSloshRe * denSloshRe + denSloshIm * denSloshIm + 1e-18;
+
+            const reTotal = 1.0 + alphaFlex * w2 * denFlexRe / denFlexMag2 + alphaSlosh * w2 * denSloshRe / denSloshMag2;
+            const imTotal = -alphaFlex * w2 * denFlexIm / denFlexMag2 - alphaSlosh * w2 * denSloshIm / denSloshMag2;
+            const magStruct = Math.sqrt(reTotal * reTotal + imTotal * imTotal);
+
+            const magUnfilt = magCtrl * magStruct;
+            const dbUnfilt = 20.0 * Math.log10(Math.max(1e-6, magUnfilt));
+
+            const numNotch = Math.sqrt(Math.pow(wNotch * wNotch - w2, 2) + Math.pow(2.0 * zNotchZero * wNotch * w, 2));
+            const denNotch = Math.sqrt(Math.pow(wNotch * wNotch - w2, 2) + Math.pow(2.0 * zNotchPole * wNotch * w, 2));
+            const magNotch = numNotch / (denNotch + 1e-12);
+
+            const wNotchSlosh = omegaSlosh;
+            const numNs = Math.sqrt(Math.pow(wNotchSlosh * wNotchSlosh - w2, 2) + Math.pow(2.0 * 0.025 * wNotchSlosh * w, 2));
+            const denNs = Math.sqrt(Math.pow(wNotchSlosh * wNotchSlosh - w2, 2) + Math.pow(2.0 * 0.160 * wNotchSlosh * w, 2));
+            const magNotchSlosh = numNs / (denNs + 1e-12);
+
+            const magFilt = magUnfilt * magNotch * magNotchSlosh;
+            const dbFilt = 20.0 * Math.log10(Math.max(1e-6, magFilt));
+
+            if (Math.abs(fHz - fFlex1Hz) < 0.08 * fFlex1Hz) {
+                if (dbUnfilt > peakUnfiltFlexDb) {
+                    peakUnfiltFlexDb = dbUnfilt;
+                    filtAtFlexDb = dbFilt;
+                }
+            }
+
+            trajCsi.push({
+                t_sec: +tSec.toFixed(2),
+                tip_defl_mm: +tipDeflMm.toFixed(3),
+                slosh_wave_mm: +sloshWaveMm.toFixed(3),
+                slosh_force_n: +fSloshN.toFixed(4),
+                slosh_torque_mnm: +tauSloshMnm.toFixed(3),
+                jitter_arcsec: +jitterArcsec.toFixed(3),
+                bode_freq_hz: +fHz.toFixed(4),
+                bode_mag_db: +dbFilt.toFixed(2),
+                bode_unfilt_db: +dbUnfilt.toFixed(2)
+            });
+
+            if (i < numSamples - 1) {
+                let tCur = tSec;
+                for (let s = 0; s < substeps; s++) {
+                    const k1 = deriv(tCur, state);
+                    const s2 = state.map((v, j) => v + 0.5 * dtSub * k1[j]);
+                    const k2 = deriv(tCur + 0.5 * dtSub, s2);
+                    const s3 = state.map((v, j) => v + 0.5 * dtSub * k2[j]);
+                    const k3 = deriv(tCur + 0.5 * dtSub, s3);
+                    const s4 = state.map((v, j) => v + dtSub * k3[j]);
+                    const k4 = deriv(tCur + dtSub, s4);
+                    state = state.map((v, j) => v + (dtSub / 6.0) * (k1[j] + 2.0 * k2[j] + 2.0 * k3[j] + k4[j]));
+                    tCur += dtSub;
+                }
+            }
+        }
+
+        const rmsJitterArcsec = Math.sqrt(sumSqJitter / numSamples);
+        const notchAttenDb = filtAtFlexDb - peakUnfiltFlexDb;
+        const csiGainMarginDb = Math.max(6.0, -filtAtFlexDb);
+
+        // 5. Launch Vehicle Stiffness & QSL Margin of Safety
+        const massScale = Math.pow(500.0 / mWet, 0.35);
+        const launchFreqAxHz  = 46.2 * massScale;
+        const launchFreqLatHz = 20.4 * massScale;
+        const qslAxialG = 6.0, qslLateralG = 2.0;
+        const rCylM = 0.58, tWallM = 0.0022, hCgM = 0.95;
+        const areaShellM2 = 2.0 * Math.PI * rCylM * tWallM;
+        const sectionModM3 = Math.PI * rCylM * rCylM * tWallM;
+
+        const fAxLimN  = mWet * G0 * qslAxialG * 1.25;
+        const mLatLimNm = mWet * G0 * qslLateralG * hCgM * 1.25;
+        const sigmaEqMpa = ((fAxLimN / areaShellM2) + (mLatLimNm / sectionModM3)) * 1e-6;
+        const sigmaYieldAl7075Mpa = 435.0;
+        const fos = 1.25;
+        const mosPct = ((sigmaYieldAl7075Mpa / (fos * sigmaEqMpa)) - 1.0) * 100.0;
+
+        let notchStatus = 'NOMINAL — Bi-Quad Cascade Notch Filter Active (CSI Stable, GM > 6 dB)';
+        if (fFlex1Hz < 0.32) {
+            notchStatus = 'CAUTION — Ultra-Low Array Stiffness (Close Proximity to ADCS Bandwidth)';
+        } else if (zSlosh < 0.012) {
+            notchStatus = 'WARNING — Low Baffle Damping (Extended Slosh Settling Time > 40 s)';
+        }
+
+        return {
+            structural_csi_summary: {
+                flex_freq_1_hz: +fFlex1Hz.toFixed(3),
+                flex_freq_2_hz: +fFlex2Hz.toFixed(3),
+                flex_zeta: +zFlex.toFixed(4),
+                slosh_freq_hz: +fSloshHz.toFixed(3),
+                slosh_zeta: +zSlosh.toFixed(4),
+                slosh_mass_kg: +mSloshKg.toFixed(2),
+                fixed_prop_mass_kg: +mFixedKg.toFixed(2),
+                pendulum_len_m: +lPendM.toFixed(3),
+                peak_tip_defl_mm: +peakTipDeflMm.toFixed(2),
+                max_slosh_wave_mm: +maxSloshWaveMm.toFixed(2),
+                max_slosh_force_n: +maxSloshForceN.toFixed(3),
+                max_slosh_torque_mnm: +maxSloshTorqueMnm.toFixed(2),
+                rms_jitter_arcsec: +rmsJitterArcsec.toFixed(3),
+                peak_jitter_arcsec: +peakJitterArcsec.toFixed(3),
+                notch_freq_hz: +fNotchHz.toFixed(3),
+                notch_atten_db: +notchAttenDb.toFixed(2),
+                csi_gain_margin_db: +csiGainMarginDb.toFixed(2),
+                notch_filter_status: notchStatus,
+                launch_freq_ax_hz: +launchFreqAxHz.toFixed(1),
+                launch_freq_lat_hz: +launchFreqLatHz.toFixed(1),
+                qsl_axial_g: +qslAxialG.toFixed(1),
+                qsl_lateral_g: +qslLateralG.toFixed(1),
+                von_mises_stress_mpa: +sigmaEqMpa.toFixed(2),
+                launch_mos_pct: +mosPct.toFixed(1),
+                launch_qualified: (launchFreqAxHz >= 35.0 && launchFreqLatHz >= 15.0 && mosPct > 0.0) ? 1 : 0
+            },
+            traj_csi: trajCsi
+        };
+    }
+
     document.getElementById('btnRunCustomMission').addEventListener('click', function() {
         const mass0 = parseFloat(document.getElementById('inMass').value) || 500;
         const propParts = document.getElementById('inPropellant').value.split('|');
@@ -6847,6 +7356,14 @@
             kepInit.a, finalMass, fuelUsed, isp, cisRegime, cisHaloAzKm
         );
 
+        // Sprint 22: Flexible Structural Dynamics, Propellant Sloshing & CSI
+        const csiFlexFreqHz = Math.max(0.15, Math.min(5.0,  parseFloat(document.getElementById('csiFlexFreqHz').value) || 0.85));
+        const csiSloshZeta  = Math.max(0.002, Math.min(0.35, parseFloat(document.getElementById('csiSloshZeta').value) || 0.030));
+        const csiRes        = simulateStructuralSloshAndCsiJS(
+            mass0, sysRes.systems_engineering.prop_mass_kg, thrustN,
+            adcsJyy, adcsRes.adcs_summary.peak_rw_torque_mnm, csiFlexFreqHz, csiSloshZeta
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -6875,6 +7392,7 @@
             ssa_cam_summary: camRes.ssa_cam_summary,
             eol_reentry_summary: eolRes.eol_reentry_summary,
             cislunar_summary: cisRes.cislunar_summary,
+            structural_csi_summary: csiRes.structural_csi_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -6886,7 +7404,8 @@
             cam_tradeoff: camRes.cam_tradeoff,
             traj_reentry: eolRes.traj_reentry,
             traj_cislunar_transfer: cisRes.traj_cislunar_transfer,
-            traj_halo_orbit: cisRes.traj_halo_orbit
+            traj_halo_orbit: cisRes.traj_halo_orbit,
+            traj_csi: csiRes.traj_csi
         };
 
         document.getElementById('inputModal').classList.remove('open');

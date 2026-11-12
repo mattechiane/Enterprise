@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 21: CISLUNAR CR3BP & LUNAR HALO ORBIT  \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 22: FLEXIBLE DYNAMICS, SLOSH & CSI     \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -128,6 +128,18 @@ int main(void) {
         .leo_parking_alt_km = 400.0             // Quota LEO pre-TLI [km]
     };
     CislunarReport cislunar = simulate_cislunar_cr3bp(orb_initial, plan, cr3bp_spec);
+
+    // 14. SPRINT 22: FLEXIBLE STRUCTURAL DYNAMICS, PROPELLANT SLOSHING & CSI
+    StructuralCSISpec csi_spec = {
+        .flex_freq_hz       = 0.85,  // 1° modo flessionale pannello solare a sbalzo f_flex,1 = 0.85 Hz
+        .flex_damping_zeta  = 0.015, // Smorzamento strutturale modale zeta_flex = 0.015
+        .slosh_damping_zeta = 0.030, // Smorzamento setti antisciacquio (Baffles) zeta_slosh = 0.030
+        .tank_radius_m      = 0.38,  // Raggio interno serbatoio propellente R_tank = 0.38 m
+        .tank_fill_ratio    = 1.15,  // Rapporto riempimento liquido h_f / R_tank = 1.15
+        .array_span_m       = 3.80,  // Lunghezza ala pannello solare L_wing = 3.80 m
+        .enable_notch_filter = true  // Filtro digitale Bi-Quad Notch GNC attivo
+    };
+    StructuralReport csi = simulate_structural_slosh_and_csi(plan, adcs, sys, csi_spec);
 
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
@@ -254,10 +266,22 @@ int main(void) {
     printf("  * Halo Orbit & Jacobi   : A_z = %.0f km (Period = %.2f d) | Jacobi C_J = %.6f | |dC_J/C_J0| = %.2e (< 1e-8 OK)\n\n",
            cislunar.halo_az_km, cislunar.halo_period_days, cislunar.jacobi_c, cislunar.delta_cj_rel);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Cislunar CR3BP, Lagrange Points & All Subsystems!\n");
+    printf("[FLEXIBLE STRUCTURAL DYNAMICS, PROPELLANT SLOSHING & CONTROL-STRUCTURE INTERACTION (CSI)]\n");
+    printf("  * Solar Array Modes     : f_flex,1 = %.2f Hz (zeta = %.3f) | f_flex,2 = %.2f Hz | Peak Tip Defl = %.2f mm\n",
+           csi.flex_freq_hz, csi.spec.flex_damping_zeta, csi.flex_freq_mode2_hz, csi.peak_tip_defl_mm);
+    printf("  * Abramson Tank Slosh   : f_slosh = %.3f Hz (m_slosh = %.2f kg, zeta = %.3f) | Max Torque = %.2f mN*m\n",
+           csi.slosh_freq_hz, csi.slosh_mass_kg, csi.spec.slosh_damping_zeta, csi.peak_slosh_torque_mnm);
+    printf("  * Micro-Vibration Jitter: RMS = %.2f arcsec | Peak = %.2f arcsec | Settling Time = %.1f s\n",
+           csi.rms_jitter_arcsec, csi.peak_jitter_arcsec, csi.settling_time_sec);
+    printf("  * GNC Notch Filter & CSI: %s (Gain Margin = +%.1f dB)\n",
+           csi.notch_status, csi.csi_gain_margin_db);
+    printf("  * Launch Loads & QSL    : Stowed f_ax = %.1f Hz (>35), f_lat = %.1f Hz (>15) | sigma_vM = %.1f MPa -> MoS = +%.1f%%\n\n",
+           csi.launch_axial_freq_hz, csi.launch_lateral_freq_hz, csi.max_von_mises_mpa, csi.launch_mos_pct);
+
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Structural Dynamics, Sloshing, CSI & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;
