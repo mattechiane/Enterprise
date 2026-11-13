@@ -40,6 +40,7 @@ bool export_web_mission_json(const char *filename,
                              CislunarReport cislunar,
                              StructuralReport csi,
                              FDIRReport fdir,
+                             const InterplanetaryReport *ipl,
                              const GroundStation *station,
                              const SpacecraftConfig *sc);
 

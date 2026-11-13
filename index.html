@@ -185,6 +185,9 @@
         .kpi-value { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.4px; line-height: 1.15; }
         .kpi-unit { font-size: 11.5px; font-weight: 600; color: var(--text-muted); }
         .kpi-sub { font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ipl-kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+        @media (max-width: 1360px) { .ipl-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (max-width: 900px)  { .ipl-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
         /* ===== TAB FILTERING ===== */
         .sections-stack { display: flex; flex-direction: column; gap: 22px; }
@@ -1079,6 +1082,50 @@
         <div id="plotFdirBusState" class="plot-container-rdv"></div>
     </div>
 </section>
+
+<!-- 18. INTERPLANETARY PATCHED-CONICS, PORKCHOP CONTOUR PLOT (C3) & HYPERBOLIC ESCAPE -->
+<section class="section-block" id="sec-18" data-tab="transfer" style="--sec-order: 18;">
+    <div class="section-header">
+        <div>
+            <h2>18. Interplanetary Patched-Conics, Porkchop Contour Plot (C<sub>3</sub>) &amp; Hyperbolic Escape</h2>
+            <span>Heliocentric Lambert (&mu;<sub>&#9737;</sub> = 1.3271244&times;10<sup>11</sup> km&sup3;/s&sup2;) &bull; Launch Window vs. TOF Grid &bull; Departure Hyperbola (C<sub>3</sub>, DLA/RLA, &Delta;V<sub>TMI</sub>) &bull; Arrival Hyperbola &amp; B-Plane (&Delta;V<sub>MOI</sub>)</span>
+        </div>
+        <span class="badge" id="iplStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#9737; PATCHED CONICS</span>
+    </div>
+
+    <div class="ipl-kpi-grid">
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Launch Energy C<sub>3</sub></span><span class="kpi-micro-badge" id="iplKpiC3Badge">---</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="iplKpiC3">---</span><span class="kpi-unit">km&sup2;/s&sup2;</span></div>
+            <div class="kpi-sub" id="iplKpiC3Sub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--green);">
+            <div class="kpi-top"><span class="kpi-label" id="iplKpiTmiLabel">Trans-Mars Injection &Delta;V<sub>TMI</sub></span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="iplKpiTmi">---</span><span class="kpi-unit">m/s</span></div>
+            <div class="kpi-sub" id="iplKpiTmiSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--amber);">
+            <div class="kpi-top"><span class="kpi-label" id="iplKpiMoiLabel">Arrival Capture &Delta;V<sub>MOI</sub></span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="iplKpiMoi">---</span><span class="kpi-unit">m/s</span></div>
+            <div class="kpi-sub" id="iplKpiMoiSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--purple);">
+            <div class="kpi-top"><span class="kpi-label">Asymptote DLA</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="iplKpiDla">---</span><span class="kpi-unit">deg</span></div>
+            <div class="kpi-sub" id="iplKpiDlaSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--red);">
+            <div class="kpi-top"><span class="kpi-label">Heliocentric TOF</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="iplKpiTof">---</span><span class="kpi-unit">days</span></div>
+            <div class="kpi-sub" id="iplKpiTofSub">---</div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotIplPorkchop" class="plot-container-rdv"></div>
+        <div id="plotIplHelio" class="plot-container-rdv"></div>
+    </div>
+</section>
         </div><!-- /sections-stack -->
     </main>
 </div><!-- /app-shell -->
@@ -1508,6 +1555,30 @@
             </div>
         </div>
 
+        <div class="form-section modal-cat-item" data-cat="orbit" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--amber)">16. Interplanetary Patched-Conics (Earth &rarr; Mars / Venus)</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Heliocentric Lambert &bull; Porkchop C<sub>3</sub> / V<sub>&infin;</sub> grid &bull; Departure &amp; Arrival Hyperbolae &bull; B-Plane</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="field">
+                    <label>Target Planet</label>
+                    <select id="iplTarget">
+                        <option value="0" selected>Mars</option>
+                        <option value="1">Venus</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Target Capture Periapsis Altitude [km]</label>
+                    <input type="number" id="iplCaptureAltKm" value="400" min="100" max="100000" step="50">
+                </div>
+                <div class="field">
+                    <label>Interplanetary Transfer TOF [days]</label>
+                    <input type="number" id="iplTofDays" value="210" min="150" max="320" step="5">
+                </div>
+            </div>
+        </div>
+
         <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
             <div class="form-section-header">
                 <h3 style="color:var(--purple)">14. Structural &amp; Slosh Dynamics (Flexible Solar Array Modes, Tank Sloshing &amp; CSI)</h3>
@@ -1578,16 +1649,16 @@
     const TAB_META = {
         overview:   { title: '\u{1F30D} Overview & 3D Astrodynamics', sub: 'Executive KPIs, 3D WGS84 inertial trajectory, 2D ground track & maneuver data sheet',
                       jumps: [['sec-1', '3D Globe'], ['sec-4', 'Ground Track'], ['sec-2', 'Data Sheet']] },
-        transfer:   { title: '\u{1F680} Transfer, Lambert & Cislunar', sub: 'Lambert \u0394V trade-off, Monte Carlo 3\u03C3 & TCM, CR3BP Lagrange points / Halo orbit',
-                      jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP']] },
+        transfer:   { title: '\u{1F680} Transfer, Lambert & Cislunar', sub: 'Lambert \u0394V trade-off, Monte Carlo 3\u03C3 & TCM, CR3BP Lagrange points / Halo orbit, interplanetary porkchop (C\u2083)',
+                      jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary']] },
         gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, reaction wheels, EKF navigation, structure/slosh CSI',
                       jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF'], ['sec-16', 'Flex/Slosh CSI']] },
         subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF & Payload)', sub: 'Kinematics/Radar/EPS, thermal & radiation, RF link budget, Walker constellation & cost',
                       jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost']] },
         safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL & FDIR)', sub: 'B-Plane collision avoidance, Sutton-Graves atmospheric re-entry, autonomous FDIR',
                       jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL Re-Entry'], ['sec-17', 'FDIR']] },
-        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 17',
-                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17']] }
+        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 18',
+                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18']] }
     };
 
     function resizeVisiblePlots() {
@@ -2097,6 +2168,12 @@
             const cis = data.cislunar_summary;
             if (cis.target_regime !== undefined) document.getElementById('cislunarRegime').value   = String(cis.target_regime);
             if (cis.halo_az_km !== undefined)    document.getElementById('cislunarHaloAzKm').value = Math.round(cis.halo_az_km);
+        }
+        if (data.interplanetary_summary) {
+            const ip = data.interplanetary_summary;
+            if (ip.target_planet !== undefined)  document.getElementById('iplTarget').value       = String(ip.target_planet);
+            if (ip.capture_alt_km !== undefined) document.getElementById('iplCaptureAltKm').value = Math.round(ip.capture_alt_km);
+            if (ip.design_tof_days !== undefined) document.getElementById('iplTofDays').value     = Math.round(ip.design_tof_days);
         }
         if (data.structural_csi_summary) {
             const csi = data.structural_csi_summary;
@@ -4594,6 +4671,11 @@
         }, { responsive: true, displaylogo: false });
 
         // =====================================================================
+        // 18. INTERPLANETARY PATCHED CONICS, PORKCHOP CONTOUR (C3) & HYPERBOLIC ESCAPE
+        // =====================================================================
+        renderInterplanetarySection(data);
+
+        // =====================================================================
         // 17. ONBOARD FDIR AUTONOMY, REDUNDANCY SWITCHOVER & SAFE-MODE RECOVERY
         // =====================================================================
         let fdirInfo = data.fdir_summary;
@@ -5117,6 +5199,7 @@
         sol.dv1_mag = vecNorm(dv1Eci);
         sol.dv2_mag = vecNorm(dv2Eci);
         sol.total_dv = sol.dv1_mag + sol.dv2_mag;
+        sol.v1_eci = v1Eci; sol.v2_eci = v2Eci;
         sol.burn1_dir_rtn = vecNormalize(eciVecToRtnC(r1Vec, v1Init, dv1Eci));
         sol.burn2_dir_rtn = vecNormalize(eciVecToRtnC(r2Vec, v2Targ, dv2Eci));
         sol.converged = true;
@@ -6469,7 +6552,7 @@
         const r3 = r2 * r;
         const r5 = r3 * r2;
         const r7 = r5 * r2;
-        const kJ2 = 1.5 * J2 * MU * R_EQ * R_EQ;
+        const kJ2 = 1.5 * EARTH_J2 * MU * R_EQ * R_EQ;
 
         const G = [[0,0,0],[0,0,0],[0,0,0]];
         const pos = [x, y, z];
@@ -7862,6 +7945,298 @@
         statusEl.innerHTML = `&#9989; <b>NORAD #${res.sat_num} Decoded:</b> a = ${res.sma_km.toFixed(2)} km (h = ${res.alt_km.toFixed(1)} km) &bull; e = ${res.ecc.toFixed(7)} &bull; i = ${res.inc_deg.toFixed(4)}&deg; &bull; &Omega; = ${res.raan_deg.toFixed(2)}&deg; &bull; &theta; = ${res.true_anom_deg.toFixed(2)}&deg; (${res.mean_motion_rev_day.toFixed(4)} rev/day)`;
     }
 
+    // =====================================================================
+    // SPRINT 24: INTERPLANETARY PATCHED CONICS, PORKCHOP GRID (C3 / V_inf) & B-PLANE (JS mirror of mission_analysis.c)
+    // Circular coplanar ephemerides (ecliptic), synthetic day-0 phases identical to the C11 engine.
+    // =====================================================================
+    const IPL = {
+        SUN_MU: 1.3271244e11, AU: 149597870.7, OBL_DEG: 23.4392911, EARTH_MU: 398600.4418, EARTH_R: 6378.137,
+        NDEP: 37, NTOF: 35, DEP_MAX: 180.0, TOF_MIN: 150.0, TOF_MAX: 320.0,
+        EARTH_LON0: 0.0,
+        PLANETS: [
+            { name: 'Mars',  a_au: 1.523679, mu: 42828.375,  R: 3389.5, lon0: 85.0 },
+            { name: 'Venus', a_au: 0.723332, mu: 324858.592, R: 6051.8, lon0: -136.0 }
+        ]
+    };
+
+    function iplState(aAu, lon0Deg, day) {
+        const a = aAu * IPL.AU;
+        const n = Math.sqrt(IPL.SUN_MU / (a * a * a));
+        const lon = lon0Deg * DEG2RAD + n * day * 86400.0;
+        const vc = Math.sqrt(IPL.SUN_MU / a);
+        return {
+            r: { x: a * Math.cos(lon), y: a * Math.sin(lon), z: 0.0 },
+            v: { x: -vc * Math.sin(lon), y: vc * Math.cos(lon), z: 0.0 }
+        };
+    }
+
+    function iplPropagatePosition(r0, v0, dt, mu) {
+        const r0n = vecNorm(r0);
+        const vr0 = vecDot(r0, v0) / r0n;
+        const alpha = 2.0 / r0n - vecDot(v0, v0) / mu;
+        const sm = Math.sqrt(mu);
+        let chi = Math.abs(alpha) < 1e-18 ? sm * dt / r0n : sm * Math.abs(alpha) * dt;
+        for (let it = 0; it < 80; it++) {
+            const z = alpha * chi * chi;
+            const C = stumpffC(z), S = stumpffS(z);
+            const F  = r0n * vr0 / sm * chi * chi * C + (1.0 - alpha * r0n) * chi * chi * chi * S + r0n * chi - sm * dt;
+            const dF = r0n * vr0 / sm * chi * (1.0 - z * S) + (1.0 - alpha * r0n) * chi * chi * C + r0n;
+            if (Math.abs(dF) < 1e-14) break;
+            const d = F / dF;
+            chi -= d;
+            if (Math.abs(d) < 1e-9) break;
+        }
+        const z = alpha * chi * chi;
+        const C = stumpffC(z), S = stumpffS(z);
+        const f = 1.0 - chi * chi / r0n * C;
+        const g = dt - chi * chi * chi / sm * S;
+        return vecAdd(vecScale(r0, f), vecScale(v0, g));
+    }
+
+    function iplEvalCell(pl, rPark, rCap, dep, tof) {
+        const E = iplState(1.0, IPL.EARTH_LON0, dep);
+        const T = iplState(pl.a_au, pl.lon0, dep + tof);
+        const sol = solveLambertUniversalC(E.r, E.v, T.r, T.v, tof * 86400.0, IPL.SUN_MU, true);
+        if (!sol.converged) return null;
+        const vinfD = vecSub(sol.v1_eci, E.v);
+        const vinfA = vecSub(sol.v2_eci, T.v);
+        const vd = vecNorm(vinfD), va = vecNorm(vinfA);
+        if (!isFinite(vd) || !isFinite(va) || vd > 15.0 || va > 25.0) return null;
+        const dvTmi = (Math.sqrt(vd * vd + 2.0 * IPL.EARTH_MU / rPark) - Math.sqrt(IPL.EARTH_MU / rPark)) * 1000.0;
+        const dvMoi = (Math.sqrt(va * va + 2.0 * pl.mu / rCap) - Math.sqrt(pl.mu / rCap)) * 1000.0;
+        return { dep, tof, c3: vd * vd, vinf_dep: vd, vinf_arr: va, dv_tmi_ms: dvTmi, dv_moi_ms: dvMoi,
+                 dv_tot_ms: dvTmi + dvMoi, v1: sol.v1_eci, r1: E.r, vinf_vec: vinfD, rE: E.r, rT: T.r };
+    }
+
+    function simulateInterplanetaryJS(rParkKm, planetIdx, captureAltKm, tofDays) {
+        const pl = IPL.PLANETS[planetIdx === 1 ? 1 : 0];
+        let capAlt = parseFloat(captureAltKm);
+        if (!(capAlt >= 100.0)) capAlt = 400.0;
+        capAlt = Math.min(100000.0, capAlt);
+        let tof = parseFloat(tofDays);
+        if (!(tof >= IPL.TOF_MIN)) tof = IPL.TOF_MIN;
+        tof = Math.min(IPL.TOF_MAX, tof);
+        let rPark = rParkKm;
+        if (!(rPark > IPL.EARTH_R + 100.0)) rPark = IPL.EARTH_R + 400.0;
+        const rCap = pl.R + capAlt;
+
+        const depDays = [], tofDaysAx = [];
+        for (let i = 0; i < IPL.NDEP; i++) depDays.push(+(IPL.DEP_MAX * i / (IPL.NDEP - 1)).toFixed(1));
+        for (let j = 0; j < IPL.NTOF; j++) tofDaysAx.push(+(IPL.TOF_MIN + (IPL.TOF_MAX - IPL.TOF_MIN) * j / (IPL.NTOF - 1)).toFixed(1));
+        const mk = () => tofDaysAx.map(() => depDays.map(() => null));
+        const gC3 = mk(), gVa = mk(), gTmi = mk(), gMoi = mk(), gTot = mk();
+        let minC3 = { v: 1e30, dep: 0, tof: 0 }, minDv = { v: 1e30, dep: 0, tof: 0 };
+        tofDaysAx.forEach((tj, j) => depDays.forEach((di, i) => {
+            const c = iplEvalCell(pl, rPark, rCap, di, tj);
+            if (!c) return;
+            gC3[j][i] = +c.c3.toFixed(3); gVa[j][i] = +c.vinf_arr.toFixed(3);
+            gTmi[j][i] = +c.dv_tmi_ms.toFixed(3); gMoi[j][i] = +c.dv_moi_ms.toFixed(3); gTot[j][i] = +c.dv_tot_ms.toFixed(3);
+            if (c.c3 < minC3.v) minC3 = { v: c.c3, dep: di, tof: tj };
+            if (c.dv_tot_ms < minDv.v) minDv = { v: c.dv_tot_ms, dep: di, tof: tj };
+        }));
+
+        let best = null;
+        for (let d = 0; d <= IPL.DEP_MAX; d++) {
+            const c = iplEvalCell(pl, rPark, rCap, d, tof);
+            if (c && (!best || c.dv_tot_ms < best.dv_tot_ms)) best = c;
+        }
+        if (!best) return { interplanetary_summary: null, porkchop_grid: null, traj_interplanetary: [] };
+
+        const eps = IPL.OBL_DEG * DEG2RAD, vi = best.vinf_vec;
+        const ux = vi.x, uy = vi.y * Math.cos(eps) - vi.z * Math.sin(eps), uz = vi.y * Math.sin(eps) + vi.z * Math.cos(eps);
+        const un = Math.sqrt(ux * ux + uy * uy + uz * uz);
+        let rla = Math.atan2(uy, ux) * RAD2DEG; if (rla < 0) rla += 360.0;
+        const va = best.vinf_arr, vd = best.vinf_dep;
+        const bPlane = rCap * Math.sqrt(1.0 + 2.0 * pl.mu / (rCap * va * va));
+        const eDep = 1.0 + rPark * vd * vd / IPL.EARTH_MU;
+        const eArr = 1.0 + rCap * va * va / pl.mu;
+        const r1n = vecNorm(best.r1);
+        const en = 0.5 * vecDot(best.v1, best.v1) - IPL.SUN_MU / r1n;
+        const aKm = -IPL.SUN_MU / (2.0 * en);
+        const h = vecCross(best.r1, best.v1);
+        const e2 = 1.0 - (vecDot(h, h) / IPL.SUN_MU) / aKm;
+        const ca = Math.max(-1, Math.min(1, vecDot(best.rE, best.rT) / (vecNorm(best.rE) * vecNorm(best.rT))));
+        const ang = Math.acos(ca) * RAD2DEG;
+        const trAng = vecCross(best.rE, best.rT).z >= 0 ? ang : 360.0 - ang;
+
+        const n = 121, traj = [];
+        for (let k = 0; k < n; k++) {
+            const t = best.tof * 86400.0 * k / (n - 1);
+            const r = k === 0 ? best.r1 : iplPropagatePosition(best.r1, best.v1, t, IPL.SUN_MU);
+            traj.push({ t_days: +(t / 86400.0).toFixed(2), x_au: +(r.x / IPL.AU).toFixed(6), y_au: +(r.y / IPL.AU).toFixed(6), z_au: +(r.z / IPL.AU).toFixed(6) });
+        }
+        const last = traj[n - 1];
+        const resid = Math.hypot(last.x_au * IPL.AU - best.rT.x, last.y_au * IPL.AU - best.rT.y, last.z_au * IPL.AU - best.rT.z);
+
+        return {
+            interplanetary_summary: {
+                target_planet: planetIdx === 1 ? 1 : 0, target_name: pl.name, capture_alt_km: capAlt, design_tof_days: tof,
+                mu_target: pl.mu, r_target_km: pl.R, target_sma_au: pl.a_au,
+                soi_earth_km: Math.round(IPL.AU * Math.pow(IPL.EARTH_MU / IPL.SUN_MU, 0.4)),
+                soi_target_km: Math.round(pl.a_au * IPL.AU * Math.pow(pl.mu / IPL.SUN_MU, 0.4)),
+                r_park_km: +rPark.toFixed(3), r_capture_km: +rCap.toFixed(3), opt_dep_day: best.dep,
+                c3_opt: +best.c3.toFixed(4), vinf_dep_kms: +vd.toFixed(4), dla_deg: +(Math.asin(uz / un) * RAD2DEG).toFixed(3), rla_deg: +rla.toFixed(3),
+                dv_tmi_ms: +best.dv_tmi_ms.toFixed(2), vinf_arr_kms: +va.toFixed(4), dv_moi_ms: +best.dv_moi_ms.toFixed(2),
+                dv_total_ms: +best.dv_tot_ms.toFixed(2), tof_days: best.tof, b_plane_km: +bPlane.toFixed(2),
+                hyp_e_dep: +eDep.toFixed(5), hyp_e_arr: +eArr.toFixed(5), turn_angle_arr_deg: +(2.0 * Math.asin(1.0 / eArr) * RAD2DEG).toFixed(3),
+                transfer_a_au: +(aKm / IPL.AU).toFixed(5), transfer_e: +(e2 > 0 ? Math.sqrt(e2) : 0).toFixed(5),
+                transfer_angle_deg: +trAng.toFixed(3), lambert_residual_km: +resid.toFixed(4),
+                grid_min_c3: +minC3.v.toFixed(4), grid_min_c3_dep: minC3.dep, grid_min_c3_tof: minC3.tof,
+                grid_min_dv_ms: +minDv.v.toFixed(2), grid_min_dv_dep: minDv.dep, grid_min_dv_tof: minDv.tof
+            },
+            porkchop_grid: { dep_days: depDays, tof_days: tofDaysAx, c3: gC3, vinf_arr: gVa, dv_tmi_ms: gTmi, dv_moi_ms: gMoi, dv_total_ms: gTot },
+            traj_interplanetary: traj
+        };
+    }
+
+    function renderInterplanetarySection(data) {
+        let ip = data.interplanetary_summary, pg = data.porkchop_grid, tr = data.traj_interplanetary;
+        if (!ip || !pg || !tr || !tr.length) {
+            const ir = data.initial_report || {};
+            const rPark = (ir.sma_km && ir.ecc !== undefined) ? ir.sma_km * (1.0 - ir.ecc) : R_EQ + 400.0;
+            const fb = simulateInterplanetaryJS(rPark, 0, 400.0, 210.0);
+            ip = fb.interplanetary_summary; pg = fb.porkchop_grid; tr = fb.traj_interplanetary;
+            data.interplanetary_summary = ip; data.porkchop_grid = pg; data.traj_interplanetary = tr;
+        }
+        if (!ip) return;
+        const pn = ip.target_name;
+        const f1 = (v, d) => Number(v).toFixed(d);
+
+        const badge = document.getElementById('iplStatusBadge');
+        badge.innerHTML = `&#9737; PATCHED CONICS &bull; EARTH &rarr; ${pn.toUpperCase()} &bull; LAUNCH DAY +${f1(ip.opt_dep_day, 0)}`;
+
+        document.getElementById('iplKpiTmiLabel').innerHTML = `Trans-${pn} Injection &Delta;V<sub>TMI</sub>`;
+        document.getElementById('iplKpiMoiLabel').innerHTML = `${pn} Orbit Insertion &Delta;V<sub>${pn === 'Venus' ? 'VOI' : 'MOI'}</sub>`;
+        document.getElementById('iplKpiC3').textContent = f1(ip.c3_opt, 2);
+        document.getElementById('iplKpiC3Badge').textContent = `v\u221E ${f1(ip.vinf_dep_kms, 2)} km/s`;
+        document.getElementById('iplKpiC3Sub').textContent = `Grid min C\u2083 = ${f1(ip.grid_min_c3, 2)} (d+${f1(ip.grid_min_c3_dep, 0)}, TOF ${f1(ip.grid_min_c3_tof, 0)} d)`;
+        document.getElementById('iplKpiTmi').textContent = f1(ip.dv_tmi_ms, 0);
+        document.getElementById('iplKpiTmiSub').textContent = `From r_p = ${f1(ip.r_park_km, 0)} km | e_dep = ${f1(ip.hyp_e_dep, 3)}`;
+        document.getElementById('iplKpiMoi').textContent = f1(ip.dv_moi_ms, 0);
+        document.getElementById('iplKpiMoiSub').textContent = `v\u221E,arr ${f1(ip.vinf_arr_kms, 2)} km/s | B = ${Number(ip.b_plane_km).toLocaleString('en-US', {maximumFractionDigits: 0})} km`;
+        document.getElementById('iplKpiDla').textContent = f1(ip.dla_deg, 2);
+        document.getElementById('iplKpiDlaSub').textContent = `RLA = ${f1(ip.rla_deg, 2)}\u00B0 | total \u0394V = ${f1(ip.dv_total_ms, 0)} m/s`;
+        document.getElementById('iplKpiTof').textContent = f1(ip.tof_days, 0);
+        document.getElementById('iplKpiTofSub').textContent = `Transfer angle ${f1(ip.transfer_angle_deg, 1)}\u00B0 | a = ${f1(ip.transfer_a_au, 3)} AU, e = ${f1(ip.transfer_e, 3)}`;
+
+        // ---- Left: Porkchop contour (C3 filled + v_inf,arr lines) ----
+        const c3Min = ip.grid_min_c3;
+        const c3Start = Math.floor(c3Min / 2.0) * 2.0;
+        const c3Size = 4.0, c3End = c3Start + 16 * c3Size;
+        const c3Clamp = pg.c3.map(row => row.map(v => v === null ? null : Math.min(v, c3End + c3Size)));
+        const vaFlat = [].concat(...pg.vinf_arr).filter(v => v !== null);
+        const vaMin = Math.floor(Math.min(...vaFlat) * 2.0) / 2.0;
+        Plotly.react('plotIplPorkchop', [
+            {
+                type: 'contour', x: pg.dep_days, y: pg.tof_days, z: c3Clamp, text: pg.c3,
+                name: 'C\u2083 [km\u00B2/s\u00B2]', showlegend: true,
+                contours: { start: c3Start, end: c3End, size: c3Size, coloring: 'heatmap', showlines: true },
+                line: { color: 'rgba(15,23,42,0.55)', width: 0.8 }, connectgaps: false,
+                colorscale: 'Viridis', reversescale: true,
+                colorbar: { title: { text: 'C\u2083 [km\u00B2/s\u00B2]', font: { color: '#e2e8f0', size: 10 } }, tickfont: { color: '#e2e8f0', size: 9 }, len: 0.9, thickness: 12 },
+                hovertemplate: 'Launch offset = %{x} d<br>TOF = %{y} d<br>C\u2083 = %{text} km\u00B2/s\u00B2<extra>Porkchop</extra>'
+            },
+            {
+                type: 'contour', x: pg.dep_days, y: pg.tof_days, z: pg.vinf_arr,
+                name: 'v\u221E,arr [km/s]', showlegend: true, showscale: false,
+                contours: { start: vaMin, end: vaMin + 12.0, size: 0.5, coloring: 'lines', showlabels: true, labelfont: { color: '#ffab00', size: 9 } },
+                line: { color: '#ffab00', width: 1.3, dash: 'dot' }, connectgaps: false,
+                hovertemplate: 'Launch offset = %{x} d<br>TOF = %{y} d<br>v\u221E,arr = %{z} km/s<extra>Arrival</extra>'
+            },
+            {
+                x: [pg.dep_days[0], pg.dep_days[pg.dep_days.length - 1]], y: [ip.tof_days, ip.tof_days], mode: 'lines',
+                name: `Design TOF = ${f1(ip.tof_days, 0)} d`, line: { color: 'rgba(255,255,255,0.45)', width: 1, dash: 'dash' }, hoverinfo: 'skip'
+            },
+            {
+                x: [ip.grid_min_c3_dep], y: [ip.grid_min_c3_tof], mode: 'markers', name: `Grid min C\u2083 = ${f1(ip.grid_min_c3, 2)}`,
+                marker: { size: 11, color: '#00e676', symbol: 'diamond', line: { color: '#fff', width: 1.5 } },
+                hovertemplate: 'Grid min C\u2083<br>d+%{x}, TOF %{y} d<extra></extra>'
+            },
+            {
+                x: [ip.opt_dep_day], y: [ip.tof_days], mode: 'markers', name: `Selected Design (C\u2083 = ${f1(ip.c3_opt, 2)}, \u0394V = ${f1(ip.dv_total_ms, 0)} m/s)`,
+                marker: { size: 14, color: '#ff1744', symbol: 'star', line: { color: '#fff', width: 1.5 } },
+                hovertemplate: `<b>Selected design point</b><br>Launch d+${f1(ip.opt_dep_day, 0)} | TOF ${f1(ip.tof_days, 0)} d<br>C\u2083 = ${f1(ip.c3_opt, 2)} km\u00B2/s\u00B2<br>v\u221E,arr = ${f1(ip.vinf_arr_kms, 2)} km/s<extra></extra>`
+            }
+        ], {
+            title: { text: `Earth \u2192 ${pn} Porkchop: C\u2083 (filled) & v\u221E,arr (dotted)`, font: { color: '#e2e8f0', size: 12.5 } },
+            margin: { l: 58, r: 20, t: 40, b: 50 },
+            xaxis: { title: 'Launch Window Offset [days]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Time of Flight [days]', color: '#e2e8f0', gridcolor: '#222d42' },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.0 }, bgcolor: 'rgba(17,22,34,0.86)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---- Right: heliocentric ecliptic view (AU) + departure hyperbola inset ----
+        const pl = IPL.PLANETS[ip.target_planet === 1 ? 1 : 0];
+        const circ = (rAu) => { const x = [], y = []; for (let k = 0; k <= 180; k++) { const a = 2 * Math.PI * k / 180; x.push(rAu * Math.cos(a)); y.push(rAu * Math.sin(a)); } return { x, y }; };
+        const cE = circ(1.0), cT = circ(ip.target_sma_au);
+        const E0 = iplState(1.0, IPL.EARTH_LON0, ip.opt_dep_day).r;
+        const T1 = iplState(pl.a_au, pl.lon0, ip.opt_dep_day + ip.tof_days).r;
+        const T0 = iplState(pl.a_au, pl.lon0, ip.opt_dep_day).r;
+        const E1 = iplState(1.0, IPL.EARTH_LON0, ip.opt_dep_day + ip.tof_days).r;
+        const au = (v) => v / IPL.AU;
+
+        // Departure hyperbola (planetocentric, orbital plane), km
+        const rp = ip.r_park_km, eH = ip.hyp_e_dep, pH = rp * (1.0 + eH), rCut = 12.0 * rp;
+        const nuMax = Math.acos(Math.max(-1, Math.min(1, (pH / rCut - 1.0) / eH)));
+        const hx = [], hy = [];
+        for (let k = 0; k <= 80; k++) { const nu = -nuMax + 2 * nuMax * k / 80; const r = pH / (1.0 + eH * Math.cos(nu)); hx.push(r * Math.cos(nu)); hy.push(r * Math.sin(nu)); }
+        const nuInf = Math.acos(-1.0 / eH);
+        const ec = circ(1.0); const eX = ec.x.map(v => v * IPL.EARTH_R), eY = ec.y.map(v => v * IPL.EARTH_R);
+        const pkX = ec.x.map(v => v * rp), pkY = ec.y.map(v => v * rp);
+        const hLim = rCut * 1.05;
+        const hxLo = Math.min(...hx, -IPL.EARTH_R), hxHi = Math.max(...hx), hyLo = Math.min(...hy), hyHi = Math.max(...hy);
+        const hSpan = Math.max(hxHi - hxLo, hyHi - hyLo) * 1.12, hcx = 0.5 * (hxHi + hxLo), hcy = 0.5 * (hyHi + hyLo);
+        const hxR = [hcx - hSpan / 2, hcx + hSpan / 2], hyR = [hcy - hSpan / 2, hcy + hSpan / 2];
+
+        Plotly.react('plotIplHelio', [
+            { x: cE.x, y: cE.y, mode: 'lines', name: 'Earth Orbit (1.000 AU)', line: { color: '#38bdf8', width: 1.6 }, hoverinfo: 'skip' },
+            { x: cT.x, y: cT.y, mode: 'lines', name: `${pn} Orbit (${f1(ip.target_sma_au, 3)} AU)`, line: { color: pn === 'Venus' ? '#ffd54f' : '#ff7043', width: 1.6 }, hoverinfo: 'skip' },
+            { x: tr.map(p => p.x_au), y: tr.map(p => p.y_au), mode: 'lines', name: `Lambert Transfer (a = ${f1(ip.transfer_a_au, 3)} AU, e = ${f1(ip.transfer_e, 3)}, TOF ${f1(ip.tof_days, 0)} d)`,
+              line: { color: '#00e676', width: 3.0 }, hovertemplate: 'x = %{x:.3f} AU<br>y = %{y:.3f} AU<extra>Transfer</extra>' },
+            { x: [0], y: [0], mode: 'markers+text', name: 'Sun', marker: { size: 14, color: '#ffeb3b', line: { color: '#ff9800', width: 2 } }, text: ['SUN'], textposition: 'bottom center', textfont: { color: '#ffeb3b', size: 9.5 }, hoverinfo: 'skip' },
+            { x: [au(E0.x)], y: [au(E0.y)], mode: 'markers+text', name: `Earth @ launch (d+${f1(ip.opt_dep_day, 0)})`, marker: { size: 10, color: '#38bdf8', line: { color: '#fff', width: 1.5 } }, text: ['Earth (dep)'], textposition: 'top right', textfont: { color: '#38bdf8', size: 9 } },
+            { x: [au(T1.x)], y: [au(T1.y)], mode: 'markers+text', name: `${pn} @ arrival`, marker: { size: 10, color: '#ff7043', line: { color: '#fff', width: 1.5 } }, text: [`${pn} (arr)`], textposition: 'top left', textfont: { color: '#ff7043', size: 9 } },
+            { x: [au(T0.x), au(E1.x)], y: [au(T0.y), au(E1.y)], mode: 'markers', name: `${pn} @ launch / Earth @ arrival`, marker: { size: 7, color: 'rgba(148,163,184,0.7)', symbol: 'circle-open', line: { width: 1.5 } }, hoverinfo: 'skip' },
+            // inset: departure escape hyperbola
+            { x: eX, y: eY, xaxis: 'x2', yaxis: 'y2', mode: 'lines', name: 'Earth surface', line: { color: '#38bdf8', width: 1.2 }, showlegend: false, hoverinfo: 'skip' },
+            { x: pkX, y: pkY, xaxis: 'x2', yaxis: 'y2', mode: 'lines', name: `Parking orbit r_p = ${f1(rp, 0)} km`, line: { color: '#94a3b8', width: 1, dash: 'dot' }, showlegend: false, hoverinfo: 'skip' },
+            { x: hx, y: hy, xaxis: 'x2', yaxis: 'y2', mode: 'lines', name: 'Departure hyperbola', line: { color: '#ff1744', width: 2.2 }, showlegend: false,
+              hovertemplate: 'x = %{x:.0f} km<br>y = %{y:.0f} km<extra>Escape hyperbola</extra>' },
+            { x: [0, hLim * Math.cos(nuInf) * 0.9], y: [0, hLim * Math.sin(nuInf) * 0.9], xaxis: 'x2', yaxis: 'y2', mode: 'lines', name: 'Asymptote', line: { color: '#ffab00', width: 1, dash: 'dash' }, showlegend: false, hoverinfo: 'skip' }
+        ], {
+            title: { text: `Heliocentric Transfer Earth \u2192 ${pn} (ecliptic, AU) & Departure Escape Hyperbola`, font: { color: '#e2e8f0', size: 12.5 } },
+            margin: { l: 52, r: 16, t: 40, b: 46 },
+            xaxis: { title: 'Ecliptic X [AU]', color: '#e2e8f0', gridcolor: '#222d42', zerolinecolor: '#334155', range: [-1.8, 1.8], domain: [0, 1] },
+            yaxis: { title: 'Ecliptic Y [AU]', color: '#e2e8f0', gridcolor: '#222d42', zerolinecolor: '#334155', range: [-1.8, 1.8], scaleanchor: 'x', scaleratio: 1 },
+            xaxis2: { domain: [0.70, 0.98], anchor: 'y2', range: hxR, color: '#94a3b8', showgrid: false, tickfont: { size: 8 }, title: { text: 'Hyperbola [km]', font: { size: 8.5 } } },
+            yaxis2: { domain: [0.04, 0.34], anchor: 'x2', range: hyR, color: '#94a3b8', showgrid: false, tickfont: { size: 8 } },
+            annotations: [{
+                xref: 'paper', yref: 'paper', x: 0.99, y: 0.37, xanchor: 'right', yanchor: 'bottom', showarrow: false,
+                text: `C\u2083 = ${f1(ip.c3_opt, 2)} | DLA ${f1(ip.dla_deg, 1)}\u00B0 | e = ${f1(ip.hyp_e_dep, 2)}`, font: { color: '#ff8a80', size: 9 }
+            }],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.0 }, bgcolor: 'rgba(17,22,34,0.86)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+    }
+
+    function iplRecomputeFromModal() {
+        if (!globalData) return;
+        const ir = globalData.initial_report || {};
+        const rPark = (ir.sma_km && ir.ecc !== undefined) ? ir.sma_km * (1.0 - ir.ecc) : R_EQ + 400.0;
+        const res = simulateInterplanetaryJS(
+            rPark,
+            parseInt(document.getElementById('iplTarget').value, 10) || 0,
+            parseFloat(document.getElementById('iplCaptureAltKm').value),
+            parseFloat(document.getElementById('iplTofDays').value)
+        );
+        globalData.interplanetary_summary = res.interplanetary_summary;
+        globalData.porkchop_grid = res.porkchop_grid;
+        globalData.traj_interplanetary = res.traj_interplanetary;
+        renderInterplanetarySection(globalData);
+        resizeVisiblePlots();
+    }
+
     function simulateFdirAndSafeModeJS(jPitchKgm2, steadyPointErrDeg, faultScenario, faultInjectTimeS) {
         const scen = parseInt(faultScenario, 10) || 0;
         const tFault = Math.max(3.0, Math.min(55.0, parseFloat(faultInjectTimeS) || 12.0));
@@ -8445,6 +8820,14 @@
             adcsJyy, adcsRes.adcs_summary.steady_point_err_deg, fdirScenario, fdirInjectTime
         );
 
+        // Sprint 24: Interplanetary Patched Conics (Earth -> Mars / Venus), Porkchop Grid & B-Plane
+        const iplRes = simulateInterplanetaryJS(
+            kepInit.a * (1.0 - kepInit.e),
+            parseInt(document.getElementById('iplTarget').value, 10) || 0,
+            parseFloat(document.getElementById('iplCaptureAltKm').value),
+            parseFloat(document.getElementById('iplTofDays').value)
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -8475,6 +8858,9 @@
             cislunar_summary: cisRes.cislunar_summary,
             structural_csi_summary: csiRes.structural_csi_summary,
             fdir_summary: fdirRes.fdir_summary,
+            interplanetary_summary: iplRes.interplanetary_summary,
+            porkchop_grid: iplRes.porkchop_grid,
+            traj_interplanetary: iplRes.traj_interplanetary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -8506,6 +8892,9 @@
     document.getElementById('btnOpenModal').addEventListener('click', () => {
         validateModalOrbits(false);
         document.getElementById('inputModal').classList.add('open');
+    });
+    ['iplTarget', 'iplCaptureAltKm', 'iplTofDays'].forEach(id => {
+        document.getElementById(id).addEventListener('change', iplRecomputeFromModal);
     });
     document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
     document.getElementById('btnCancelModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));

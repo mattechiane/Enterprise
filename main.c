@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 23: AUTONOMOUS FDIR, TLE & CCSDS OEM   \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 24: INTERPLANETARY PATCHED CONICS, PORKCHOP & B-PLANE \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -156,6 +156,14 @@ int main(void) {
     const char *tle_l2 = "2 25544  51.6416  24.8512 0006703 130.5360 229.6085 15.49560532421537";
     bool tle_ok = parse_norad_tle(tle_l1, tle_l2, &kep_tle_test);
 
+    // 16. SPRINT 24: INTERPLANETARY PATCHED CONICS (EARTH -> MARS), PORKCHOP GRID & B-PLANE
+    static InterplanetaryReport ipl;
+    InterplanetarySpec ipl_spec = {
+        .target         = PLANET_MARS,
+        .capture_alt_km = 400.0,   // Periasse di cattura 400 km sopra la superficie
+        .tof_days       = 210.0    // TOF eliocentrico di progetto
+    };
+    bool ipl_ok = compute_interplanetary_porkchop_and_transfer(orb_initial, ipl_spec, &ipl);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -308,15 +316,29 @@ int main(void) {
     printf("  * CCSDS OEM Ephemeris   : %s (%d EME2000 State Vectors)\n\n",
            fdir.ccsds_oem_status, fdir.oem_state_vectors);
 
+    printf("[INTERPLANETARY PATCHED CONICS: EARTH -> %s, PORKCHOP & B-PLANE TARGETING]\n", ipl.target_name);
+    if (ipl_ok) {
+        printf("  * Launch Window         : day +%.0f | TOF = %.0f d | transfer angle = %.1f deg | a = %.4f AU, e = %.4f\n",
+               ipl.opt_dep_day, ipl.opt_tof_days, ipl.transfer_angle_deg, ipl.transfer_a_au, ipl.transfer_e);
+        printf("  * Departure Hyperbola   : C3 = %.3f km2/s2 (v_inf = %.3f km/s) | DLA = %.2f deg, RLA = %.2f deg | dV_TMI = %.1f m/s\n",
+               ipl.c3_opt, ipl.vinf_dep_kms, ipl.dla_deg, ipl.rla_deg, ipl.dv_tmi_ms);
+        printf("  * Arrival Hyperbola     : v_inf = %.3f km/s | B-plane B = %.0f km | dV_MOI = %.1f m/s | Total dV = %.1f m/s\n",
+               ipl.vinf_arr_kms, ipl.b_plane_km, ipl.dv_moi_ms, ipl.dv_total_ms);
+        printf("  * Porkchop Grid Minima  : C3_min = %.2f km2/s2 (dep +%.0f d, TOF %.0f d) | dV_min = %.0f m/s (dep +%.0f d, TOF %.0f d)\n",
+               ipl.grid_min_c3, ipl.grid_min_c3_dep, ipl.grid_min_c3_tof, ipl.grid_min_dv_ms, ipl.grid_min_dv_dep, ipl.grid_min_dv_tof);
+        printf("  * Lambert Closure Check : arrival position residual = %.3f km\n\n", ipl.lambert_residual_km);
+    } else {
+        printf("  * No valid Lambert solution for the selected TOF.\n\n");
+    }
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &milano, &sc)) {
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, &milano, &sc)) {
         printf("[SUCCESS] 'mission_report.json' updated with Autonomous FDIR, NORAD TLE, CCSDS OEM & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

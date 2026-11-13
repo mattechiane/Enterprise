@@ -843,4 +843,88 @@ typedef struct {
     double air_density;
 } SpaceEnvironment;
 
+// ==========================================
+// 5M. SPRINT 24: INTERPLANETARY PATCHED CONICS, PORKCHOP PLOT & B-PLANE TARGETING
+// ==========================================
+#define SUN_MU            1.3271244e11          // Parametro gravitazionale eliocentrico mu_sun [km^3/s^2]
+#define AU_KM             149597870.7           // Unita' Astronomica [km]
+#define EARTH_ECLIPTIC_OBLIQUITY_DEG 23.4392911 // Obliquita' dell'eclittica (J2000) [deg]
+#define MARS_MU           42828.375             // mu Marte [km^3/s^2]
+#define MARS_RADIUS_KM    3389.5                // Raggio medio Marte [km]
+#define MARS_SMA_AU       1.523679              // Semiasse maggiore Marte [AU]
+#define VENUS_MU          324858.592            // mu Venere [km^3/s^2]
+#define VENUS_RADIUS_KM   6051.8                // Raggio Venere [km]
+#define VENUS_SMA_AU      0.723332              // Semiasse maggiore Venere [AU]
+#define PORK_N_DEP        37                    // Punti griglia partenza: 0..180 d, passo 5 d
+#define PORK_N_TOF        35                    // Punti griglia TOF: 150..320 d, passo 5 d
+#define PORK_DEP_MAX_DAYS 180.0
+#define PORK_TOF_MIN_DAYS 150.0
+#define PORK_TOF_MAX_DAYS 320.0
+#define MAX_INTERPLANETARY_SAMPLES 181
+
+typedef enum {
+    PLANET_MARS  = 0,
+    PLANET_VENUS = 1
+} InterplanetaryTarget;
+
+typedef struct {
+    InterplanetaryTarget target;      // Pianeta di destinazione
+    double capture_alt_km;            // Altitudine del periasse di cattura (default 400 km)
+    double tof_days;                  // TOF di progetto del trasferimento eliocentrico [days] (default 210)
+} InterplanetarySpec;
+
+typedef struct {
+    double dep_day;                   // Offset di partenza [days]
+    double tof_day;                   // Tempo di volo [days]
+    double c3;                        // C3 = v_inf_dep^2 [km^2/s^2]
+    double vinf_dep;                  // |v_inf| partenza [km/s]
+    double vinf_arr;                  // |v_inf| arrivo [km/s]
+    double dv_tmi_ms;                 // Delta-V TMI [m/s]
+    double dv_moi_ms;                 // Delta-V MOI/VOI [m/s]
+    double dv_tot_ms;                 // TMI + MOI [m/s]
+    bool   valid;                     // Lambert convergente e fisicamente sensato
+} PorkchopGridPoint;
+
+typedef struct {
+    double t_days;                    // Giorni dalla partenza
+    double x_au, y_au, z_au;          // Posizione eliocentrica eclittica [AU]
+} HelioSample;
+
+typedef struct {
+    InterplanetarySpec spec;
+    char   target_name[16];           // "Mars" / "Venus"
+    double mu_target;                 // [km^3/s^2]
+    double r_target_km;               // raggio planetario [km]
+    double target_sma_au;             // [AU]
+    double soi_earth_km;              // Sfera d'influenza di Laplace Terra [km]
+    double soi_target_km;             // Sfera d'influenza di Laplace pianeta target [km]
+    double r_park_km;                 // Raggio del perigeo dell'orbita di parcheggio [km]
+    double r_capture_km;              // Raggio del periasse di cattura [km]
+
+    // Punto di progetto (TOF selezionato, miglior giorno di partenza = min DeltaV_tot)
+    double opt_dep_day;               // [days]
+    double opt_tof_days;              // [days]
+    double c3_opt;                    // [km^2/s^2]
+    double vinf_dep_kms;              // [km/s]
+    double dla_deg, rla_deg;          // Declinazione / Ascensione retta dell'asintoto di fuga [deg]
+    double dv_tmi_ms;                 // [m/s]
+    double vinf_arr_kms;              // [km/s]
+    double dv_moi_ms;                 // [m/s]
+    double dv_total_ms;               // [m/s]
+    double b_plane_km;                // Parametro d'impatto B [km]
+    double hyp_e_dep, hyp_e_arr;      // Eccentricita' delle iperboli di partenza / arrivo
+    double turn_angle_arr_deg;        // Angolo di deflessione all'arrivo [deg]
+    double transfer_a_au, transfer_e; // Elementi dell'ellisse di trasferimento
+    double transfer_angle_deg;        // Angolo di trasferimento eliocentrico [deg]
+    double lambert_residual_km;       // Residuo posizione di arrivo (verifica propagazione Kepler)
+
+    // Minimo globale della griglia
+    double grid_min_c3, grid_min_c3_dep, grid_min_c3_tof;
+    double grid_min_dv_ms, grid_min_dv_dep, grid_min_dv_tof;
+
+    PorkchopGridPoint grid[PORK_N_TOF][PORK_N_DEP];
+    int num_traj_samples;
+    HelioSample traj[MAX_INTERPLANETARY_SAMPLES];
+} InterplanetaryReport;
+
 #endif // ORBIT_TYPES_H

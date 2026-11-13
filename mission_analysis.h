@@ -154,4 +154,10 @@ FDIRReport simulate_fdir_and_safemode(ADCSReport adcs,
                                       ThermalReport tcs,
                                       FDIRSpec spec);
 
+// Sprint 24: Interplanetary Patched Conics (Earth -> Mars/Venus), Porkchop Grid (C3 / V_inf) & B-Plane Targeting
+// Ritorna false se nessuna soluzione Lambert valida esiste per il TOF di progetto.
+bool compute_interplanetary_porkchop_and_transfer(KeplerianElements orb_init,
+                                                  InterplanetarySpec spec,
+                                                  InterplanetaryReport *out);
+
 #endif // MISSION_ANALYSIS_H

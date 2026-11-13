@@ -3658,3 +3658,194 @@ FDIRReport simulate_fdir_and_safemode(ADCSReport adcs,
 
     return rep;
 }
+
+// =====================================================================================
+// SPRINT 24: INTERPLANETARY PATCHED CONICS, PORKCHOP GRID (C3 / V_inf) & B-PLANE TARGETING
+// Effemeridi planetarie: orbite circolari complanari (eclittica), fasi al giorno 0 sintetiche
+// scelte in modo da avere una finestra di lancio Hohmann-like dentro [0, 180] giorni.
+// =====================================================================================
+#define IPL_EARTH_LON0_DEG   0.0
+#define IPL_MARS_LON0_DEG   85.0
+#define IPL_VENUS_LON0_DEG -136.0
+
+typedef struct { double a_au, mu, radius, lon0_deg; } IplPlanet;
+
+static IplPlanet ipl_planet(InterplanetaryTarget t) {
+    IplPlanet p;
+    if (t == PLANET_VENUS) { p.a_au = VENUS_SMA_AU; p.mu = VENUS_MU; p.radius = VENUS_RADIUS_KM; p.lon0_deg = IPL_VENUS_LON0_DEG; }
+    else                   { p.a_au = MARS_SMA_AU;  p.mu = MARS_MU;  p.radius = MARS_RADIUS_KM;  p.lon0_deg = IPL_MARS_LON0_DEG;  }
+    return p;
+}
+
+// Posizione/velocita' eliocentrica [km, km/s] di un pianeta su orbita circolare al giorno "day"
+static void ipl_circular_state(double a_au, double lon0_deg, double day, Vector3D *r, Vector3D *v) {
+    double a = a_au * AU_KM;
+    double n = sqrt(SUN_MU / (a * a * a));                 // rad/s
+    double lon = lon0_deg * DEG2RAD + n * day * 86400.0;
+    double vc = sqrt(SUN_MU / a);
+    r->x = a * cos(lon);  r->y = a * sin(lon);  r->z = 0.0;
+    v->x = -vc * sin(lon); v->y = vc * cos(lon); v->z = 0.0;
+}
+
+// Propagazione Kepleriana a variabili universali (f & g) per l'arco eliocentrico
+static Vector3D ipl_propagate_position(Vector3D r0, Vector3D v0, double dt, double mu) {
+    double r0n = vec_norm(r0);
+    double vr0 = vec_dot(r0, v0) / r0n;
+    double alpha = 2.0 / r0n - vec_dot(v0, v0) / mu;      // 1/a
+    double chi = sqrt(mu) * fabs(alpha) * dt;
+    if (fabs(alpha) < 1e-18) chi = sqrt(mu) * dt / r0n;
+    for (int it = 0; it < 80; it++) {
+        double z = alpha * chi * chi;
+        double C = stumpff_C(z), S = stumpff_S(z);
+        double F = r0n * vr0 / sqrt(mu) * chi * chi * C + (1.0 - alpha * r0n) * chi * chi * chi * S + r0n * chi - sqrt(mu) * dt;
+        double dF = r0n * vr0 / sqrt(mu) * chi * (1.0 - z * S) + (1.0 - alpha * r0n) * chi * chi * C + r0n;
+        if (fabs(dF) < 1e-14) break;
+        double d = F / dF;
+        chi -= d;
+        if (fabs(d) < 1e-9) break;
+    }
+    double z = alpha * chi * chi;
+    double C = stumpff_C(z), S = stumpff_S(z);
+    double f = 1.0 - chi * chi / r0n * C;
+    double g = dt - chi * chi * chi / sqrt(mu) * S;
+    return vec_add(vec_scale(r0, f), vec_scale(v0, g));
+}
+
+// Valuta una cella (partenza, TOF): Lambert eliocentrico + iperboli planetocentriche
+static bool ipl_eval_cell(InterplanetaryTarget tgt, IplPlanet pl, double r_park, double r_cap,
+                          double dep_day, double tof_day, PorkchopGridPoint *out,
+                          Vector3D *v1_out, Vector3D *r1_out, Vector3D *vinf_dep_vec) {
+    Vector3D rE, vE, rT, vT;
+    (void)tgt;
+    ipl_circular_state(1.0, IPL_EARTH_LON0_DEG, dep_day, &rE, &vE);
+    ipl_circular_state(pl.a_au, pl.lon0_deg, dep_day + tof_day, &rT, &vT);
+
+    LambertSolution sol = solve_lambert_universal(rE, vE, rT, vT, tof_day * 86400.0, SUN_MU, true);
+    out->dep_day = dep_day; out->tof_day = tof_day; out->valid = false;
+    if (!sol.converged) return false;
+
+    Vector3D vinf_d = vec_sub(sol.v1_eci, vE);
+    Vector3D vinf_a = vec_sub(sol.v2_eci, vT);
+    double vd = vec_norm(vinf_d), va = vec_norm(vinf_a);
+    if (!isfinite(vd) || !isfinite(va) || vd > 15.0 || va > 25.0) return false;
+
+    out->vinf_dep = vd;
+    out->vinf_arr = va;
+    out->c3 = vd * vd;
+    double v_circ_e = sqrt(EARTH_MU / r_park);
+    double dv_tmi = sqrt(vd * vd + 2.0 * EARTH_MU / r_park) - v_circ_e;
+    double dv_moi = sqrt(va * va + 2.0 * pl.mu / r_cap) - sqrt(pl.mu / r_cap);   // cattura su orbita circolare r_cap
+    out->dv_tmi_ms = dv_tmi * 1000.0;
+    out->dv_moi_ms = dv_moi * 1000.0;
+    out->dv_tot_ms = out->dv_tmi_ms + out->dv_moi_ms;
+    out->valid = true;
+    if (v1_out) *v1_out = sol.v1_eci;
+    if (r1_out) *r1_out = rE;
+    if (vinf_dep_vec) *vinf_dep_vec = vinf_d;
+    return true;
+}
+
+bool compute_interplanetary_porkchop_and_transfer(KeplerianElements orb_init,
+                                                  InterplanetarySpec spec,
+                                                  InterplanetaryReport *out) {
+    if (out == NULL) return false;
+    memset(out, 0, sizeof(*out));
+
+    if (spec.target != PLANET_VENUS) spec.target = PLANET_MARS;
+    if (!(spec.capture_alt_km >= 100.0)) spec.capture_alt_km = 400.0;
+    if (spec.capture_alt_km > 100000.0) spec.capture_alt_km = 100000.0;
+    if (!(spec.tof_days >= PORK_TOF_MIN_DAYS)) spec.tof_days = PORK_TOF_MIN_DAYS;
+    if (spec.tof_days > PORK_TOF_MAX_DAYS) spec.tof_days = PORK_TOF_MAX_DAYS;
+    out->spec = spec;
+
+    IplPlanet pl = ipl_planet(spec.target);
+    strcpy(out->target_name, spec.target == PLANET_VENUS ? "Venus" : "Mars");
+    out->mu_target = pl.mu;
+    out->r_target_km = pl.radius;
+    out->target_sma_au = pl.a_au;
+    out->soi_earth_km  = AU_KM * pow(EARTH_MU / SUN_MU, 0.4);
+    out->soi_target_km = pl.a_au * AU_KM * pow(pl.mu / SUN_MU, 0.4);
+    double rp_park = orb_init.a * (1.0 - orb_init.e);
+    if (!(rp_park > EARTH_RADIUS + 100.0)) rp_park = EARTH_RADIUS + 400.0;
+    out->r_park_km = rp_park;
+    out->r_capture_km = pl.radius + spec.capture_alt_km;
+
+    // ---- Griglia Porkchop ----
+    out->grid_min_c3 = 1e30;
+    out->grid_min_dv_ms = 1e30;
+    for (int j = 0; j < PORK_N_TOF; j++) {
+        double tof = PORK_TOF_MIN_DAYS + (PORK_TOF_MAX_DAYS - PORK_TOF_MIN_DAYS) * j / (PORK_N_TOF - 1);
+        for (int i = 0; i < PORK_N_DEP; i++) {
+            double dep = PORK_DEP_MAX_DAYS * i / (PORK_N_DEP - 1);
+            PorkchopGridPoint *g = &out->grid[j][i];
+            ipl_eval_cell(spec.target, pl, rp_park, out->r_capture_km, dep, tof, g, NULL, NULL, NULL);
+            if (!g->valid) continue;
+            if (g->c3 < out->grid_min_c3) { out->grid_min_c3 = g->c3; out->grid_min_c3_dep = dep; out->grid_min_c3_tof = tof; }
+            if (g->dv_tot_ms < out->grid_min_dv_ms) { out->grid_min_dv_ms = g->dv_tot_ms; out->grid_min_dv_dep = dep; out->grid_min_dv_tof = tof; }
+        }
+    }
+
+    // ---- Punto di progetto: TOF selezionato, partenza ottima (min DeltaV_tot), passo 1 d ----
+    PorkchopGridPoint best; memset(&best, 0, sizeof(best));
+    Vector3D bv1 = {0}, br1 = {0}, bvinf = {0};
+    double best_dv = 1e30;
+    for (int d = 0; d <= (int)PORK_DEP_MAX_DAYS; d++) {
+        PorkchopGridPoint c; Vector3D v1, r1, vi;
+        if (!ipl_eval_cell(spec.target, pl, rp_park, out->r_capture_km, (double)d, spec.tof_days, &c, &v1, &r1, &vi)) continue;
+        if (c.dv_tot_ms < best_dv) { best_dv = c.dv_tot_ms; best = c; bv1 = v1; br1 = r1; bvinf = vi; }
+    }
+    if (!best.valid) return false;
+
+    out->opt_dep_day = best.dep_day;
+    out->opt_tof_days = best.tof_day;
+    out->c3_opt = best.c3;
+    out->vinf_dep_kms = best.vinf_dep;
+    out->dv_tmi_ms = best.dv_tmi_ms;
+    out->vinf_arr_kms = best.vinf_arr;
+    out->dv_moi_ms = best.dv_moi_ms;
+    out->dv_total_ms = best.dv_tot_ms;
+
+    // Asintoto di fuga: eclittica -> equatoriale (rotazione attorno a X di epsilon)
+    double eps = EARTH_ECLIPTIC_OBLIQUITY_DEG * DEG2RAD;
+    double ux = bvinf.x, uy = bvinf.y * cos(eps) - bvinf.z * sin(eps), uz = bvinf.y * sin(eps) + bvinf.z * cos(eps);
+    double un = sqrt(ux * ux + uy * uy + uz * uz);
+    out->dla_deg = asin(uz / un) * RAD2DEG;
+    out->rla_deg = atan2(uy, ux) * RAD2DEG;
+    if (out->rla_deg < 0.0) out->rla_deg += 360.0;
+
+    // B-Plane
+    double rc = out->r_capture_km, va = best.vinf_arr;
+    out->b_plane_km = rc * sqrt(1.0 + 2.0 * pl.mu / (rc * va * va));
+    out->hyp_e_dep = 1.0 + rp_park * best.vinf_dep * best.vinf_dep / EARTH_MU;
+    out->hyp_e_arr = 1.0 + rc * va * va / pl.mu;
+    out->turn_angle_arr_deg = 2.0 * asin(1.0 / out->hyp_e_arr) * RAD2DEG;
+
+    // Ellisse di trasferimento (specific energy & momentum)
+    double r1n = vec_norm(br1);
+    double en = 0.5 * vec_dot(bv1, bv1) - SUN_MU / r1n;
+    out->transfer_a_au = (-SUN_MU / (2.0 * en)) / AU_KM;
+    Vector3D h = vec_cross(br1, bv1);
+    double p = vec_dot(h, h) / SUN_MU;
+    double a_km = out->transfer_a_au * AU_KM;
+    double e2 = 1.0 - p / a_km;
+    out->transfer_e = e2 > 0.0 ? sqrt(e2) : 0.0;
+    Vector3D rEarr, vEarr, rTarr, vTarr;
+    ipl_circular_state(1.0, IPL_EARTH_LON0_DEG, best.dep_day, &rEarr, &vEarr);
+    ipl_circular_state(pl.a_au, pl.lon0_deg, best.dep_day + best.tof_day, &rTarr, &vTarr);
+    double ca = vec_dot(rEarr, rTarr) / (vec_norm(rEarr) * vec_norm(rTarr));
+    double ang = acos(fmax(-1.0, fmin(1.0, ca))) * RAD2DEG;
+    out->transfer_angle_deg = (vec_cross(rEarr, rTarr).z >= 0.0) ? ang : 360.0 - ang;
+
+    // Arco eliocentrico campionato + verifica di chiusura Lambert
+    int n = 121;
+    out->num_traj_samples = n;
+    for (int k = 0; k < n; k++) {
+        double t = best.tof_day * 86400.0 * k / (n - 1);
+        Vector3D r = (k == 0) ? br1 : ipl_propagate_position(br1, bv1, t, SUN_MU);
+        out->traj[k].t_days = t / 86400.0;
+        out->traj[k].x_au = r.x / AU_KM; out->traj[k].y_au = r.y / AU_KM; out->traj[k].z_au = r.z / AU_KM;
+    }
+    Vector3D rend = {out->traj[n - 1].x_au * AU_KM, out->traj[n - 1].y_au * AU_KM, out->traj[n - 1].z_au * AU_KM};
+    out->lambert_residual_km = vec_norm(vec_sub(rend, rTarr));
+    return true;
+}

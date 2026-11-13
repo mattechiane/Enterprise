@@ -297,6 +297,37 @@ static void write_csi_trajectory_json_array(FILE *fp, StructuralReport csi) {
     fprintf(fp, "  ]");
 }
 
+static void write_porkchop_matrix(FILE *fp, const InterplanetaryReport *ip, int field) {
+    fprintf(fp, "[");
+    for (int j = 0; j < PORK_N_TOF; j++) {
+        fprintf(fp, "%s[", j ? "," : "");
+        for (int i = 0; i < PORK_N_DEP; i++) {
+            const PorkchopGridPoint *g = &ip->grid[j][i];
+            fprintf(fp, "%s", i ? "," : "");
+            if (!g->valid) { fprintf(fp, "null"); continue; }
+            double v = field == 0 ? g->c3 : field == 1 ? g->vinf_arr : field == 2 ? g->dv_tmi_ms : field == 3 ? g->dv_moi_ms : g->dv_tot_ms;
+            fprintf(fp, "%.3f", v);
+        }
+        fprintf(fp, "]");
+    }
+    fprintf(fp, "]");
+}
+
+static void write_porkchop_grid_json(FILE *fp, const InterplanetaryReport *ip) {
+    fprintf(fp, "{\n    \"dep_days\": [");
+    for (int i = 0; i < PORK_N_DEP; i++)
+        fprintf(fp, "%s%.1f", i ? "," : "", PORK_DEP_MAX_DAYS * i / (PORK_N_DEP - 1));
+    fprintf(fp, "],\n    \"tof_days\": [");
+    for (int j = 0; j < PORK_N_TOF; j++)
+        fprintf(fp, "%s%.1f", j ? "," : "", PORK_TOF_MIN_DAYS + (PORK_TOF_MAX_DAYS - PORK_TOF_MIN_DAYS) * j / (PORK_N_TOF - 1));
+    fprintf(fp, "],\n    \"c3\": ");           write_porkchop_matrix(fp, ip, 0);
+    fprintf(fp, ",\n    \"vinf_arr\": ");      write_porkchop_matrix(fp, ip, 1);
+    fprintf(fp, ",\n    \"dv_tmi_ms\": ");     write_porkchop_matrix(fp, ip, 2);
+    fprintf(fp, ",\n    \"dv_moi_ms\": ");     write_porkchop_matrix(fp, ip, 3);
+    fprintf(fp, ",\n    \"dv_total_ms\": ");   write_porkchop_matrix(fp, ip, 4);
+    fprintf(fp, "\n  }");
+}
+
 static void write_fdir_trajectory_json_array(FILE *fp, FDIRReport fdir) {
     fprintf(fp, "[\n");
     for (int i = 0; i < fdir.num_samples; i++) {
@@ -449,6 +480,7 @@ bool export_web_mission_json(const char *filename,
                              CislunarReport cislunar,
                              StructuralReport csi,
                              FDIRReport fdir,
+                              const InterplanetaryReport *ipl,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -754,6 +786,34 @@ bool export_web_mission_json(const char *filename,
             fdir.ccsds_oem_filename, fdir.ccsds_oem_status, fdir.oem_state_vectors);
     fprintf(fp, "    \"tle_norad_id\": %d, \"tle_sat_name\": \"%s\"\n  },\n",
             fdir.tle_norad_id, fdir.tle_sat_name);
+
+    fprintf(fp, "  \"interplanetary_summary\": {\n");
+    fprintf(fp, "    \"target_planet\": %d, \"target_name\": \"%s\", \"capture_alt_km\": %.1f, \"design_tof_days\": %.1f,\n",
+            ipl->spec.target, ipl->target_name, ipl->spec.capture_alt_km, ipl->spec.tof_days);
+    fprintf(fp, "    \"mu_target\": %.3f, \"r_target_km\": %.1f, \"target_sma_au\": %.6f, \"soi_earth_km\": %.0f, \"soi_target_km\": %.0f,\n",
+            ipl->mu_target, ipl->r_target_km, ipl->target_sma_au, ipl->soi_earth_km, ipl->soi_target_km);
+    fprintf(fp, "    \"r_park_km\": %.3f, \"r_capture_km\": %.3f, \"opt_dep_day\": %.1f,\n", ipl->r_park_km, ipl->r_capture_km, ipl->opt_dep_day);
+    fprintf(fp, "    \"c3_opt\": %.4f, \"vinf_dep_kms\": %.4f, \"dla_deg\": %.3f, \"rla_deg\": %.3f, \"dv_tmi_ms\": %.2f,\n",
+            ipl->c3_opt, ipl->vinf_dep_kms, ipl->dla_deg, ipl->rla_deg, ipl->dv_tmi_ms);
+    fprintf(fp, "    \"vinf_arr_kms\": %.4f, \"dv_moi_ms\": %.2f, \"dv_total_ms\": %.2f, \"tof_days\": %.1f, \"b_plane_km\": %.2f,\n",
+            ipl->vinf_arr_kms, ipl->dv_moi_ms, ipl->dv_total_ms, ipl->opt_tof_days, ipl->b_plane_km);
+    fprintf(fp, "    \"hyp_e_dep\": %.5f, \"hyp_e_arr\": %.5f, \"turn_angle_arr_deg\": %.3f,\n",
+            ipl->hyp_e_dep, ipl->hyp_e_arr, ipl->turn_angle_arr_deg);
+    fprintf(fp, "    \"transfer_a_au\": %.5f, \"transfer_e\": %.5f, \"transfer_angle_deg\": %.3f, \"lambert_residual_km\": %.4f,\n",
+            ipl->transfer_a_au, ipl->transfer_e, ipl->transfer_angle_deg, ipl->lambert_residual_km);
+    fprintf(fp, "    \"grid_min_c3\": %.4f, \"grid_min_c3_dep\": %.1f, \"grid_min_c3_tof\": %.1f,\n",
+            ipl->grid_min_c3, ipl->grid_min_c3_dep, ipl->grid_min_c3_tof);
+    fprintf(fp, "    \"grid_min_dv_ms\": %.2f, \"grid_min_dv_dep\": %.1f, \"grid_min_dv_tof\": %.1f\n  },\n",
+            ipl->grid_min_dv_ms, ipl->grid_min_dv_dep, ipl->grid_min_dv_tof);
+    fprintf(fp, "  \"porkchop_grid\": ");
+    write_porkchop_grid_json(fp, ipl);
+    fprintf(fp, ",\n  \"traj_interplanetary\": [\n");
+    for (int k = 0; k < ipl->num_traj_samples; k++) {
+        const HelioSample *s = &ipl->traj[k];
+        fprintf(fp, "    {\"t_days\":%.2f,\"x_au\":%.6f,\"y_au\":%.6f,\"z_au\":%.6f}%s\n",
+                s->t_days, s->x_au, s->y_au, s->z_au, (k < ipl->num_traj_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ],\n");
 
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
