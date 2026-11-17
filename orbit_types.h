@@ -927,4 +927,78 @@ typedef struct {
     HelioSample traj[MAX_INTERPLANETARY_SAMPLES];
 } InterplanetaryReport;
 
+// ==========================================
+// 5N. SPRINT 25: MULTI-SATELLITE FORMATION FLYING, J2-INVARIANT ROEs & FLEET RECONFIGURATION
+// ==========================================
+#define MAX_FORMATION_SAMPLES 145
+#define NUM_FORMATION_DEPUTIES 3
+
+typedef enum {
+    FORM_PROJECTED_CIRCULAR_PCO = 0, // Projected Circular Orbit (PCO) nel piano T-N con oscillazione R
+    FORM_ALONG_TRACK_STRING     = 1, // Stringa Along-Track (Leader-Follower con elica E/I passiva)
+    FORM_PENDULUM_CROSS_TRACK   = 2, // Pendolo Cross-Track (oscillazione fuori piano per interferometria)
+    FORM_CARTWHEEL_ELLIPSE      = 3  // Cartwheel 2:1 In-Plane Ellipse con separazione E/I sicura
+} FormationGeometryType;
+
+// Quasi-Nonsingular Relative Orbital Elements (ROEs di D'Amico) adimensionali e scalati per a_c [m]
+typedef struct {
+    double da;       // (a_d - a_c) / a_c [-]
+    double dlambda;  // (u_d - u_c) + (Omega_d - Omega_c) * cos(i_c) [rad]
+    double dex;      // e_d * cos(omega_d) - e_c * cos(omega_c) [-]
+    double dey;      // e_d * sin(omega_d) - e_c * sin(omega_c) [-]
+    double dix;      // i_d - i_c [rad]
+    double diy;      // (Omega_d - Omega_c) * sin(i_c) [rad]
+    // Componenti metriche scalate per il semiasse maggiore del Chief a_c [m]
+    double da_m;
+    double dlambda_m;
+    double dex_m;
+    double dey_m;
+    double dix_m;
+    double diy_m;
+} RelativeOrbitalElements;
+
+typedef struct {
+    FormationGeometryType geometry;   // Topologia geometrica della formazione
+    double baseline_radius_m;         // Raggio caratteristico della formazione rho_form [m] (default 500.0 m)
+    double tolerance_window_m;        // Finestra di tolleranza della baseline [m] (default 5.0 m)
+} FormationSpec;
+
+typedef struct {
+    double theta_deg;      // Anomalia orbitale lungo l'orbita del Chief [deg] (0 .. 360)
+    double d1_r, d1_t, d1_n; // Coordinate LVLH [x_R, y_T, z_N] di Deputy 1 [m]
+    double d2_r, d2_t, d2_n; // Coordinate LVLH [x_R, y_T, z_N] di Deputy 2 [m]
+    double d3_r, d3_t, d3_n; // Coordinate LVLH [x_R, y_T, z_N] di Deputy 3 [m]
+    double baseline_err_m; // Errore di deriva della baseline indotto da J2 [m] (entro +/-5 m)
+} FormationSample;
+
+typedef struct {
+    FormationSpec spec;
+    char   geometry_name[64];         // Nome descrittivo della topologia (es. "Projected Circular Orbit (PCO)")
+    int    num_deputies;              // Numero di satelliti Deputy nel cluster (3)
+    double chief_sma_km;              // Semiasse maggiore del Chief a_c [km]
+    double chief_inc_deg;             // Inclinazione del Chief i_c [deg]
+    double mean_motion_rad_s;         // Moto medio orbitale n_c [rad/s]
+
+    // ROEs (D'Amico) per ciascuno dei 3 satelliti Deputy
+    RelativeOrbitalElements roe_deputy[NUM_FORMATION_DEPUTIES];
+
+    // Sicurezza passiva E/I-Vector Separation e metriche di separazione
+    double min_safe_rn_sep_m;         // Separazione minima sicura nel piano R-N al passaggio per y_T = 0 [m]
+    double min_3d_inter_sat_m;        // Separazione 3D minima inter-satellite lungo l'orbita [m]
+    double ei_phase_angle_deg;        // Angolo di fase tra i vettori relativi delta_e e delta_i [deg] (0 = paralleli)
+    bool   passive_safe;              // true se la separazione E/I garantisce assenza di collisione passiva
+
+    // Deriva secolare differenziale da J2, Invarianza di Schaub-Alfriend & Costi Delta-V
+    double j2_raan_drift_deg_day;     // Deriva secolare differenziale del nodo Delta_Omega_dot_J2 [deg/day]
+    double j2_argp_drift_deg_day;     // Deriva secolare differenziale del perigeo Delta_omega_dot_J2 [deg/day]
+    double schaub_alfriend_eta;       // Fattore cinematico eta = sqrt(1 - e_c^2) di Schaub-Alfriend [-]
+    double reconfig_dv_ms;            // Costo di riconfigurazione / iniezione del cluster Delta-V_reconfig [m/s]
+    double fk_dv_yr_ms;               // Costo annuale di Formation-Keeping contro J2 Delta-V_FK [m/s/yr]
+    double fk_fuel_yr_kg;             // Consumo annuale di propellente per Formation-Keeping [kg/yr]
+    double max_baseline_err_m;        // Massimo scostamento della baseline nella finestra di controllo [m]
+
+    int    num_samples;
+    FormationSample samples[MAX_FORMATION_SAMPLES];
+} FormationFlyingReport;
+
 #endif // ORBIT_TYPES_H

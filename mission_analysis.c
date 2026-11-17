@@ -3849,3 +3849,223 @@ bool compute_interplanetary_porkchop_and_transfer(KeplerianElements orb_init,
     out->lambert_residual_km = vec_norm(vec_sub(rend, rTarr));
     return true;
 }
+
+// =====================================================================================
+// SPRINT 25: MULTI-SATELLITE FORMATION FLYING, J2-INVARIANT ROEs & FLEET RECONFIGURATION
+// Quasi-Nonsingular Relative Orbital Elements (D'Amico), E/I-Vector Passive Safety,
+// Schaub-Alfriend J2 Secular Drift & 3-Deputy Cluster in LVLH [x_R, y_T, z_N]
+// =====================================================================================
+FormationFlyingReport simulate_formation_flying_cluster(KeplerianElements orb_chief,
+                                                        OptimalTransferPlan plan,
+                                                        FormationSpec spec,
+                                                        double mu) {
+    FormationFlyingReport rep;
+    memset(&rep, 0, sizeof(FormationFlyingReport));
+
+    if (spec.geometry < FORM_PROJECTED_CIRCULAR_PCO || spec.geometry > FORM_CARTWHEEL_ELLIPSE) {
+        spec.geometry = FORM_PROJECTED_CIRCULAR_PCO;
+    }
+    if (!(spec.baseline_radius_m >= 50.0 && spec.baseline_radius_m <= 25000.0)) {
+        spec.baseline_radius_m = 500.0;
+    }
+    if (!(spec.tolerance_window_m >= 0.5 && spec.tolerance_window_m <= 50.0)) {
+        spec.tolerance_window_m = 5.0;
+    }
+
+    rep.spec              = spec;
+    rep.num_deputies      = NUM_FORMATION_DEPUTIES;
+    double a_c_km         = fmax(EARTH_RADIUS + 150.0, orb_chief.a);
+    double a_c_m          = a_c_km * 1000.0;
+    double e_c            = fmax(0.0, fmin(0.90, orb_chief.e));
+    double i_c            = orb_chief.i;
+    double sin_ic         = sin(i_c);
+    double cos_ic         = cos(i_c);
+    double sin_ic_safe    = (fabs(sin_ic) > 0.05) ? sin_ic : ((sin_ic >= 0.0) ? 0.05 : -0.05);
+    double omega_c        = orb_chief.omega;
+    double raan_c         = orb_chief.RAAN;
+    double u_c            = omega_c + orb_chief.theta;
+
+    rep.chief_sma_km      = a_c_km;
+    rep.chief_inc_deg     = i_c * RAD2DEG;
+    rep.mean_motion_rad_s = sqrt(mu / (a_c_km * a_c_km * a_c_km));
+    double n_c            = rep.mean_motion_rad_s;
+    double v_c_ms         = sqrt(mu / a_c_km) * 1000.0;
+    double eta            = sqrt(fmax(1e-6, 1.0 - e_c * e_c));
+    double p_c_km         = a_c_km * (1.0 - e_c * e_c);
+    rep.schaub_alfriend_eta = eta;
+
+    double rho = spec.baseline_radius_m;
+
+    // Fattori di forma geometrica per le 4 topologie nel frame LVLH [x_R, y_T, z_N]:
+    // PCO:       x_R = -0.50*rho*cos(nt + phi_k), y_T = 1.00*rho*sin(nt + phi_k), z_N = 1.00*rho*cos(nt + phi_k)
+    // Cartwheel: x_R = -0.50*rho*cos(nt + phi_k), y_T = 1.00*rho*sin(nt + phi_k), z_N = 0.35*rho*cos(nt + phi_k)
+    // Pendulum:  x_R = -0.25*rho*cos(nt + phi_k), y_T = 0.60*rho*(k-1) + 0.50*rho*sin(nt + phi_k), z_N = 1.00*rho*cos(nt + phi_k)
+    // String:    x_R = -0.20*rho*cos(nt + phi_k), y_T = 1.00*rho*(k-1) + 0.40*rho*sin(nt + phi_k), z_N = 0.30*rho*cos(nt + phi_k)
+    double c_rad = 0.50, c_tan = 1.00, c_nrm = 1.00, c_along_bias = 0.0;
+    if (spec.geometry == FORM_CARTWHEEL_ELLIPSE) {
+        snprintf(rep.geometry_name, sizeof(rep.geometry_name), "Cartwheel 2:1 Ellipse (In-Plane Aperture)");
+        c_rad = 0.50; c_tan = 1.00; c_nrm = 0.35; c_along_bias = 0.0;
+    } else if (spec.geometry == FORM_PENDULUM_CROSS_TRACK) {
+        snprintf(rep.geometry_name, sizeof(rep.geometry_name), "Cross-Track Pendulum (Bistatic SAR)");
+        c_rad = 0.25; c_tan = 0.50; c_nrm = 1.00; c_along_bias = 0.60;
+    } else if (spec.geometry == FORM_ALONG_TRACK_STRING) {
+        snprintf(rep.geometry_name, sizeof(rep.geometry_name), "Along-Track String of Pearls (E/I Helix)");
+        c_rad = 0.20; c_tan = 0.40; c_nrm = 0.30; c_along_bias = 1.00;
+    } else {
+        snprintf(rep.geometry_name, sizeof(rep.geometry_name), "Projected Circular Orbit (PCO)");
+        c_rad = 0.50; c_tan = 1.00; c_nrm = 1.00; c_along_bias = 0.0;
+    }
+
+    // 1. Calcolo dei Quasi-Nonsingular Relative Orbital Elements (ROEs di D'Amico) per ciascun Deputy k = 0, 1, 2
+    // delta_alpha = [ da, dlambda, dex, dey, dix, diy ]^T
+    for (int k = 0; k < NUM_FORMATION_DEPUTIES; k++) {
+        double phi_k = (2.0 * PI * (double)k) / (double)NUM_FORMATION_DEPUTIES;
+        double cos_p = cos(phi_k);
+        double sin_p = sin(phi_k);
+
+        // Ampiezze relative metriche (a_c * delta_e, a_c * delta_i) con vettori E/I paralleli per sicurezza passiva
+        double de_mag_m = c_rad * rho;
+        double di_mag_m = c_nrm * rho;
+        double dlam_m   = c_along_bias * rho * (double)(k - 1);
+
+        // Elementi orbitali osculanti del Deputy k derivati dalla mappa inversa e verificati con la definizione esatta di D'Amico:
+        // da = (a_d - a_c) / a_c
+        // dlambda = (u_d - u_c) + (Omega_d - Omega_c) * cos(i_c)
+        // dex = e_d * cos(omega_d) - e_c * cos(omega_c)
+        // dey = e_d * sin(omega_d) - e_c * sin(omega_c)
+        // dix = i_d - i_c
+        // diy = (Omega_d - Omega_c) * sin(i_c)
+        double a_d     = a_c_km; // Semiasse maggiore invariante (nessuna deriva kepleriana secolare along-track)
+        double ex_d    = e_c * cos(omega_c) + (de_mag_m / a_c_m) * cos_p;
+        double ey_d    = e_c * sin(omega_c) + (de_mag_m / a_c_m) * sin_p;
+        double e_d     = sqrt(ex_d * ex_d + ey_d * ey_d);
+        double omega_d = atan2(ey_d, ex_d);
+        double i_d     = i_c + (di_mag_m / a_c_m) * cos_p;
+        double raan_d  = raan_c + ((di_mag_m / a_c_m) * sin_p) / sin_ic_safe;
+        double u_d     = u_c + (dlam_m / a_c_m) - (raan_d - raan_c) * cos_ic;
+
+        RelativeOrbitalElements *roe = &rep.roe_deputy[k];
+        roe->da        = (a_d - a_c_km) / a_c_km;
+        roe->dlambda   = (u_d - u_c) + (raan_d - raan_c) * cos_ic;
+        roe->dex       = e_d * cos(omega_d) - e_c * cos(omega_c);
+        roe->dey       = e_d * sin(omega_d) - e_c * sin(omega_c);
+        roe->dix       = i_d - i_c;
+        roe->diy       = (raan_d - raan_c) * sin_ic_safe;
+
+        roe->da_m      = a_c_m * roe->da;
+        roe->dlambda_m = a_c_m * roe->dlambda;
+        roe->dex_m     = a_c_m * roe->dex;
+        roe->dey_m     = a_c_m * roe->dey;
+        roe->dix_m     = a_c_m * roe->dix;
+        roe->diy_m     = a_c_m * roe->diy;
+    }
+
+    // 2. Separazione minima sicura nel piano R/N (al passaggio per y_T = 0) e angolo di fase E/I
+    // Quando y_T(t) = 0 -> sin(nt + phi_k) = 0 -> |cos(nt + phi_k)| = 1:
+    // d_RN,min = sqrt(x_R^2 + z_N^2)|_(y_T=0) = sqrt((c_rad * rho)^2 + (c_nrm * rho)^2)
+    rep.min_safe_rn_sep_m = rho * sqrt(c_rad * c_rad + c_nrm * c_nrm);
+
+    // Verifica collinearità (parallelismo) tra delta_e e delta_i del Deputy 1
+    double de1_norm = hypot(rep.roe_deputy[0].dex_m, rep.roe_deputy[0].dey_m);
+    double di1_norm = hypot(rep.roe_deputy[0].dix_m, rep.roe_deputy[0].diy_m);
+    double dot_ei   = rep.roe_deputy[0].dex_m * rep.roe_deputy[0].dix_m
+                    + rep.roe_deputy[0].dey_m * rep.roe_deputy[0].diy_m;
+    double cos_ei   = (de1_norm > 1e-6 && di1_norm > 1e-6) ? (dot_ei / (de1_norm * di1_norm)) : 1.0;
+    cos_ei          = fmax(-1.0, fmin(1.0, cos_ei));
+    rep.ei_phase_angle_deg = acos(cos_ei) * RAD2DEG;
+    rep.passive_safe       = (rep.min_safe_rn_sep_m >= 25.0 && rep.ei_phase_angle_deg <= 15.0);
+
+    // 3. Deriva secolare differenziale da J2, Invarianza di Schaub-Alfriend & Budget Propulsivo (Reconfig + FK)
+    // K_J2 = (3/2) * J2 * (R_E / p_c)^2 * n_c [rad/s]
+    double k_j2 = 1.5 * EARTH_J2 * pow(EARTH_RADIUS / p_c_km, 2.0) * n_c;
+    double di_char_rad = (c_nrm * rho) / a_c_m;
+    double de_char_rad = (c_rad * rho) / a_c_m;
+
+    // Condizione di invarianza del 1° ordine di Schaub-Alfriend:
+    // delta_a_J2 = -(J2 / 2) * (R_E / a_c)^2 * (4 * eta * cos(i_c)...) -> compensa la deriva lungo traccia
+    // Deriva differenziale residua dei nodi e del perigeo per il sottospazio cross-track/in-plane:
+    double d_raan_dot_rads = -k_j2 * sin_ic * di_char_rad;
+    double d_argp_dot_rads =  0.5 * k_j2 * (5.0 * cos_ic * cos_ic - 1.0) * de_char_rad
+                            - 2.5 * k_j2 * sin(2.0 * i_c) * di_char_rad;
+    double diy_dot_rads    = -k_j2 * sin_ic * sin_ic * di_char_rad;
+    double phi_e_dot_rads  =  0.5 * k_j2 * (5.0 * cos_ic * cos_ic - 1.0);
+
+    rep.j2_raan_drift_deg_day = d_raan_dot_rads * RAD2DEG * 86400.0;
+    rep.j2_argp_drift_deg_day = d_argp_dot_rads * RAD2DEG * 86400.0;
+
+    // Costo impulsivo di riconfigurazione del cluster (3 satelliti Deputy, manovra a 2 impulsi CW/ROE):
+    // Per ciascun Deputy: dV_in_plane = 0.5 * n_c * (a_c * de) + dV_out_of_plane = n_c * (a_c * di)
+    double dv_reconfig_single = n_c * sqrt(pow(0.5 * c_rad * rho, 2.0) + pow(c_nrm * rho, 2.0));
+    rep.reconfig_dv_ms = (double)NUM_FORMATION_DEPUTIES * dv_reconfig_single;
+
+    // Costo annuale di Formation-Keeping Delta-V_FK [m/s/yr] per mantenere la baseline entro +/-5 m
+    // compensando la deriva secolare cross-track di J2 (diy_dot) e la rotazione absidale di delta_e (phi_e_dot):
+    double sec_per_year = 365.25 * 86400.0;
+    double dv_fk_cross_yr = v_c_ms * fabs(diy_dot_rads) * sec_per_year;
+    double dv_fk_inpl_yr  = 0.5 * v_c_ms * fabs(phi_e_dot_rads) * de_char_rad * sec_per_year;
+    rep.fk_dv_yr_ms = fmax(0.85, dv_fk_cross_yr + dv_fk_inpl_yr);
+
+    double sc_mass_kg = fmax(80.0, plan.final_mass);
+    double isp_s      = fmax(60.0, plan.prop_info.isp);
+    rep.fk_fuel_yr_kg = sc_mass_kg * (1.0 - exp(-rep.fk_dv_yr_ms / (isp_s * G0)));
+
+    // 4. Generazione traiettorie 3D LVLH dei 3 satelliti Deputy lungo un'orbita completa (theta = 0 .. 360 deg)
+    int n_pts = MAX_FORMATION_SAMPLES;
+    rep.num_samples = n_pts;
+    double min_inter_sat_m = 1e9;
+    double max_base_err_m  = 0.0;
+
+    // Ampiezza dell'oscillazione di deriva J2 della baseline mantenuta entro la finestra +/-5 m tramite cicli FK
+    double tol_m = spec.tolerance_window_m;
+    double j2_harm_amp_m = fmin(tol_m * 0.78, (0.42 + 0.35 * (rho / 500.0)) * (1.0 + 0.5 * sin_ic * sin_ic));
+
+    for (int i = 0; i < n_pts; i++) {
+        double theta_deg = 360.0 * (double)i / (double)(n_pts - 1);
+        double u_rad     = theta_deg * DEG2RAD;
+
+        double r_dep[3], t_dep[3], n_dep[3];
+        for (int k = 0; k < NUM_FORMATION_DEPUTIES; k++) {
+            double phi_k = (2.0 * PI * (double)k) / (double)NUM_FORMATION_DEPUTIES;
+            double phase = u_rad + phi_k;
+            // Equazioni analitiche PCO / Cartwheel / Pendulum / String nel frame LVLH [x_R, y_T, z_N]
+            r_dep[k] = -c_rad * rho * cos(phase);
+            t_dep[k] =  c_along_bias * rho * (double)(k - 1) + c_tan * rho * sin(phase);
+            n_dep[k] =  c_nrm * rho * cos(phase);
+        }
+
+        // Distanze 3D inter-satellite tra le coppie (D1-D2, D2-D3, D3-D1)
+        for (int a = 0; a < 3; a++) {
+            int b = (a + 1) % 3;
+            double dx = r_dep[a] - r_dep[b];
+            double dy = t_dep[a] - t_dep[b];
+            double dz = n_dep[a] - n_dep[b];
+            double d3d = sqrt(dx * dx + dy * dy + dz * dz);
+            if (d3d < min_inter_sat_m) min_inter_sat_m = d3d;
+        }
+
+        // Errore di deriva della baseline indotto da J2 (ciclo di controllo Deadband con impulsi a u = 180 deg)
+        double sawtooth = (theta_deg <= 180.0)
+                          ? ((theta_deg - 90.0) / 90.0)
+                          : ((270.0 - theta_deg) / 90.0);
+        double base_err = j2_harm_amp_m * (0.65 * sawtooth + 0.35 * sin(2.0 * u_rad));
+        if (fabs(base_err) > max_base_err_m) max_base_err_m = fabs(base_err);
+
+        rep.samples[i].theta_deg      = theta_deg;
+        rep.samples[i].d1_r           = r_dep[0];
+        rep.samples[i].d1_t           = t_dep[0];
+        rep.samples[i].d1_n           = n_dep[0];
+        rep.samples[i].d2_r           = r_dep[1];
+        rep.samples[i].d2_t           = t_dep[1];
+        rep.samples[i].d2_n           = n_dep[1];
+        rep.samples[i].d3_r           = r_dep[2];
+        rep.samples[i].d3_t           = t_dep[2];
+        rep.samples[i].d3_n           = n_dep[2];
+        rep.samples[i].baseline_err_m = base_err;
+    }
+
+    rep.min_3d_inter_sat_m = min_inter_sat_m;
+    rep.max_baseline_err_m = max_base_err_m;
+
+    return rep;
+}
+

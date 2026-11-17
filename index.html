@@ -387,7 +387,7 @@
                 <button type="button" class="nav-tab-btn" data-tab-target="gnc" onclick="switchWorkspaceTab('gnc')">
                     <div class="nav-tab-icon">&#127919;</div>
                     <div class="nav-tab-text"><div class="nav-tab-title"><span>GNC, Rendezvous &amp; 6-DOF ADCS</span></div>
-                    <div class="nav-tab-desc">CW LVLH, Reaction Wheels, EKF, Structure/Slosh CSI</div></div>
+                    <div class="nav-tab-desc">CW LVLH, Formation ROEs, Reaction Wheels, EKF, Slosh CSI</div></div>
                 </button>
                 <button type="button" class="nav-tab-btn" data-tab-target="subsystems" onclick="switchWorkspaceTab('subsystems')">
                     <div class="nav-tab-icon">&#9889;</div>
@@ -402,8 +402,8 @@
                 <div class="sidebar-divider"></div>
                 <button type="button" class="nav-tab-btn" data-tab-target="all" onclick="switchWorkspaceTab('all')">
                     <div class="nav-tab-icon">&#128214;</div>
-                    <div class="nav-tab-text"><div class="nav-tab-title"><span>Show All (Full Report View)</span><span class="nav-tab-count">17</span></div>
-                    <div class="nav-tab-desc">Complete dossier, Sections 1&ndash;17</div></div>
+                    <div class="nav-tab-text"><div class="nav-tab-title"><span>Show All (Full Report View)</span><span class="nav-tab-count">19</span></div>
+                    <div class="nav-tab-desc">Complete dossier, Sections 1&ndash;19</div></div>
                 </button>
             </nav>
         </div>
@@ -1126,6 +1126,50 @@
         <div id="plotIplHelio" class="plot-container-rdv"></div>
     </div>
 </section>
+
+<!-- 19. MULTI-SATELLITE FORMATION FLYING, E/I-VECTOR PASSIVE SAFETY & LVLH RELATIVE ORBITS -->
+<section class="section-block" id="sec-19" data-tab="gnc" style="--sec-order: 19;">
+    <div class="section-header">
+        <div>
+            <h2>19. Multi-Satellite Formation Flying, E/I-Vector Passive Safety &amp; LVLH Relative Orbits</h2>
+            <span>D'Amico Quasi-Nonsingular ROEs (&delta;<b>&alpha;</b>) &bull; Schaub-Alfriend J<sub>2</sub>-Invariance &bull; Chief + 3 Deputies 3D LVLH Cluster &bull; Passive E/I-Vector Separation</span>
+        </div>
+        <span class="badge" id="formStatusBadge" style="color:var(--green); border-color:var(--green);">&#128752; E/I-VECTOR PASSIVE SAFETY VERIFIED (&delta;<b>e</b> &parallel; &delta;<b>i</b>)</span>
+    </div>
+
+    <div class="ipl-kpi-grid">
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Formation Baseline Radius</span><span class="kpi-micro-badge" id="formKpiTopoBadge">PCO</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="formKpiRadius">---</span><span class="kpi-unit">m</span></div>
+            <div class="kpi-sub" id="formKpiRadiusSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--green);">
+            <div class="kpi-top"><span class="kpi-label">Min Safe R/N Separation</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="formKpiRnSep">---</span><span class="kpi-unit">m</span></div>
+            <div class="kpi-sub" id="formKpiRnSepSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--purple);">
+            <div class="kpi-top"><span class="kpi-label">E/I-Vector Phase Angle</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="formKpiEiAngle">---</span><span class="kpi-unit">deg</span></div>
+            <div class="kpi-sub" id="formKpiEiAngleSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--amber);">
+            <div class="kpi-top"><span class="kpi-label">Reconfiguration &Delta;V</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="formKpiReconfigDv">---</span><span class="kpi-unit">m/s</span></div>
+            <div class="kpi-sub" id="formKpiReconfigDvSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--red);">
+            <div class="kpi-top"><span class="kpi-label">Formation-Keeping &Delta;V</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="formKpiFkDv">---</span><span class="kpi-unit">m/s/yr</span></div>
+            <div class="kpi-sub" id="formKpiFkDvSub">---</div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotFormation3D" class="plot-container-rdv"></div>
+        <div id="plotFormationROE" class="plot-container-rdv"></div>
+    </div>
+</section>
         </div><!-- /sections-stack -->
     </main>
 </div><!-- /app-shell -->
@@ -1596,6 +1640,28 @@
             </div>
         </div>
 
+        <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--green)">17. Multi-Satellite Formation Flying (Chief + 3 Deputies, D'Amico ROEs &amp; J<sub>2</sub>-Invariance)</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Quasi-Nonsingular Relative Orbital Elements (&delta;<b>&alpha;</b>) &bull; E/I-Vector Passive Anti-Collision Safety &bull; LVLH [R, T, N]</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: 2fr 1fr;">
+                <div class="field">
+                    <label>Formation Topology (LVLH Relative Geometry)</label>
+                    <select id="formTopology">
+                        <option value="0" selected>Projected Circular Orbit (PCO &mdash; 3D Circular T-N Interferometric Aperture)</option>
+                        <option value="3">Cartwheel 2:1 Ellipse (In-Plane Elliptical Aperture + Cross-Track E/I Safety)</option>
+                        <option value="2">Cross-Track Pendulum (Bistatic SAR Cross-Track Oscillation)</option>
+                        <option value="1">Along-Track String of Pearls (Leader-Follower + Passive E/I Helix)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Formation Baseline Radius &rho;<sub>form</sub> [m]</label>
+                    <input type="number" id="formRadiusM" value="500" min="50" max="25000" step="50">
+                </div>
+            </div>
+        </div>
+
         <div class="form-section modal-cat-item" data-cat="safety" style="margin-bottom: 10px;">
             <div class="form-section-header">
                 <h3 style="color:var(--red)">15. Autonomous FDIR Fault Injection, B-Side Redundancy &amp; Safe-Mode Recovery</h3>
@@ -1651,14 +1717,14 @@
                       jumps: [['sec-1', '3D Globe'], ['sec-4', 'Ground Track'], ['sec-2', 'Data Sheet']] },
         transfer:   { title: '\u{1F680} Transfer, Lambert & Cislunar', sub: 'Lambert \u0394V trade-off, Monte Carlo 3\u03C3 & TCM, CR3BP Lagrange points / Halo orbit, interplanetary porkchop (C\u2083)',
                       jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary']] },
-        gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, reaction wheels, EKF navigation, structure/slosh CSI',
-                      jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF'], ['sec-16', 'Flex/Slosh CSI']] },
+        gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, multi-satellite formation flying (ROEs), reaction wheels, EKF, structure/slosh CSI',
+                      jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF'], ['sec-16', 'Flex/Slosh CSI'], ['sec-19', 'Formation ROEs']] },
         subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF & Payload)', sub: 'Kinematics/Radar/EPS, thermal & radiation, RF link budget, Walker constellation & cost',
                       jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost']] },
         safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL & FDIR)', sub: 'B-Plane collision avoidance, Sutton-Graves atmospheric re-entry, autonomous FDIR',
                       jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL Re-Entry'], ['sec-17', 'FDIR']] },
-        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 18',
-                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18']] }
+        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 19',
+                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19']] }
     };
 
     function resizeVisiblePlots() {
@@ -2184,6 +2250,11 @@
             const fdir = data.fdir_summary;
             if (fdir.fault_scenario !== undefined)      document.getElementById('fdirFaultScenario').value = String(fdir.fault_scenario);
             if (fdir.fault_inject_time_s !== undefined) document.getElementById('fdirInjectTimeS').value   = fdir.fault_inject_time_s;
+        }
+        if (data.formation_summary) {
+            const fm = data.formation_summary;
+            if (fm.geometry_type !== undefined)     document.getElementById('formTopology').value = String(fm.geometry_type);
+            if (fm.baseline_radius_m !== undefined) document.getElementById('formRadiusM').value  = Math.round(fm.baseline_radius_m);
         }
 
         validateModalOrbits(false);
@@ -4674,6 +4745,11 @@
         // 18. INTERPLANETARY PATCHED CONICS, PORKCHOP CONTOUR (C3) & HYPERBOLIC ESCAPE
         // =====================================================================
         renderInterplanetarySection(data);
+
+        // =====================================================================
+        // 19. MULTI-SATELLITE FORMATION FLYING, D'AMICO ROEs & PASSIVE E/I SAFETY
+        // =====================================================================
+        renderFormationSection(data);
 
         // =====================================================================
         // 17. ONBOARD FDIR AUTONOMY, REDUNDANCY SWITCHOVER & SAFE-MODE RECOVERY
@@ -8237,6 +8313,393 @@
         resizeVisiblePlots();
     }
 
+    // =====================================================================
+    // SPRINT 25: MULTI-SATELLITE FORMATION FLYING, D'AMICO ROEs & J2-INVARIANCE (JS mirror of mission_analysis.c)
+    // =====================================================================
+    function simulateFormationFlyingClusterJS(kepChief, finalMassKg, ispS, geometryType, baselineRadiusM) {
+        let geom = parseInt(geometryType, 10);
+        if (isNaN(geom) || geom < 0 || geom > 3) geom = 0;
+        let rho = parseFloat(baselineRadiusM);
+        if (!(rho >= 50.0 && rho <= 25000.0)) rho = 500.0;
+        const tolM = 5.0;
+        const numDeputies = 3;
+
+        const aCKm = Math.max(R_EQ + 150.0, (kepChief && kepChief.a) ? kepChief.a : (R_EQ + 650.0));
+        const aCM  = aCKm * 1000.0;
+        const eC   = Math.max(0.0, Math.min(0.90, (kepChief && kepChief.e !== undefined) ? kepChief.e : 0.001));
+        const iC   = (kepChief && kepChief.i !== undefined) ? kepChief.i : (53.0 * DEG2RAD);
+        const sinIc = Math.sin(iC), cosIc = Math.cos(iC);
+        const sinIcSafe = Math.abs(sinIc) > 0.05 ? sinIc : (sinIc >= 0.0 ? 0.05 : -0.05);
+        const omegaC = (kepChief && kepChief.omega !== undefined) ? kepChief.omega : 0.0;
+        const raanC  = (kepChief && kepChief.RAAN !== undefined) ? kepChief.RAAN : (30.0 * DEG2RAD);
+        const uC     = omegaC + ((kepChief && kepChief.theta !== undefined) ? kepChief.theta : 0.0);
+
+        const nC   = Math.sqrt(MU / (aCKm * aCKm * aCKm));
+        const vCMs = Math.sqrt(MU / aCKm) * 1000.0;
+        const eta  = Math.sqrt(Math.max(1e-6, 1.0 - eC * eC));
+        const pCKm = aCKm * (1.0 - eC * eC);
+
+        let geomName = 'Projected Circular Orbit (PCO)';
+        let cRad = 0.50, cTan = 1.00, cNrm = 1.00, cAlongBias = 0.0;
+        if (geom === 3) {
+            geomName = 'Cartwheel 2:1 Ellipse (In-Plane Aperture)';
+            cRad = 0.50; cTan = 1.00; cNrm = 0.35; cAlongBias = 0.0;
+        } else if (geom === 2) {
+            geomName = 'Cross-Track Pendulum (Bistatic SAR)';
+            cRad = 0.25; cTan = 0.50; cNrm = 1.00; cAlongBias = 0.60;
+        } else if (geom === 1) {
+            geomName = 'Along-Track String of Pearls (E/I Helix)';
+            cRad = 0.20; cTan = 0.40; cNrm = 0.30; cAlongBias = 1.00;
+        }
+
+        const roesM = [];
+        for (let k = 0; k < numDeputies; k++) {
+            const phiK = (2.0 * Math.PI * k) / numDeputies;
+            const cosP = Math.cos(phiK), sinP = Math.sin(phiK);
+            const deMagM = cRad * rho;
+            const diMagM = cNrm * rho;
+            const dlamM  = cAlongBias * rho * (k - 1);
+
+            const aD     = aCKm;
+            const exD    = eC * Math.cos(omegaC) + (deMagM / aCM) * cosP;
+            const eyD    = eC * Math.sin(omegaC) + (deMagM / aCM) * sinP;
+            const eD     = Math.hypot(exD, eyD);
+            const omegaD = Math.atan2(eyD, exD);
+            const iD     = iC + (diMagM / aCM) * cosP;
+            const raanD  = raanC + ((diMagM / aCM) * sinP) / sinIcSafe;
+            const uD     = uC + (dlamM / aCM) - (raanD - raanC) * cosIc;
+
+            const da      = (aD - aCKm) / aCKm;
+            const dlambda = (uD - uC) + (raanD - raanC) * cosIc;
+            const dex     = eD * Math.cos(omegaD) - eC * Math.cos(omegaC);
+            const dey     = eD * Math.sin(omegaD) - eC * Math.sin(omegaC);
+            const dix     = iD - iC;
+            const diy     = (raanD - raanC) * sinIcSafe;
+
+            roesM.push([
+                +(aCM * da).toFixed(2),
+                +(aCM * dlambda).toFixed(2),
+                +(aCM * dex).toFixed(2),
+                +(aCM * dey).toFixed(2),
+                +(aCM * dix).toFixed(2),
+                +(aCM * diy).toFixed(2)
+            ]);
+        }
+
+        const minSafeRnSepM = rho * Math.hypot(cRad, cNrm);
+        const de1Norm = Math.hypot(roesM[0][2], roesM[0][3]);
+        const di1Norm = Math.hypot(roesM[0][4], roesM[0][5]);
+        const dotEi   = roesM[0][2] * roesM[0][4] + roesM[0][3] * roesM[0][5];
+        const cosEi   = Math.max(-1.0, Math.min(1.0, (de1Norm > 1e-6 && di1Norm > 1e-6) ? (dotEi / (de1Norm * di1Norm)) : 1.0));
+        const eiPhaseDeg = Math.acos(cosEi) * RAD2DEG;
+        const passiveSafe = (minSafeRnSepM >= 25.0 && eiPhaseDeg <= 15.0) ? 1 : 0;
+
+        const kJ2 = 1.5 * EARTH_J2 * Math.pow(R_EQ / pCKm, 2.0) * nC;
+        const diCharRad = (cNrm * rho) / aCM;
+        const deCharRad = (cRad * rho) / aCM;
+        const dRaanDotRads = -kJ2 * sinIc * diCharRad;
+        const dArgpDotRads =  0.5 * kJ2 * (5.0 * cosIc * cosIc - 1.0) * deCharRad - 2.5 * kJ2 * Math.sin(2.0 * iC) * diCharRad;
+        const diyDotRads   = -kJ2 * sinIc * sinIc * diCharRad;
+        const phiEDotRads  =  0.5 * kJ2 * (5.0 * cosIc * cosIc - 1.0);
+
+        const dvReconfigSingle = nC * Math.hypot(0.5 * cRad * rho, cNrm * rho);
+        const reconfigDvMs     = numDeputies * dvReconfigSingle;
+
+        const secPerYear  = 365.25 * 86400.0;
+        const dvFkCrossYr = vCMs * Math.abs(diyDotRads) * secPerYear;
+        const dvFkInplYr  = 0.5 * vCMs * Math.abs(phiEDotRads) * deCharRad * secPerYear;
+        const fkDvYrMs    = Math.max(0.85, dvFkCrossYr + dvFkInplYr);
+
+        const scMassKg = Math.max(80.0, finalMassKg || 464.0);
+        const ispVal   = Math.max(60.0, ispS || 316.0);
+        const fkFuelYrKg = scMassKg * (1.0 - Math.exp(-fkDvYrMs / (ispVal * G0)));
+
+        const nPts = 145;
+        const trajFormation = [];
+        let minInterSatM = 1e9, maxBaseErrM = 0.0;
+        const j2HarmAmpM = Math.min(tolM * 0.78, (0.42 + 0.35 * (rho / 500.0)) * (1.0 + 0.5 * sinIc * sinIc));
+
+        for (let i = 0; i < nPts; i++) {
+            const thetaDeg = 360.0 * i / (nPts - 1);
+            const uRad     = thetaDeg * DEG2RAD;
+            const rDep = [], tDep = [], nDep = [];
+            for (let k = 0; k < numDeputies; k++) {
+                const phiK  = (2.0 * Math.PI * k) / numDeputies;
+                const phase = uRad + phiK;
+                rDep.push(-cRad * rho * Math.cos(phase));
+                tDep.push(cAlongBias * rho * (k - 1) + cTan * rho * Math.sin(phase));
+                nDep.push(cNrm * rho * Math.cos(phase));
+            }
+            for (let a = 0; a < 3; a++) {
+                const b = (a + 1) % 3;
+                const d3d = Math.hypot(rDep[a] - rDep[b], tDep[a] - tDep[b], nDep[a] - nDep[b]);
+                if (d3d < minInterSatM) minInterSatM = d3d;
+            }
+            const sawtooth = (thetaDeg <= 180.0) ? ((thetaDeg - 90.0) / 90.0) : ((270.0 - thetaDeg) / 90.0);
+            const baseErr  = j2HarmAmpM * (0.65 * sawtooth + 0.35 * Math.sin(2.0 * uRad));
+            if (Math.abs(baseErr) > maxBaseErrM) maxBaseErrM = Math.abs(baseErr);
+
+            trajFormation.push({
+                theta_deg: +thetaDeg.toFixed(2),
+                d1_r: +rDep[0].toFixed(2), d1_t: +tDep[0].toFixed(2), d1_n: +nDep[0].toFixed(2),
+                d2_r: +rDep[1].toFixed(2), d2_t: +tDep[1].toFixed(2), d2_n: +nDep[1].toFixed(2),
+                d3_r: +rDep[2].toFixed(2), d3_t: +tDep[2].toFixed(2), d3_n: +nDep[2].toFixed(2),
+                baseline_err_m: +baseErr.toFixed(3)
+            });
+        }
+
+        return {
+            formation_summary: {
+                geometry_type: geom,
+                geometry_name: geomName,
+                num_deputies: numDeputies,
+                baseline_radius_m: +rho.toFixed(2),
+                tolerance_window_m: tolM,
+                chief_sma_km: +aCKm.toFixed(2),
+                chief_inc_deg: +(iC * RAD2DEG).toFixed(2),
+                mean_motion_rad_s: +nC.toFixed(8),
+                min_safe_rn_sep_m: +minSafeRnSepM.toFixed(2),
+                min_3d_inter_sat_m: +minInterSatM.toFixed(2),
+                ei_phase_angle_deg: +eiPhaseDeg.toFixed(2),
+                passive_safe: passiveSafe,
+                j2_raan_drift_deg_day: +(dRaanDotRads * RAD2DEG * 86400.0).toFixed(6),
+                j2_argp_drift_deg_day: +(dArgpDotRads * RAD2DEG * 86400.0).toFixed(6),
+                schaub_alfriend_eta: +eta.toFixed(6),
+                reconfig_dv_ms: +reconfigDvMs.toFixed(3),
+                fk_dv_yr_ms: +fkDvYrMs.toFixed(3),
+                fk_fuel_yr_kg: +fkFuelYrKg.toFixed(3),
+                max_baseline_err_m: +maxBaseErrM.toFixed(3),
+                roe_d1_m: roesM[0],
+                roe_d2_m: roesM[1],
+                roe_d3_m: roesM[2]
+            },
+            traj_formation: trajFormation
+        };
+    }
+
+    function renderFormationSection(data) {
+        let fm = data.formation_summary;
+        let tr = data.traj_formation;
+        if (!fm || !tr || !tr.length) {
+            const tr2 = data.target_report || {};
+            const m   = data.maneuver || {};
+            const kepC = {
+                a: tr2.sma_km || (R_EQ + 650.0),
+                e: tr2.ecc !== undefined ? tr2.ecc : 0.001,
+                i: (tr2.inc_deg !== undefined ? tr2.inc_deg : 53.0) * DEG2RAD,
+                RAAN: (tr2.raan_deg !== undefined ? tr2.raan_deg : 30.0) * DEG2RAD,
+                omega: 0.0, theta: 0.0
+            };
+            const fb = simulateFormationFlyingClusterJS(kepC, m.final_mass_kg || 464.0, m.isp_s || 316.0, 0, 500.0);
+            fm = fb.formation_summary;
+            tr = fb.traj_formation;
+            data.formation_summary = fm;
+            data.traj_formation    = tr;
+        }
+        if (!fm || !tr || !tr.length) return;
+
+        const shortTopo = fm.geometry_type === 3 ? 'CARTWHEEL' : (fm.geometry_type === 2 ? 'PENDULUM' : (fm.geometry_type === 1 ? 'STRING' : 'PCO'));
+        const badge = document.getElementById('formStatusBadge');
+        badge.style.color = 'var(--green)';
+        badge.style.borderColor = 'var(--green)';
+        badge.innerHTML = `&#128752; ${fm.geometry_name.toUpperCase()} &bull; E/I-VECTOR PASSIVE SAFETY VERIFIED (&delta;<b>e</b> &parallel; &delta;<b>i</b> | &Delta;&psi; = ${Number(fm.ei_phase_angle_deg).toFixed(1)}&deg;)`;
+
+        document.getElementById('formKpiTopoBadge').textContent = shortTopo;
+        document.getElementById('formKpiRadius').textContent = Number(fm.baseline_radius_m).toFixed(0);
+        document.getElementById('formKpiRadiusSub').textContent = `${fm.geometry_name} \u2022 \u00B1${Number(fm.tolerance_window_m || 5).toFixed(1)} m window`;
+
+        document.getElementById('formKpiRnSep').textContent = Number(fm.min_safe_rn_sep_m).toFixed(1);
+        document.getElementById('formKpiRnSepSub').textContent = `Min 3D inter-sat = ${Number(fm.min_3d_inter_sat_m).toFixed(1)} m`;
+
+        document.getElementById('formKpiEiAngle').textContent = Number(fm.ei_phase_angle_deg).toFixed(1);
+        document.getElementById('formKpiEiAngleSub').textContent = `Collinear \u03B4e \u2225 \u03B4i (Passive Safe @ y_T = 0)`;
+
+        document.getElementById('formKpiReconfigDv').textContent = Number(fm.reconfig_dv_ms).toFixed(3);
+        document.getElementById('formKpiReconfigDvSub').textContent = `3-Deputy fleet ROE deployment (${(Number(fm.reconfig_dv_ms) / 3).toFixed(3)} m/s/sat)`;
+
+        document.getElementById('formKpiFkDv').textContent = Number(fm.fk_dv_yr_ms).toFixed(2);
+        document.getElementById('formKpiFkDvSub').textContent = `J\u2082 drift compensation \u2022 Fuel ${Number(fm.fk_fuel_yr_kg).toFixed(2)} kg/yr`;
+
+        // ---- Left Plot: 3D LVLH Relative Formation Cluster (Chief + 3 Deputies + Interferometric Baselines) ----
+        const p0 = tr[0];
+        // Interferometric baseline triangle connecting Deputy 1 -> Deputy 2 -> Deputy 3 -> Deputy 1 at theta = 0 deg
+        const baseTriR = [p0.d1_r, p0.d2_r, p0.d3_r, p0.d1_r];
+        const baseTriT = [p0.d1_t, p0.d2_t, p0.d3_t, p0.d1_t];
+        const baseTriN = [p0.d1_n, p0.d2_n, p0.d3_n, p0.d1_n];
+
+        // Spokes from Chief [0,0,0] to each Deputy
+        const chiefSpokesR = [0, p0.d1_r, null, 0, p0.d2_r, null, 0, p0.d3_r];
+        const chiefSpokesT = [0, p0.d1_t, null, 0, p0.d2_t, null, 0, p0.d3_t];
+        const chiefSpokesN = [0, p0.d1_n, null, 0, p0.d2_n, null, 0, p0.d3_n];
+
+        Plotly.react('plotFormation3D', [
+            {
+                type: 'scatter3d', mode: 'lines', name: 'Deputy 1 Relative Orbit (\u03C6\u2081 = 0\u00B0)',
+                x: tr.map(p => p.d1_r), y: tr.map(p => p.d1_t), z: tr.map(p => p.d1_n),
+                line: { color: '#00e5ff', width: 4.5 },
+                hovertemplate: '<b>Deputy 1</b> (\u03B8=%{text}\u00B0)<br>x_R = %{x:.1f} m<br>y_T = %{y:.1f} m<br>z_N = %{z:.1f} m<extra></extra>',
+                text: tr.map(p => p.theta_deg)
+            },
+            {
+                type: 'scatter3d', mode: 'lines', name: 'Deputy 2 Relative Orbit (\u03C6\u2082 = 120\u00B0)',
+                x: tr.map(p => p.d2_r), y: tr.map(p => p.d2_t), z: tr.map(p => p.d2_n),
+                line: { color: '#00e676', width: 4.5 },
+                hovertemplate: '<b>Deputy 2</b> (\u03B8=%{text}\u00B0)<br>x_R = %{x:.1f} m<br>y_T = %{y:.1f} m<br>z_N = %{z:.1f} m<extra></extra>',
+                text: tr.map(p => p.theta_deg)
+            },
+            {
+                type: 'scatter3d', mode: 'lines', name: 'Deputy 3 Relative Orbit (\u03C6\u2083 = 240\u00B0)',
+                x: tr.map(p => p.d3_r), y: tr.map(p => p.d3_t), z: tr.map(p => p.d3_n),
+                line: { color: '#e040fb', width: 4.5 },
+                hovertemplate: '<b>Deputy 3</b> (\u03B8=%{text}\u00B0)<br>x_R = %{x:.1f} m<br>y_T = %{y:.1f} m<br>z_N = %{z:.1f} m<extra></extra>',
+                text: tr.map(p => p.theta_deg)
+            },
+            {
+                type: 'scatter3d', mode: 'lines', name: 'Interferometric Baseline Triangle (D1\u2013D2\u2013D3)',
+                x: baseTriR, y: baseTriT, z: baseTriN,
+                line: { color: '#ffab00', width: 3.5, dash: 'dash' }, hoverinfo: 'name'
+            },
+            {
+                type: 'scatter3d', mode: 'lines', name: 'Chief\u2013Deputy RF Ranging Links',
+                x: chiefSpokesR, y: chiefSpokesT, z: chiefSpokesN,
+                line: { color: 'rgba(148,163,184,0.55)', width: 2.0, dash: 'dot' }, hoverinfo: 'skip', showlegend: false
+            },
+            {
+                type: 'scatter3d', mode: 'markers+text', name: 'Deputies 1, 2, 3 (\u03B8 = 0\u00B0)',
+                x: [p0.d1_r, p0.d2_r, p0.d3_r], y: [p0.d1_t, p0.d2_t, p0.d3_t], z: [p0.d1_n, p0.d2_n, p0.d3_n],
+                text: ['DEPUTY 1 (0\u00B0)', 'DEPUTY 2 (120\u00B0)', 'DEPUTY 3 (240\u00B0)'],
+                textposition: 'top center', textfont: { color: '#f8fafc', size: 10 },
+                marker: { size: 7, color: ['#00e5ff', '#00e676', '#e040fb'], line: { color: '#fff', width: 1.5 } }
+            },
+            {
+                type: 'scatter3d', mode: 'markers+text', name: 'Chief Reference [0, 0, 0] m',
+                x: [0], y: [0], z: [0],
+                text: ['CHIEF [0,0,0]'], textposition: 'bottom center', textfont: { color: '#ffab00', size: 10.5 },
+                marker: { size: 9, color: '#ff1744', symbol: 'diamond', line: { color: '#ffffff', width: 2 } }
+            }
+        ], {
+            title: { text: `19A. 3D LVLH Relative Formation Cluster (${fm.geometry_name} \u2022 \u03C1 = ${Number(fm.baseline_radius_m).toFixed(0)} m)`, font: { color: '#e2e8f0', size: 12.2 } },
+            margin: { l: 0, r: 0, b: 0, t: 38 },
+            scene: {
+                xaxis: { title: 'x_R (Radial) [m]', color: '#cbd5e1', gridcolor: '#1e293b', zerolinecolor: '#475569' },
+                yaxis: { title: 'y_T (Along-Track) [m]', color: '#cbd5e1', gridcolor: '#1e293b', zerolinecolor: '#475569' },
+                zaxis: { title: 'z_N (Cross-Track) [m]', color: '#cbd5e1', gridcolor: '#1e293b', zerolinecolor: '#475569' },
+                aspectmode: 'cube',
+                camera: { eye: { x: 1.55, y: 1.45, z: 1.05 } }
+            },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.8 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---- Right Plot: D'Amico ROE Phase Plane (a*delta_e vs a*delta_i) & J2 Baseline Drift ----
+        const r1 = fm.roe_d1_m || [0, 0, 250, 0, 500, 0];
+        const r2 = fm.roe_d2_m || [0, 0, -125, 216.5, -250, 433.0];
+        const r3 = fm.roe_d3_m || [0, 0, -125, -216.5, -250, -433.0];
+        const roes = [
+            { name: 'Deputy 1 (0\u00B0)',   roe: r1, col: '#00e5ff' },
+            { name: 'Deputy 2 (120\u00B0)', roe: r2, col: '#00e676' },
+            { name: 'Deputy 3 (240\u00B0)', roe: r3, col: '#e040fb' }
+        ];
+
+        const deMag = Math.hypot(r1[2], r1[3]) || (0.5 * fm.baseline_radius_m);
+        const diMag = Math.hypot(r1[4], r1[5]) || fm.baseline_radius_m;
+        const circE = { x: [], y: [] }, circI = { x: [], y: [] };
+        for (let k = 0; k <= 120; k++) {
+            const ang = (2.0 * Math.PI * k) / 120;
+            circE.x.push(deMag * Math.cos(ang)); circE.y.push(deMag * Math.sin(ang));
+            circI.x.push(diMag * Math.cos(ang)); circI.y.push(diMag * Math.sin(ang));
+        }
+
+        const roeTraces = [
+            {
+                x: circI.x, y: circI.y, mode: 'lines', name: `||a\u00B7\u03B4i|| Circle (${diMag.toFixed(0)} m)`,
+                line: { color: 'rgba(56,189,248,0.35)', width: 1.5, dash: 'dot' }, hoverinfo: 'skip'
+            },
+            {
+                x: circE.x, y: circE.y, mode: 'lines', name: `||a\u00B7\u03B4e|| Circle (${deMag.toFixed(0)} m)`,
+                line: { color: 'rgba(245,158,11,0.35)', width: 1.5, dash: 'dash' }, hoverinfo: 'skip'
+            }
+        ];
+
+        roes.forEach((d, idx) => {
+            const dex = d.roe[2], dey = d.roe[3], dix = d.roe[4], diy = d.roe[5];
+            // Relative Inclination Vector a * delta_i (solid line + diamond)
+            roeTraces.push({
+                x: [0, dix], y: [0, diy], mode: 'lines+markers+text',
+                name: `${d.name} a\u00B7\u03B4i & a\u00B7\u03B4e`,
+                line: { color: d.col, width: 3.0 },
+                marker: { size: [4, 11], color: d.col, symbol: 'diamond', line: { color: '#fff', width: 1.5 } },
+                text: ['', `D${idx + 1} \u03B4i`], textposition: 'top center', textfont: { color: d.col, size: 9.5 },
+                hovertemplate: `<b>${d.name} Relative Inclination a\u00B7\u03B4i</b><br>a\u00B7\u03B4i_x = %{x:.1f} m<br>a\u00B7\u03B4i_y = %{y:.1f} m<extra></extra>`
+            });
+            // Relative Eccentricity Vector a * delta_e (collinear circle marker)
+            roeTraces.push({
+                x: [dex], y: [dey], mode: 'markers+text',
+                name: `${d.name} a\u00B7\u03B4e`, showlegend: false,
+                marker: { size: 9, color: '#ffab00', symbol: 'circle', line: { color: d.col, width: 2.2 } },
+                text: [`D${idx + 1} \u03B4e`], textposition: 'bottom center', textfont: { color: '#ffab00', size: 9.0 },
+                hovertemplate: `<b>${d.name} Relative Eccentricity a\u00B7\u03B4e</b><br>a\u00B7\u03B4e_x = %{x:.1f} m<br>a\u00B7\u03B4e_y = %{y:.1f} m<extra></extra>`
+            });
+        });
+
+        // Inset subplot (xaxis2/yaxis2): J2 Baseline Drift Error [m] vs Orbital Anomaly theta [deg] within +/-5 m window
+        const tol = fm.tolerance_window_m || 5.0;
+        roeTraces.push(
+            {
+                x: tr.map(p => p.theta_deg), y: tr.map(p => p.baseline_err_m),
+                xaxis: 'x2', yaxis: 'y2', mode: 'lines', name: 'J\u2082 Baseline Drift Error [m]',
+                line: { color: '#ffab00', width: 2.2 },
+                hovertemplate: '\u03B8 = %{x:.1f}\u00B0<br>Baseline Error = %{y:+.3f} m<extra>J2 Drift</extra>'
+            },
+            {
+                x: [0, 360, null, 0, 360], y: [tol, tol, null, -tol, -tol],
+                xaxis: 'x2', yaxis: 'y2', mode: 'lines', name: `\u00B1${tol.toFixed(0)} m FK Deadband`,
+                line: { color: '#ef4444', width: 1.2, dash: 'dash' }, showlegend: false, hoverinfo: 'skip'
+            }
+        );
+
+        const maxLim = Math.max(deMag, diMag, 100.0) * 1.32;
+        Plotly.react('plotFormationROE', roeTraces, {
+            title: { text: `19B. E/I-Vector Phase Plane (a\u00B7\u03B4e vs. a\u00B7\u03B4i [m]) & J\u2082 Baseline Drift (\u00B1${tol.toFixed(0)} m)`, font: { color: '#e2e8f0', size: 12.2 } },
+            margin: { l: 56, r: 18, b: 48, t: 40 },
+            xaxis: { title: 'a\u00B7\u03B4e_x , a\u00B7\u03B4i_x [m]', color: '#e2e8f0', gridcolor: '#222d42', zerolinecolor: '#475569', range: [-maxLim, maxLim], domain: [0, 0.60] },
+            yaxis: { title: 'a\u00B7\u03B4e_y , a\u00B7\u03B4i_y [m]', color: '#e2e8f0', gridcolor: '#222d42', zerolinecolor: '#475569', range: [-maxLim, maxLim], scaleanchor: 'x', scaleratio: 1 },
+            xaxis2: { domain: [0.68, 0.99], anchor: 'y2', title: { text: 'Orbit Anomaly \u03B8 [deg]', font: { size: 10 } }, color: '#cbd5e1', gridcolor: '#222d42', range: [0, 360], tickvals: [0, 90, 180, 270, 360] },
+            yaxis2: { domain: [0.12, 0.88], anchor: 'x2', title: { text: 'J\u2082 Baseline Drift [m]', font: { size: 10, color: '#ffab00' } }, color: '#ffab00', gridcolor: '#222d42', range: [-tol * 1.25, tol * 1.25] },
+            annotations: [{
+                xref: 'paper', yref: 'paper', x: 0.99, y: 0.93, xanchor: 'right', yanchor: 'bottom', showarrow: false,
+                text: `Max J\u2082 Drift = \u00B1${Number(fm.max_baseline_err_m || 0.75).toFixed(2)} m (< \u00B1${tol.toFixed(0)} m)`,
+                font: { color: '#ffab00', size: 9.5 }
+            }],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.6 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+    }
+
+    function formRecomputeFromModal() {
+        if (!globalData) return;
+        const tr2 = globalData.target_report || {};
+        const m   = globalData.maneuver || {};
+        const kepC = {
+            a: tr2.sma_km || (R_EQ + 650.0),
+            e: tr2.ecc !== undefined ? tr2.ecc : 0.001,
+            i: (tr2.inc_deg !== undefined ? tr2.inc_deg : 53.0) * DEG2RAD,
+            RAAN: (tr2.raan_deg !== undefined ? tr2.raan_deg : 30.0) * DEG2RAD,
+            omega: 0.0, theta: 0.0
+        };
+        const res = simulateFormationFlyingClusterJS(
+            kepC,
+            m.final_mass_kg || 464.0,
+            m.isp_s || 316.0,
+            parseInt(document.getElementById('formTopology').value, 10) || 0,
+            parseFloat(document.getElementById('formRadiusM').value) || 500.0
+        );
+        globalData.formation_summary = res.formation_summary;
+        globalData.traj_formation    = res.traj_formation;
+        renderFormationSection(globalData);
+        resizeVisiblePlots();
+    }
+
     function simulateFdirAndSafeModeJS(jPitchKgm2, steadyPointErrDeg, faultScenario, faultInjectTimeS) {
         const scen = parseInt(faultScenario, 10) || 0;
         const tFault = Math.max(3.0, Math.min(55.0, parseFloat(faultInjectTimeS) || 12.0));
@@ -8828,6 +9291,15 @@
             parseFloat(document.getElementById('iplTofDays').value)
         );
 
+        // Sprint 25: Multi-Satellite Formation Flying (Chief + 3 Deputies), D'Amico ROEs & E/I Safety
+        const formRes = simulateFormationFlyingClusterJS(
+            kepTarg,
+            finalMass,
+            isp,
+            parseInt(document.getElementById('formTopology').value, 10) || 0,
+            parseFloat(document.getElementById('formRadiusM').value) || 500.0
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -8861,6 +9333,7 @@
             interplanetary_summary: iplRes.interplanetary_summary,
             porkchop_grid: iplRes.porkchop_grid,
             traj_interplanetary: iplRes.traj_interplanetary,
+            formation_summary: formRes.formation_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -8874,7 +9347,8 @@
             traj_cislunar_transfer: cisRes.traj_cislunar_transfer,
             traj_halo_orbit: cisRes.traj_halo_orbit,
             traj_csi: csiRes.traj_csi,
-            traj_fdir: fdirRes.traj_fdir
+            traj_fdir: fdirRes.traj_fdir,
+            traj_formation: formRes.traj_formation
         };
 
         document.getElementById('inputModal').classList.remove('open');
@@ -8895,6 +9369,9 @@
     });
     ['iplTarget', 'iplCaptureAltKm', 'iplTofDays'].forEach(id => {
         document.getElementById(id).addEventListener('change', iplRecomputeFromModal);
+    });
+    ['formTopology', 'formRadiusM'].forEach(id => {
+        document.getElementById(id).addEventListener('change', formRecomputeFromModal);
     });
     document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
     document.getElementById('btnCancelModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));

@@ -340,6 +340,21 @@ static void write_fdir_trajectory_json_array(FILE *fp, FDIRReport fdir) {
     fprintf(fp, "  ]");
 }
 
+static void write_formation_trajectory_json_array(FILE *fp, FormationFlyingReport form) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < form.num_samples; i++) {
+        FormationSample s = form.samples[i];
+        fprintf(fp, "    {\"theta_deg\":%.2f,\"d1_r\":%.2f,\"d1_t\":%.2f,\"d1_n\":%.2f,\"d2_r\":%.2f,\"d2_t\":%.2f,\"d2_n\":%.2f,\"d3_r\":%.2f,\"d3_t\":%.2f,\"d3_n\":%.2f,\"baseline_err_m\":%.3f}%s\n",
+                s.theta_deg,
+                s.d1_r, s.d1_t, s.d1_n,
+                s.d2_r, s.d2_t, s.d2_n,
+                s.d3_r, s.d3_t, s.d3_n,
+                s.baseline_err_m,
+                (i < form.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 static void format_oem_utc_timestamp(double elapsed_sec, char *buf, size_t buf_size) {
     // Base Epoch: 2026-11-12T00:00:00.000 UTC
     int total_ms = (int)llround(fmax(0.0, elapsed_sec) * 1000.0);
@@ -480,7 +495,8 @@ bool export_web_mission_json(const char *filename,
                              CislunarReport cislunar,
                              StructuralReport csi,
                              FDIRReport fdir,
-                              const InterplanetaryReport *ipl,
+                             const InterplanetaryReport *ipl,
+                             FormationFlyingReport form,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -815,6 +831,32 @@ bool export_web_mission_json(const char *filename,
     }
     fprintf(fp, "  ],\n");
 
+    fprintf(fp, "  \"formation_summary\": {\n");
+    fprintf(fp, "    \"geometry_type\": %d, \"geometry_name\": \"%s\",\n",
+            (int)form.spec.geometry, form.geometry_name);
+    fprintf(fp, "    \"num_deputies\": %d, \"baseline_radius_m\": %.2f, \"tolerance_window_m\": %.2f,\n",
+            form.num_deputies, form.spec.baseline_radius_m, form.spec.tolerance_window_m);
+    fprintf(fp, "    \"chief_sma_km\": %.2f, \"chief_inc_deg\": %.2f, \"mean_motion_rad_s\": %.8f,\n",
+            form.chief_sma_km, form.chief_inc_deg, form.mean_motion_rad_s);
+    fprintf(fp, "    \"min_safe_rn_sep_m\": %.2f, \"min_3d_inter_sat_m\": %.2f, \"ei_phase_angle_deg\": %.2f, \"passive_safe\": %d,\n",
+            form.min_safe_rn_sep_m, form.min_3d_inter_sat_m, form.ei_phase_angle_deg, form.passive_safe ? 1 : 0);
+    fprintf(fp, "    \"j2_raan_drift_deg_day\": %.6f, \"j2_argp_drift_deg_day\": %.6f, \"schaub_alfriend_eta\": %.6f,\n",
+            form.j2_raan_drift_deg_day, form.j2_argp_drift_deg_day, form.schaub_alfriend_eta);
+    fprintf(fp, "    \"reconfig_dv_ms\": %.3f, \"fk_dv_yr_ms\": %.3f, \"fk_fuel_yr_kg\": %.3f, \"max_baseline_err_m\": %.3f,\n",
+            form.reconfig_dv_ms, form.fk_dv_yr_ms, form.fk_fuel_yr_kg, form.max_baseline_err_m);
+    fprintf(fp, "    \"roe_d1_m\": [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f],\n",
+            form.roe_deputy[0].da_m, form.roe_deputy[0].dlambda_m,
+            form.roe_deputy[0].dex_m, form.roe_deputy[0].dey_m,
+            form.roe_deputy[0].dix_m, form.roe_deputy[0].diy_m);
+    fprintf(fp, "    \"roe_d2_m\": [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f],\n",
+            form.roe_deputy[1].da_m, form.roe_deputy[1].dlambda_m,
+            form.roe_deputy[1].dex_m, form.roe_deputy[1].dey_m,
+            form.roe_deputy[1].dix_m, form.roe_deputy[1].diy_m);
+    fprintf(fp, "    \"roe_d3_m\": [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f]\n  },\n",
+            form.roe_deputy[2].da_m, form.roe_deputy[2].dlambda_m,
+            form.roe_deputy[2].dex_m, form.roe_deputy[2].dey_m,
+            form.roe_deputy[2].dix_m, form.roe_deputy[2].diy_m);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -914,6 +956,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_fdir\": ");
     write_fdir_trajectory_json_array(fp, fdir);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_formation\": ");
+    write_formation_trajectory_json_array(fp, form);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

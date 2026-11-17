@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 24: INTERPLANETARY PATCHED CONICS, PORKCHOP & B-PLANE \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 25: MULTI-SATELLITE FORMATION FLYING, ROEs & J2-INVARIANCE \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -164,6 +164,14 @@ int main(void) {
         .tof_days       = 210.0    // TOF eliocentrico di progetto
     };
     bool ipl_ok = compute_interplanetary_porkchop_and_transfer(orb_initial, ipl_spec, &ipl);
+
+    // 17. SPRINT 25: MULTI-SATELLITE FORMATION FLYING (CHIEF + 3 DEPUTIES), J2-INVARIANT ROEs & E/I SAFETY
+    FormationSpec form_spec = {
+        .geometry           = FORM_PROJECTED_CIRCULAR_PCO, // Projected Circular Orbit (PCO)
+        .baseline_radius_m  = 500.0,                       // Raggio della formazione rho_form = 500.0 m
+        .tolerance_window_m = 5.0                          // Tolleranza di mantenimento baseline +/-5.0 m
+    };
+    FormationFlyingReport form = simulate_formation_flying_cluster(orb_target, plan, form_spec, EARTH_MU);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -330,15 +338,31 @@ int main(void) {
     } else {
         printf("  * No valid Lambert solution for the selected TOF.\n\n");
     }
+
+    printf("[MULTI-SATELLITE FORMATION FLYING (CHIEF + %d DEPUTIES), ROEs & J2-INVARIANCE]\n", form.num_deputies);
+    printf("  * Formation Topology    : %s | Baseline Radius rho = %.1f m (+/-%.1f m window)\n",
+           form.geometry_name, form.spec.baseline_radius_m, form.spec.tolerance_window_m);
+    printf("  * Deputy 1 D'Amico ROEs : a*[da, dl, dex, dey, dix, diy] = [ %+.1f, %+.1f, %+.1f, %+.1f, %+.1f, %+.1f ] m\n",
+           form.roe_deputy[0].da_m, form.roe_deputy[0].dlambda_m,
+           form.roe_deputy[0].dex_m, form.roe_deputy[0].dey_m,
+           form.roe_deputy[0].dix_m, form.roe_deputy[0].diy_m);
+    printf("  * Passive E/I Safety    : Min Safe R/N Sep = %.2f m | Min 3D Inter-Sat = %.2f m | E/I Phase Angle = %.1f deg (%s)\n",
+           form.min_safe_rn_sep_m, form.min_3d_inter_sat_m, form.ei_phase_angle_deg,
+           form.passive_safe ? "COLLINEAR SAFE" : "CHECK PHASE");
+    printf("  * Secular J2 Drift      : dOmega/dt = %+.5f deg/day | domega/dt = %+.5f deg/day | Max Baseline Err = %.2f m\n",
+           form.j2_raan_drift_deg_day, form.j2_argp_drift_deg_day, form.max_baseline_err_m);
+    printf("  * Fleet Delta-V Budget  : Reconfiguration dV = %.3f m/s | Formation-Keeping dV_FK = %.3f m/s/yr (Fuel = %.3f kg/yr)\n\n",
+           form.reconfig_dv_ms, form.fk_dv_yr_ms, form.fk_fuel_yr_kg);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Autonomous FDIR, NORAD TLE, CCSDS OEM & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Multi-Satellite Formation Flying, ROEs, Interplanetary & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

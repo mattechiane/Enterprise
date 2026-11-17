@@ -41,6 +41,7 @@ bool export_web_mission_json(const char *filename,
                              StructuralReport csi,
                              FDIRReport fdir,
                              const InterplanetaryReport *ipl,
+                             FormationFlyingReport form,
                              const GroundStation *station,
                              const SpacecraftConfig *sc);
 

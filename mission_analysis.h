@@ -160,4 +160,11 @@ bool compute_interplanetary_porkchop_and_transfer(KeplerianElements orb_init,
                                                   InterplanetarySpec spec,
                                                   InterplanetaryReport *out);
 
+// Sprint 25: Multi-Satellite Formation Flying (Chief + 3 Deputies), J2-Invariant ROEs (D'Amico / Schaub-Alfriend)
+// & Passive E/I-Vector Separation Safety
+FormationFlyingReport simulate_formation_flying_cluster(KeplerianElements orb_chief,
+                                                        OptimalTransferPlan plan,
+                                                        FormationSpec spec,
+                                                        double mu);
+
 #endif // MISSION_ANALYSIS_H
