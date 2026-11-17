@@ -45,6 +45,7 @@ bool export_web_mission_json(const char *filename,
                              MissionOpsReport ops,
                              OrbitLifetimeReport swx,
                              ISLNetworkReport isl,
+                             GroundSegmentReport gnd,
                              const GroundStation *station,
                              const SpacecraftConfig *sc);
 

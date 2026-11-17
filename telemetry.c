@@ -141,28 +141,25 @@ static void write_transfer_vector_basis_json_array(FILE *fp,
     if (r2_mag < 1e-6) r2_mag = EARTH_RADIUS + 650.0;
 
     // 1. Costruisci la Base Ortonormale del Piano di Trasferimento (u_hat, v_hat)
-    Vector3D u_hat  = vec_scale(r1_vec, 1.0 / r1_mag);
-    Vector3D r2_hat = vec_scale(r2_vec, 1.0 / r2_mag);
-    Vector3D h_vec  = vec_cross(r1_vec, r2_vec);
+    Vector3D u1_hat     = vec_scale(r1_vec, 1.0 / r1_mag);
+    Vector3D r2_hat     = vec_scale(r2_vec, 1.0 / r2_mag);
+    Vector3D neg_r2_hat = vec_scale(r2_hat, -1.0);
+    Vector3D h_vec      = vec_cross(r1_vec, r2_vec);
 
-    // Gestione Singolarita 180 deg (Hohmann: vettori r1 e r2 collineari/opposti)
-    if (vec_norm(h_vec) < 1e-6 || vec_norm(vec_cross(u_hat, r2_hat)) < 1e-6) {
+    // Gestione Singolarita 180 deg (Hohmann) o nodi equatoriali complanari z1=z2=0 con cambio RAAN:
+    // usa la normale fisica dell'orbita target h = r2 x v2 per preservare l'inclinazione 3D reale!
+    bool both_nodes_equatorial = (fabs(r1_vec.z) < 1.0 && fabs(r2_vec.z) < 1.0);
+    if (vec_norm(h_vec) < 1e-6 || vec_norm(vec_cross(u1_hat, r2_hat)) < 1e-6 || both_nodes_equatorial) {
         h_vec = vec_cross(r2_vec, v2_targ_vec);
         if (vec_norm(h_vec) < 1e-6) {
-            Vector3D fallback_axis = (fabs(u_hat.z) < 0.9) ? (Vector3D){0.0, 0.0, 1.0} : (Vector3D){0.0, 1.0, 0.0};
-            h_vec = vec_cross(u_hat, fallback_axis);
+            Vector3D fallback_axis = (fabs(u1_hat.z) < 0.9) ? (Vector3D){0.0, 0.0, 1.0} : (Vector3D){0.0, 1.0, 0.0};
+            h_vec = vec_cross(u1_hat, fallback_axis);
         }
     }
     Vector3D h_hat = vec_normalize(h_vec);
-    Vector3D v_hat = vec_normalize(vec_cross(h_hat, u_hat));
+    Vector3D v_hat = vec_normalize(vec_cross(h_hat, neg_r2_hat));
 
-    // 2. Calcola l'angolo di trasferimento totale Delta_theta e i parametri dell'ellisse (a, e, p)
-    double cos_dtheta = vec_dot(u_hat, r2_hat);
-    if (cos_dtheta >  1.0) cos_dtheta =  1.0;
-    if (cos_dtheta < -1.0) cos_dtheta = -1.0;
-    double delta_theta = acos(cos_dtheta);
-    if (delta_theta < 1e-6) delta_theta = PI;
-
+    // 2. Calcola i parametri dell'ellisse (a, e, p)
     double a = 0.5 * (r1_mag + r2_mag);
     double e = fabs(r2_mag - r1_mag) / (r1_mag + r2_mag);
     double p = a * (1.0 - e * e);
@@ -171,8 +168,8 @@ static void write_transfer_vector_basis_json_array(FILE *fp,
     fprintf(fp, "[\n");
     for (int k = 0; k <= num_steps; k++) {
         double s = (double)k / (double)num_steps;
-        double theta = s * delta_theta;
-        double r_theta = p / (1.0 + sign_e * e * cos(s * PI));
+        double theta = s * PI;
+        double r_theta = p / (1.0 + sign_e * e * cos(theta));
 
         Vector3D pos;
         if (k == 0) {
@@ -180,7 +177,11 @@ static void write_transfer_vector_basis_json_array(FILE *fp,
         } else if (k == num_steps) {
             pos = r2_vec;
         } else {
-            Vector3D dir_uv = vec_add(vec_scale(u_hat, cos(theta)), vec_scale(v_hat, sin(theta)));
+            // Versore di linea dei nodi interpolato con continuita da u1_hat (s=0) a -r2_hat (s=1):
+            // a s=0: cos(0)*u1_hat + sin(0)*v_hat = +u1_hat -> r(0) = r1_vec
+            // a s=1: cos(pi)*(-r2_hat) + sin(pi)*v_hat = +r2_hat -> r(1) = r2_vec
+            Vector3D u_s = vec_normalize(vec_add(vec_scale(u1_hat, 1.0 - s), vec_scale(neg_r2_hat, s)));
+            Vector3D dir_uv = vec_normalize(vec_add(vec_scale(u_s, cos(theta)), vec_scale(v_hat, sin(theta))));
             pos = vec_scale(dir_uv, r_theta);
         }
 
@@ -508,6 +509,42 @@ static void write_isl_topology_json_array(FILE *fp, ISLNetworkReport isl) {
     fprintf(fp, "  ]");
 }
 
+static void write_ground_stations_json_array(FILE *fp, GroundSegmentReport gnd) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < gnd.num_stations; i++) {
+        GroundStationNode st = gnd.stations[i];
+        fprintf(fp, "    {\"station_id\":%d,\"name\":\"%s\",\"lat_deg\":%.4f,\"lon_deg\":%.4f,\"alt_km\":%.3f,\"min_el_deg\":%.1f,\"contact_min_24h\":%.1f,\"passes_24h\":%d,\"max_el_deg\":%.1f,\"peak_slew_deg_s\":%.3f,\"footprint_deg\":%.2f}%s\n",
+                st.station_id, st.name, st.lat_deg, st.lon_deg, st.alt_km, st.min_el_deg,
+                st.contact_time_min_24h, st.pass_count_24h, st.max_el_deg, st.peak_slew_rate_deg_s, st.footprint_radius_deg,
+                (i < gnd.num_stations - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
+static void write_ground_passes_json_array(FILE *fp, GroundSegmentReport gnd) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < gnd.num_passes; i++) {
+        GroundStationPass p = gnd.passes[i];
+        fprintf(fp, "    {\"station_id\":%d,\"station_name\":\"%s\",\"aos_min\":%.2f,\"los_min\":%.2f,\"duration_min\":%.2f,\"max_el_deg\":%.1f,\"az_aos_deg\":%.1f,\"az_los_deg\":%.1f,\"peak_slew_deg_s\":%.3f}%s\n",
+                p.station_id, p.station_name, p.aos_min, p.los_min, p.duration_min,
+                p.max_el_deg, p.az_at_aos_deg, p.az_at_los_deg, p.peak_slew_deg_s,
+                (i < gnd.num_passes - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
+static void write_ground_track_json_array(FILE *fp, GroundSegmentReport gnd) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < gnd.num_track_samples; i++) {
+        GroundTrackSample s = gnd.samples[i];
+        fprintf(fp, "    {\"t_min\":%.2f,\"lat_deg\":%.2f,\"lon_deg\":%.2f,\"alt_km\":%.2f,\"active_station_id\":%d,\"azimuth_deg\":%.2f,\"elevation_deg\":%.2f,\"range_km\":%.1f,\"range_rate_kms\":%.3f,\"slew_rate_deg_s\":%.4f}%s\n",
+                s.t_min, s.sat_lat_deg, s.sat_lon_deg, s.sat_alt_km, s.active_station_id,
+                s.azimuth_deg, s.elevation_deg, s.range_km, s.range_rate_kms, s.slew_rate_deg_s,
+                (i < gnd.num_track_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 static void format_oem_utc_timestamp(double elapsed_sec, char *buf, size_t buf_size) {
     // Base Epoch: 2026-11-12T00:00:00.000 UTC
     int total_ms = (int)llround(fmax(0.0, elapsed_sec) * 1000.0);
@@ -674,6 +711,7 @@ bool export_web_mission_json(const char *filename,
                              MissionOpsReport ops,
                              OrbitLifetimeReport swx,
                              ISLNetworkReport isl,
+                             GroundSegmentReport gnd,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -1103,6 +1141,16 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"total_capacity_gbps\": %.1f, \"mean_node_degree\": %.2f, \"mesh_connectivity_status\": \"%s\"\n  },\n",
             isl.total_capacity_gbps, isl.mean_node_degree, isl.mesh_connectivity_status);
 
+    fprintf(fp, "  \"ground_segment_summary\": {\n");
+    fprintf(fp, "    \"network_type\": %d, \"network_name\": \"%s\", \"elevation_mask_deg\": %.1f, \"num_stations\": %d,\n",
+            (int)gnd.spec.network_type, gnd.network_name, gnd.spec.elevation_mask_deg, gnd.num_stations);
+    fprintf(fp, "    \"total_contact_hours_24h\": %.2f, \"coverage_duty_pct\": %.1f, \"max_comm_gap_min\": %.2f, \"total_handovers\": %d,\n",
+            gnd.total_contact_hours_24h, gnd.coverage_duty_pct, gnd.max_comm_gap_min, gnd.total_handovers);
+    fprintf(fp, "    \"best_station_id\": %d, \"best_station_name\": \"%s\", \"best_station_contact_min\": %.1f,\n",
+            gnd.best_station_id, gnd.best_station_name, gnd.best_station_contact_min);
+    fprintf(fp, "    \"peak_antenna_slew_deg_s\": %.4f, \"num_passes_24h\": %d\n  },\n",
+            gnd.peak_antenna_slew_deg_s, gnd.num_passes);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -1223,6 +1271,18 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"isl_topology\": ");
     write_isl_topology_json_array(fp, isl);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"ground_stations\": ");
+    write_ground_stations_json_array(fp, gnd);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"ground_passes\": ");
+    write_ground_passes_json_array(fp, gnd);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_ground_track\": ");
+    write_ground_track_json_array(fp, gnd);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

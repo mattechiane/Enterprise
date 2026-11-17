@@ -205,4 +205,12 @@ ISLNetworkReport evaluate_optical_isl_network(KeplerianElements orb_target,
                                               SystemEngineeringReport sys,
                                               ISLNetworkSpec spec);
 
+// Sprint 30: Multi-Ground Station Tracking (NASA DSN / ESA ESTRACK / Polar LEO),
+// Topocentric SEZ Azimuth-Elevation-Range (AER), Link Handovers & Antenna Slew Rate
+GroundSegmentReport evaluate_multi_station_coverage(KeplerianElements orb_target,
+                                                    OptimalTransferPlan plan,
+                                                    const SpacecraftConfig *sc,
+                                                    GroundNetworkSpec spec,
+                                                    double mu);
+
 #endif // MISSION_ANALYSIS_H

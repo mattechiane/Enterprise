@@ -4633,7 +4633,8 @@ OrbitLifetimeReport simulate_lifetime_orbit_decay(KeplerianElements orb_target,
     double cd_a_m  = (cd * area_m2) / mass_kg;
 
     rep.ballistic_coeff_kgm2 = mass_kg / fmax(1e-6, cd * area_m2);
-    rep.initial_alt_km       = fmax(160.0, orb_target.a - EARTH_RADIUS);
+    double raw_targ_alt_km   = fmax(160.0, orb_target.a - EARTH_RADIUS);
+    rep.initial_alt_km       = (raw_targ_alt_km <= 950.0) ? raw_targ_alt_km : 650.0;
     rep.ap_index             = 2.0 * exp(0.65 * spec.kp_index);
 
     // Metriche termosferiche alla quota target iniziale
@@ -4816,7 +4817,9 @@ ISLNetworkReport evaluate_optical_isl_network(KeplerianElements orb_target,
             double d_km = sqrt(d_sq);
 
             bool same_plane = (rep.nodes[i].plane_id == rep.nodes[j].plane_id);
-            double range_gate_km = same_plane ? (spec.max_range_km * 1.08) : spec.max_range_km;
+            double shell_scale   = fmax(1.0, r_orb_km / (EARTH_RADIUS + 650.0));
+            double eff_max_range = spec.max_range_km * shell_scale;
+            double range_gate_km = same_plane ? (eff_max_range * 1.08) : eff_max_range;
             if (d_km > range_gate_km) continue;
 
             // Verifica Geometrica 3D Line-of-Sight (LoS) rispetto alla sfera occultante terrestre + atmosfera (R_E + 80 km)
@@ -4886,6 +4889,333 @@ ISLNetworkReport evaluate_optical_isl_network(KeplerianElements orb_target,
 
     return rep;
 }
+
+// =========================================================================
+// SPRINT 30: MULTI-GROUND STATION TRACKING (NASA DSN / ESA ESTRACK / POLAR),
+// TOPOCENTRIC SEZ AZIMUTH-ELEVATION-RANGE (AER) & ANTENNA SLEW RATE
+// =========================================================================
+static void compute_topocentric_sez_aer(Vector3D sat_ecef,
+                                        Vector3D gs_ecef,
+                                        double lat_rad,
+                                        double lon_rad,
+                                        double *az_deg_out,
+                                        double *el_deg_out,
+                                        double *range_km_out) {
+    Vector3D rho = vec_sub(sat_ecef, gs_ecef);
+    double r_mag = fmax(1e-6, vec_norm(rho));
+
+    double sin_lat = sin(lat_rad), cos_lat = cos(lat_rad);
+    double sin_lon = sin(lon_rad), cos_lon = cos(lon_rad);
+
+    // Rotazione da ECEF a Topocentrico SEZ (South - East - Zenith)
+    double rho_S =  sin_lat * cos_lon * rho.x + sin_lat * sin_lon * rho.y - cos_lat * rho.z;
+    double rho_E = -sin_lon * rho.x           + cos_lon * rho.y;
+    double rho_Z =  cos_lat * cos_lon * rho.x + cos_lat * sin_lon * rho.y + sin_lat * rho.z;
+
+    double el_rad = asin(fmax(-1.0, fmin(1.0, rho_Z / r_mag)));
+    double az_rad = atan2(rho_E, -rho_S);
+    if (az_rad < 0.0) az_rad += 2.0 * PI;
+
+    if (az_deg_out)   *az_deg_out   = az_rad * RAD2DEG;
+    if (el_deg_out)   *el_deg_out   = el_rad * RAD2DEG;
+    if (range_km_out) *range_km_out = r_mag;
+}
+
+GroundSegmentReport evaluate_multi_station_coverage(KeplerianElements orb_target,
+                                                    OptimalTransferPlan plan,
+                                                    const SpacecraftConfig *sc,
+                                                    GroundNetworkSpec spec,
+                                                    double mu) {
+    GroundSegmentReport rep = {0};
+
+    if (spec.elevation_mask_deg < 0.0 || spec.elevation_mask_deg > 45.0) {
+        spec.elevation_mask_deg = 5.0;
+    }
+    rep.spec = spec;
+    rep.num_stations = NUM_NET_STATIONS;
+
+    if (spec.network_type == NET_ESA_ESTRACK) {
+        snprintf(rep.network_name, sizeof(rep.network_name), "ESA ESTRACK Global Tracking Network");
+        const char *names[4] = {"Cebreros (DSA-2, Spain)", "Malargue (DSA-3, Argentina)", "New Norcia (DSA-1, Australia)", "Kourou (ESTRACK, Fr. Guiana)"};
+        const double lats[4] = { 40.4528, -35.7761, -31.0483,   5.2514};
+        const double lons[4] = { -4.3675, -69.3983, 116.1914, -52.8047};
+        const double alts[4] = {  0.794,    1.550,    0.252,    0.014};
+        for (int s = 0; s < 4; s++) {
+            rep.stations[s].station_id = s;
+            snprintf(rep.stations[s].name, sizeof(rep.stations[s].name), "%s", names[s]);
+            rep.stations[s].lat_deg    = lats[s];
+            rep.stations[s].lon_deg    = lons[s];
+            rep.stations[s].alt_km     = alts[s];
+            rep.stations[s].min_el_deg = spec.elevation_mask_deg;
+        }
+    } else if (spec.network_type == NET_POLAR_LEO) {
+        snprintf(rep.network_name, sizeof(rep.network_name), "High-Latitude Polar LEO Network");
+        const char *names[4] = {"Svalbard SvalSat (Norway)", "TrollSat (Antarctica)", "Fairbanks (ASF, Alaska)", "Punta Arenas (Chile)"};
+        const double lats[4] = { 78.2297, -72.0114,  64.8590, -52.9360};
+        const double lons[4] = { 15.4078,   2.5350, -147.8490, -70.8700};
+        const double alts[4] = {  0.458,    1.270,    0.185,    0.042};
+        for (int s = 0; s < 4; s++) {
+            rep.stations[s].station_id = s;
+            snprintf(rep.stations[s].name, sizeof(rep.stations[s].name), "%s", names[s]);
+            rep.stations[s].lat_deg    = lats[s];
+            rep.stations[s].lon_deg    = lons[s];
+            rep.stations[s].alt_km     = alts[s];
+            rep.stations[s].min_el_deg = spec.elevation_mask_deg;
+        }
+    } else {
+        snprintf(rep.network_name, sizeof(rep.network_name), "NASA Deep Space Network (DSN + MOC)");
+        const char *names[4] = {"Goldstone (DSN-14, USA)", "Madrid (DSN-63, Spain)", "Canberra (DSN-43, Australia)", "Milano-Bovisa (MOC, Italy)"};
+        const double lats[4] = {  35.4267,  40.4314, -35.4014, 45.5020};
+        const double lons[4] = {-116.8900,  -4.2481, 148.9817,  9.1560};
+        const double alts[4] = {   1.036,    0.834,    0.688,   0.140};
+        for (int s = 0; s < 4; s++) {
+            rep.stations[s].station_id = s;
+            snprintf(rep.stations[s].name, sizeof(rep.stations[s].name), "%s", names[s]);
+            rep.stations[s].lat_deg    = lats[s];
+            rep.stations[s].lon_deg    = lons[s];
+            rep.stations[s].alt_km     = alts[s];
+            rep.stations[s].min_el_deg = spec.elevation_mask_deg;
+        }
+    }
+
+    double r_orb_km = fmax(EARTH_RADIUS + 150.0, orb_target.a);
+    double el_mask_rad = spec.elevation_mask_deg * DEG2RAD;
+    double cos_arg = fmax(-1.0, fmin(1.0, (EARTH_RADIUS / r_orb_km) * cos(el_mask_rad)));
+    double lambda_cone_deg = fmax(3.0, (acos(cos_arg) - el_mask_rad) * RAD2DEG);
+
+    Vector3D gs_ecef[NUM_NET_STATIONS];
+    for (int s = 0; s < NUM_NET_STATIONS; s++) {
+        rep.stations[s].footprint_radius_deg = lambda_cone_deg;
+        GeodeticCoord gc = {
+            .latitude  = rep.stations[s].lat_deg * DEG2RAD,
+            .longitude = rep.stations[s].lon_deg * DEG2RAD,
+            .altitude  = rep.stations[s].alt_km
+        };
+        gs_ecef[s] = geodetic_to_ecef(gc);
+    }
+
+    // 1. Simulazione 24 ore (86400 s, dt = 30 s) per bilancio completo contatti, gap, handover e passaggi AOS/LOS
+    double mass_kg = (plan.final_mass > 10.0) ? plan.final_mass : 464.0;
+    KeplerianElements kep_start = orb_target;
+    validate_and_clamp_closed_orbit(&kep_start, NULL);
+    CartesianState state = keplerian_to_cartesian(kep_start, mu, mass_kg, 0.0);
+
+    ForceModelConfig forces = {.enable_j2 = true, .enable_drag = true, .sun_dir = {1.0, 0.0, 0.0}};
+    SpacecraftConfig sc_pass = *sc;
+    sc_pass.thruster.is_active = false;
+
+    const double dt_s = 30.0;
+    const int n_steps_24h = 2880;
+
+    bool   in_pass_st[NUM_NET_STATIONS]     = {false};
+    double aos_min_st[NUM_NET_STATIONS]     = {0.0};
+    double max_el_pass_st[NUM_NET_STATIONS] = {0.0};
+    double az_aos_st[NUM_NET_STATIONS]      = {0.0};
+    double peak_slew_pass_st[NUM_NET_STATIONS] = {0.0};
+
+    double prev_az_st[NUM_NET_STATIONS]  = {0.0};
+    double prev_el_st[NUM_NET_STATIONS]  = {0.0};
+
+    int    prev_active_st   = -1;
+    double current_gap_sec  = 0.0;
+    double max_gap_sec      = 0.0;
+    double total_contact_s  = 0.0;
+    int    handover_cnt     = 0;
+    double global_peak_slew = 0.0;
+
+    for (int step = 0; step <= n_steps_24h; step++) {
+        double t_sec = (double)step * dt_s;
+        double t_min = t_sec / 60.0;
+        Vector3D sat_ecef = eci_to_ecef(state.position, t_sec, 0.0);
+
+        int best_st = -1;
+        double best_el = spec.elevation_mask_deg;
+
+        for (int s = 0; s < NUM_NET_STATIONS; s++) {
+            double az_d = 0.0, el_d = 0.0, rng_km = 0.0;
+            compute_topocentric_sez_aer(
+                sat_ecef, gs_ecef[s],
+                rep.stations[s].lat_deg * DEG2RAD,
+                rep.stations[s].lon_deg * DEG2RAD,
+                &az_d, &el_d, &rng_km
+            );
+
+            double slew_deg_s = 0.0;
+            if (step > 0) {
+                double d_el = (el_d - prev_el_st[s]) / dt_s;
+                double d_az = az_d - prev_az_st[s];
+                if (d_az >  180.0) d_az -= 360.0;
+                if (d_az < -180.0) d_az += 360.0;
+                d_az /= dt_s;
+                double cos_el = cos(el_d * DEG2RAD);
+                slew_deg_s = sqrt(d_el * d_el + (d_az * cos_el) * (d_az * cos_el));
+            }
+            prev_az_st[s] = az_d;
+            prev_el_st[s] = el_d;
+
+            if (el_d >= spec.elevation_mask_deg) {
+                rep.stations[s].contact_time_min_24h += (dt_s / 60.0);
+                if (el_d > rep.stations[s].max_el_deg) rep.stations[s].max_el_deg = el_d;
+                if (slew_deg_s > rep.stations[s].peak_slew_rate_deg_s) rep.stations[s].peak_slew_rate_deg_s = slew_deg_s;
+                if (slew_deg_s > global_peak_slew) global_peak_slew = slew_deg_s;
+
+                if (!in_pass_st[s]) {
+                    in_pass_st[s]          = true;
+                    aos_min_st[s]          = t_min;
+                    max_el_pass_st[s]      = el_d;
+                    az_aos_st[s]           = az_d;
+                    peak_slew_pass_st[s]   = slew_deg_s;
+                    rep.stations[s].pass_count_24h++;
+                } else {
+                    if (el_d > max_el_pass_st[s])       max_el_pass_st[s]    = el_d;
+                    if (slew_deg_s > peak_slew_pass_st[s]) peak_slew_pass_st[s] = slew_deg_s;
+                }
+
+                if (el_d > best_el) {
+                    best_el = el_d;
+                    best_st = s;
+                }
+            } else if (in_pass_st[s]) {
+                in_pass_st[s] = false;
+                double dur_m = t_min - aos_min_st[s];
+                if (dur_m >= 1.0 && rep.num_passes < MAX_GROUND_PASSES) {
+                    int pidx = rep.num_passes++;
+                    rep.passes[pidx].station_id     = s;
+                    snprintf(rep.passes[pidx].station_name, sizeof(rep.passes[pidx].station_name), "%s", rep.stations[s].name);
+                    rep.passes[pidx].aos_min        = aos_min_st[s];
+                    rep.passes[pidx].los_min        = t_min;
+                    rep.passes[pidx].duration_min   = dur_m;
+                    rep.passes[pidx].max_el_deg     = max_el_pass_st[s];
+                    rep.passes[pidx].az_at_aos_deg  = az_aos_st[s];
+                    rep.passes[pidx].az_at_los_deg  = az_d;
+                    rep.passes[pidx].peak_slew_deg_s = peak_slew_pass_st[s];
+                }
+            }
+        }
+
+        if (best_st >= 0) {
+            total_contact_s += dt_s;
+            if (current_gap_sec > max_gap_sec) max_gap_sec = current_gap_sec;
+            current_gap_sec = 0.0;
+            if (prev_active_st >= 0 && prev_active_st != best_st) {
+                handover_cnt++;
+            }
+            prev_active_st = best_st;
+        } else {
+            current_gap_sec += dt_s;
+            if (current_gap_sec > max_gap_sec) max_gap_sec = current_gap_sec;
+            prev_active_st = -1;
+        }
+
+        if (step < n_steps_24h) {
+            state = propagate_step_rk4(state, dt_s, &sc_pass, &forces);
+        }
+    }
+
+    // Chiudi eventuali passaggi ancora aperti a fine giornata
+    for (int s = 0; s < NUM_NET_STATIONS; s++) {
+        if (in_pass_st[s] && rep.num_passes < MAX_GROUND_PASSES) {
+            double dur_m = 1440.0 - aos_min_st[s];
+            if (dur_m >= 1.0) {
+                int pidx = rep.num_passes++;
+                rep.passes[pidx].station_id      = s;
+                snprintf(rep.passes[pidx].station_name, sizeof(rep.passes[pidx].station_name), "%s", rep.stations[s].name);
+                rep.passes[pidx].aos_min         = aos_min_st[s];
+                rep.passes[pidx].los_min         = 1440.0;
+                rep.passes[pidx].duration_min    = dur_m;
+                rep.passes[pidx].max_el_deg      = max_el_pass_st[s];
+                rep.passes[pidx].az_at_aos_deg   = az_aos_st[s];
+                rep.passes[pidx].az_at_los_deg   = prev_az_st[s];
+                rep.passes[pidx].peak_slew_deg_s = peak_slew_pass_st[s];
+            }
+        }
+    }
+
+    rep.total_contact_hours_24h = fmin(24.0, total_contact_s / 3600.0);
+    rep.coverage_duty_pct       = fmin(100.0, (total_contact_s / 86400.0) * 100.0);
+    rep.max_comm_gap_min        = max_gap_sec / 60.0;
+    rep.total_handovers         = handover_cnt;
+    rep.peak_antenna_slew_deg_s = global_peak_slew;
+
+    int best_id = 0;
+    for (int s = 1; s < NUM_NET_STATIONS; s++) {
+        if (rep.stations[s].contact_time_min_24h > rep.stations[best_id].contact_time_min_24h) {
+            best_id = s;
+        }
+    }
+    rep.best_station_id = best_id;
+    snprintf(rep.best_station_name, sizeof(rep.best_station_name), "%s", rep.stations[best_id].name);
+    rep.best_station_contact_min = rep.stations[best_id].contact_time_min_24h;
+
+    // 2. Generazione serie temporale ad alta risoluzione traj_ground_track su 2.5 periodi orbitali (MAX_GROUND_TRACK_SAMPLES)
+    double period_s = 2.0 * PI * sqrt((r_orb_km * r_orb_km * r_orb_km) / mu);
+    double track_win_s = fmin(43200.0, fmax(10800.0, 2.5 * period_s));
+    int n_trk = MAX_GROUND_TRACK_SAMPLES;
+    rep.num_track_samples = n_trk;
+    double dt_trk = track_win_s / (double)(n_trk - 1);
+
+    CartesianState st_trk = keplerian_to_cartesian(kep_start, mu, mass_kg, 0.0);
+    double prev_az = 0.0, prev_el = 0.0, prev_rng = 0.0;
+
+    for (int k = 0; k < n_trk; k++) {
+        double t_s = (double)k * dt_trk;
+        Vector3D ecef_k = eci_to_ecef(st_trk.position, t_s, 0.0);
+        GeodeticCoord geo_k = ecef_to_geodetic(ecef_k);
+
+        int act_id = -1;
+        double best_el_k = -90.0, best_az_k = 0.0, best_rng_k = 0.0;
+        for (int s = 0; s < NUM_NET_STATIONS; s++) {
+            double az_d = 0.0, el_d = 0.0, rng_km = 0.0;
+            compute_topocentric_sez_aer(
+                ecef_k, gs_ecef[s],
+                rep.stations[s].lat_deg * DEG2RAD,
+                rep.stations[s].lon_deg * DEG2RAD,
+                &az_d, &el_d, &rng_km
+            );
+            if (el_d > best_el_k) {
+                best_el_k  = el_d;
+                best_az_k  = az_d;
+                best_rng_k = rng_km;
+                if (el_d >= spec.elevation_mask_deg) {
+                    act_id = s;
+                }
+            }
+        }
+
+        double r_rate = 0.0, slew_rate = 0.0;
+        if (k > 0) {
+            r_rate = (best_rng_k - prev_rng) / dt_trk;
+            double d_el = (best_el_k - prev_el) / dt_trk;
+            double d_az = best_az_k - prev_az;
+            if (d_az >  180.0) d_az -= 360.0;
+            if (d_az < -180.0) d_az += 360.0;
+            d_az /= dt_trk;
+            double cos_e = cos(best_el_k * DEG2RAD);
+            slew_rate = sqrt(d_el * d_el + (d_az * cos_e) * (d_az * cos_e));
+        }
+        prev_az  = best_az_k;
+        prev_el  = best_el_k;
+        prev_rng = best_rng_k;
+
+        rep.samples[k].t_min             = t_s / 60.0;
+        rep.samples[k].sat_lat_deg       = geo_k.latitude * RAD2DEG;
+        rep.samples[k].sat_lon_deg       = geo_k.longitude * RAD2DEG;
+        rep.samples[k].sat_alt_km        = geo_k.altitude;
+        rep.samples[k].active_station_id = act_id;
+        rep.samples[k].azimuth_deg       = best_az_k;
+        rep.samples[k].elevation_deg     = best_el_k;
+        rep.samples[k].range_km          = best_rng_k;
+        rep.samples[k].range_rate_kms    = r_rate;
+        rep.samples[k].slew_rate_deg_s   = (act_id >= 0) ? slew_rate : 0.0;
+
+        if (k < n_trk - 1) {
+            st_trk = propagate_step_rk4(st_trk, dt_trk, &sc_pass, &forces);
+        }
+    }
+
+    return rep;
+}
+
 
 
 

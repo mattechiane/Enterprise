@@ -1426,6 +1426,50 @@
         <div id="plotIslHistogram" class="plot-container-rdv"></div>
     </div>
 </section>
+
+<!-- 23. MULTI-STATION GROUND NETWORK, DSN/ESTRACK GEOMETRY & ANTENNA TRACKING -->
+<section class="section-block" id="sec-23" data-tab="subsystems" style="--sec-order: 23;">
+    <div class="section-header">
+        <div>
+            <h2>23. Multi-Station Ground Network, DSN/ESTRACK Geometry &amp; Antenna Tracking</h2>
+            <span>Topocentric SEZ Azimuth-Elevation-Range (AER) &bull; NASA DSN / ESA ESTRACK / Polar LEO Networks &bull; AOS/LOS Handovers &bull; Antenna Pedestal Slew Rate [deg/s]</span>
+        </div>
+        <span class="badge" id="gndStatusBadge" style="color:var(--green); border-color:var(--green);">&#128225; GLOBAL MULTI-STATION TRACKING &amp; HANDOVER ACTIVE</span>
+    </div>
+
+    <div class="ipl-kpi-grid">
+        <div class="kpi-card" style="--kpi-accent: var(--amber);">
+            <div class="kpi-top"><span class="kpi-label">Max Comm Gap (Blackout)</span><span class="kpi-micro-badge" id="gndKpiNetBadge">NASA DSN</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="gndKpiMaxGap">---</span><span class="kpi-unit">min</span></div>
+            <div class="kpi-sub" id="gndKpiMaxGapSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--green);">
+            <div class="kpi-top"><span class="kpi-label">Total Daily Contact Time</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="gndKpiContactH">---</span><span class="kpi-unit">hours</span></div>
+            <div class="kpi-sub" id="gndKpiContactHSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Peak Antenna Slew Rate</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="gndKpiPeakSlew">---</span><span class="kpi-unit">deg/s</span></div>
+            <div class="kpi-sub" id="gndKpiPeakSlewSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--purple);">
+            <div class="kpi-top"><span class="kpi-label">Automatic Link Handovers</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="gndKpiHandovers">---</span><span class="kpi-unit">/ 24h</span></div>
+            <div class="kpi-sub" id="gndKpiHandoversSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--green);">
+            <div class="kpi-top"><span class="kpi-label">Primary Tracking Station</span><span class="kpi-micro-badge" id="gndKpiMaskBadge" style="color:var(--cyan);border-color:rgba(0,229,255,0.35);background:rgba(0,229,255,0.12);">EL &ge; 5&deg;</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="gndKpiBestSt" style="font-size:16px;">---</span></div>
+            <div class="kpi-sub" id="gndKpiBestStSub">---</div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotMultiStationMap" class="plot-container-rdv"></div>
+        <div id="plotPolarSkyAndGantt" class="plot-container-rdv"></div>
+    </div>
+</section>
         </div><!-- /sections-stack -->
     </main>
 </div><!-- /app-shell -->
@@ -1592,19 +1636,19 @@
                 <div id="fieldsTargKep" class="input-group">
                     <div class="field">
                         <label>Mean Altitude a - R_eq (km) <span>[Min: 150]</span></label>
-                        <input type="number" id="targAlt" value="650" min="150" max="400000" step="10" oninput="validateModalOrbits()">
+                        <input type="number" id="targAlt" value="10000" min="150" max="400000" step="10" oninput="validateModalOrbits()">
                     </div>
                     <div class="field">
-                        <label>Eccentricity (e) <span id="maxEccLabelTarg">[Max: 0.071]</span></label>
-                        <input type="number" id="targEcc" value="0.001" step="0.005" min="0" max="0.95" oninput="validateModalOrbits()">
+                        <label>Eccentricity (e) <span id="maxEccLabelTarg">[Max: 0.601]</span></label>
+                        <input type="number" id="targEcc" value="0.02" step="0.005" min="0" max="0.95" oninput="validateModalOrbits()">
                     </div>
                     <div class="field">
                         <label>Inclination (deg) <span>[0 - 180&deg;]</span></label>
-                        <input type="number" id="targInc" value="53.0" min="0" max="180" step="0.5" oninput="validateModalOrbits()">
+                        <input type="number" id="targInc" value="55.0" min="0" max="180" step="0.5" oninput="validateModalOrbits()">
                     </div>
                     <div class="field">
                         <label>RAAN &Omega; (deg) <span>[0 - 360&deg;]</span></label>
-                        <input type="number" id="targRaan" value="30.0" min="0" max="360" step="1" oninput="validateModalOrbits()">
+                        <input type="number" id="targRaan" value="50.0" min="0" max="360" step="1" oninput="validateModalOrbits()">
                     </div>
                 </div>
                 <div id="fieldsTargCart" class="input-group" style="display:none;">
@@ -1814,6 +1858,27 @@
                 <div class="field">
                     <label>Per-Link Laser Data Rate [Gbps] <span>[Coherent BPSK LCT]</span></label>
                     <input type="number" id="islLinkRateGbps" value="10.0" min="1.0" max="100.0" step="1.0">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--amber)">20. Multi-Station Ground Network (NASA DSN / ESA ESTRACK / Polar LEO) &amp; Tracking</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Topocentric SEZ Azimuth-Elevation-Range (AER) &bull; AOS/LOS Visibility Cones &bull; Antenna Pedestal Slew Rate</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: 2fr 1fr;">
+                <div class="field">
+                    <label>Active Global Ground Station Network</label>
+                    <select id="gndNetworkType">
+                        <option value="0" selected>NASA Deep Space Network (DSN: Goldstone, Madrid, Canberra + Milano-Bovisa)</option>
+                        <option value="1">ESA ESTRACK Global Network (Cebreros, Malarg&uuml;e, New Norcia, Kourou)</option>
+                        <option value="2">High-Latitude Polar LEO Network (Svalbard SvalSat, TrollSat, Fairbanks, Punta Arenas)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Antenna Elevation Mask El<sub>min</sub> [deg] <span>[0 - 45&deg;]</span></label>
+                    <input type="number" id="gndElMaskDeg" value="5.0" min="0.0" max="45.0" step="1.0">
                 </div>
             </div>
         </div>
@@ -2055,12 +2120,12 @@
                       jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary']] },
         gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, multi-satellite formation flying (ROEs), reaction wheels, EKF, structure/slosh CSI',
                       jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF'], ['sec-16', 'Flex/Slosh CSI'], ['sec-19', 'Formation ROEs']] },
-        subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF, Payload, SSR & Optical ISL)', sub: 'Kinematics/Radar/EPS, thermal & radiation, RF link budget, Walker constellation, SSR memory buffer & optical laser ISL mesh network',
-                      jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops'], ['sec-22', 'Optical ISL']] },
+        subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF, Payload, SSR, ISL & DSN Ground Network)', sub: 'Kinematics/Radar/EPS, thermal & radiation, RF link budget, Walker constellation, SSR buffer, optical laser ISL & multi-station DSN/ESTRACK tracking',
+                      jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops'], ['sec-22', 'Optical ISL'], ['sec-23', 'Ground Network']] },
         safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL, FDIR & Space Weather)', sub: 'B-Plane collision avoidance, 3-phase EDL re-entry, autonomous FDIR & NRLMSISE/Jacchia space weather orbital decay',
                       jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL & EDL'], ['sec-17', 'FDIR'], ['sec-21', 'Space Weather']] },
-        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 22',
-                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22']] }
+        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 23',
+                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22'], ['sec-23', '23']] }
     };
 
     function resizeVisiblePlots() {
@@ -2628,6 +2693,15 @@
             }
             if (isl.link_rate_gbps !== undefined && document.getElementById('islLinkRateGbps')) {
                 document.getElementById('islLinkRateGbps').value = isl.link_rate_gbps;
+            }
+        }
+        if (data.ground_segment_summary) {
+            const gnd = data.ground_segment_summary;
+            if (gnd.network_type !== undefined && document.getElementById('gndNetworkType')) {
+                document.getElementById('gndNetworkType').value = String(gnd.network_type);
+            }
+            if (gnd.elevation_mask_deg !== undefined && document.getElementById('gndElMaskDeg')) {
+                document.getElementById('gndElMaskDeg').value = gnd.elevation_mask_deg;
             }
         }
 
@@ -5253,6 +5327,11 @@
         renderOpticalIslSection(data);
 
         // =====================================================================
+        // 23. MULTI-STATION GROUND NETWORK, DSN/ESTRACK GEOMETRY & TRACKING
+        // =====================================================================
+        renderGroundSegmentSection(data);
+
+        // =====================================================================
         // 17. ONBOARD FDIR AUTONOMY, REDUNDANCY SWITCHOVER & SAFE-MODE RECOVERY
         // =====================================================================
         let fdirInfo = data.fdir_summary;
@@ -5908,26 +5987,25 @@
         const r2Mag = Math.max(1e-6, vecNorm(r2Vec));
 
         // 1. Costruisci la Base Ortonormale del Piano di Trasferimento (u_hat, v_hat)
-        const uHat  = vecScale(r1Vec, 1.0 / r1Mag);
-        const r2Hat = vecScale(r2Vec, 1.0 / r2Mag);
-        let hVec    = vecCross(r1Vec, r2Vec);
+        const u1Hat     = vecScale(r1Vec, 1.0 / r1Mag);
+        const r2Hat     = vecScale(r2Vec, 1.0 / r2Mag);
+        const negR2Hat  = vecScale(r2Hat, -1.0);
+        let hVec        = vecCross(r1Vec, r2Vec);
 
-        // Gestione Singolarita 180 deg (Hohmann: vettori collineari/opposti)
-        if (vecNorm(hVec) < 1e-6 || vecNorm(vecCross(uHat, r2Hat)) < 1e-6) {
+        // Gestione Singolarita 180 deg (Hohmann) o nodi equatoriali complanari z1=z2=0 con cambio RAAN:
+        // usa la normale fisica dell'orbita target h = r2 x v2 per preservare l'inclinazione 3D reale!
+        const bothNodesEq = (Math.abs(r1Vec.z) < 1.0 && Math.abs(r2Vec.z) < 1.0);
+        if (vecNorm(hVec) < 1e-6 || vecNorm(vecCross(u1Hat, r2Hat)) < 1e-6 || bothNodesEq) {
             hVec = vecCross(r2Vec, v2TargVec || { x: 0, y: 0, z: 1 });
             if (vecNorm(hVec) < 1e-6) {
-                const fallbackAxis = (Math.abs(uHat.z) < 0.9) ? { x: 0, y: 0, z: 1 } : { x: 0, y: 1, z: 0 };
-                hVec = vecCross(uHat, fallbackAxis);
+                const fallbackAxis = (Math.abs(u1Hat.z) < 0.9) ? { x: 0, y: 0, z: 1 } : { x: 0, y: 1, z: 0 };
+                hVec = vecCross(u1Hat, fallbackAxis);
             }
         }
         const hHat = vecNormalize(hVec);
-        const vHat = vecNormalize(vecCross(hHat, uHat));
+        const vHat = vecNormalize(vecCross(hHat, negR2Hat));
 
-        // 2. Calcola l'angolo di trasferimento totale Delta_theta e i parametri dell'ellisse (a, e, p)
-        const cosDtheta = Math.max(-1.0, Math.min(1.0, vecDot(uHat, r2Hat)));
-        let deltaTheta = Math.acos(cosDtheta);
-        if (deltaTheta < 1e-6) deltaTheta = Math.PI;
-
+        // 2. Calcola i parametri dell'ellisse (a, e, p)
         const a = 0.5 * (r1Mag + r2Mag);
         const e = Math.abs(r2Mag - r1Mag) / (r1Mag + r2Mag);
         const p = a * (1.0 - e * e);
@@ -5935,8 +6013,8 @@
 
         for (let k = 0; k <= numSteps; k++) {
             const s = k / numSteps;
-            const theta = s * deltaTheta;
-            const rTheta = p / (1.0 + signE * e * Math.cos(s * Math.PI));
+            const theta = s * Math.PI;
+            const rTheta = p / (1.0 + signE * e * Math.cos(theta));
 
             let pos;
             if (k === 0) {
@@ -5944,7 +6022,8 @@
             } else if (k === numSteps) {
                 pos = { x: r2Vec.x, y: r2Vec.y, z: r2Vec.z };
             } else {
-                const dirUv = vecAdd(vecScale(uHat, Math.cos(theta)), vecScale(vHat, Math.sin(theta)));
+                const uS = vecNormalize(vecAdd(vecScale(u1Hat, 1.0 - s), vecScale(negR2Hat, s)));
+                const dirUv = vecNormalize(vecAdd(vecScale(uS, Math.cos(theta)), vecScale(vHat, Math.sin(theta))));
                 pos = vecScale(dirUv, rTheta);
             }
 
@@ -9872,7 +9951,8 @@
             f107 = (phase === 0) ? 70.0 : ((phase === 2) ? 220.0 : 140.0);
         }
         const kp = Math.max(0.0, Math.min(9.0, isNaN(kpInput) ? 3.0 : kpInput));
-        const h0 = Math.max(160.0, targetAltKm || 650.0);
+        const rawAlt = Math.max(160.0, targetAltKm || 650.0);
+        const h0 = (rawAlt <= 950.0) ? rawAlt : 650.0;
         const mass = Math.max(10.0, finalMassKg || 464.0);
         const cd = 2.2, area = 4.0;
         const cdAM = (cd * area) / mass;
@@ -10250,7 +10330,9 @@
                 const dKm = Math.sqrt(dSq);
 
                 const samePlane   = (ni.plane_id === nj.plane_id);
-                const rangeGateKm = samePlane ? (maxRangeKm * 1.08) : maxRangeKm;
+                const shellScale  = Math.max(1.0, rOrbKm / (R_EQ + 650.0));
+                const effMaxRange = maxRangeKm * shellScale;
+                const rangeGateKm = samePlane ? (effMaxRange * 1.08) : effMaxRange;
                 if (dKm > rangeGateKm) continue;
 
                 let sStar = -(ni.x_km * dx + ni.y_km * dy + ni.z_km * dz) / dSq;
@@ -10516,6 +10598,562 @@
         globalData.isl_nodes           = res.isl_nodes;
         globalData.isl_topology        = res.isl_topology;
         renderOpticalIslSection(globalData);
+        resizeVisiblePlots();
+    }
+
+    // =========================================================================
+    // SPRINT 30: MULTI-GROUND STATION TRACKING, DSN/ESTRACK & LINK HANDOVERS
+    // =========================================================================
+    function computeTopocentricSezAerJS(satEcef, gsEcef, latDeg, lonDeg) {
+        const dx = satEcef.x - gsEcef.x, dy = satEcef.y - gsEcef.y, dz = satEcef.z - gsEcef.z;
+        const rMag = Math.max(1e-6, Math.hypot(dx, dy, dz));
+        const lat = latDeg * DEG2RAD, lon = lonDeg * DEG2RAD;
+        const sinLat = Math.sin(lat), cosLat = Math.cos(lat);
+        const sinLon = Math.sin(lon), cosLon = Math.cos(lon);
+
+        const rhoS =  sinLat * cosLon * dx + sinLat * sinLon * dy - cosLat * dz;
+        const rhoE = -sinLon * dx          + cosLon * dy;
+        const rhoZ =  cosLat * cosLon * dx + cosLat * sinLon * dy + sinLat * dz;
+
+        const elDeg = Math.asin(Math.max(-1, Math.min(1, rhoZ / rMag))) * RAD2DEG;
+        let azDeg   = Math.atan2(rhoE, -rhoS) * RAD2DEG;
+        if (azDeg < 0) azDeg += 360.0;
+        return { az_deg: azDeg, el_deg: elDeg, range_km: rMag };
+    }
+
+    function evaluateMultiStationCoverageJS(kepTarg, finalMassKg, networkTypeId, elMaskDegInput) {
+        const netId  = isNaN(networkTypeId) ? 0 : networkTypeId;
+        const elMask = Math.max(0.0, Math.min(45.0, isNaN(elMaskDegInput) ? 5.0 : elMaskDegInput));
+
+        let netName = 'NASA Deep Space Network (DSN + MOC)';
+        let rawSt = [
+            { name: 'Goldstone (DSN-14, USA)',      lat:  35.4267, lon: -116.8900, alt: 1.036 },
+            { name: 'Madrid (DSN-63, Spain)',       lat:  40.4314, lon:   -4.2481, alt: 0.834 },
+            { name: 'Canberra (DSN-43, Australia)', lat: -35.4014, lon:  148.9817, alt: 0.688 },
+            { name: 'Milano-Bovisa (MOC, Italy)',   lat:  45.5020, lon:    9.1560, alt: 0.140 }
+        ];
+        if (netId === 1) {
+            netName = 'ESA ESTRACK Global Tracking Network';
+            rawSt = [
+                { name: 'Cebreros (DSA-2, Spain)',        lat:  40.4528, lon:  -4.3675, alt: 0.794 },
+                { name: 'Malargue (DSA-3, Argentina)',    lat: -35.7761, lon: -69.3983, alt: 1.550 },
+                { name: 'New Norcia (DSA-1, Australia)',  lat: -31.0483, lon: 116.1914, alt: 0.252 },
+                { name: 'Kourou (ESTRACK, Fr. Guiana)',   lat:   5.2514, lon: -52.8047, alt: 0.014 }
+            ];
+        } else if (netId === 2) {
+            netName = 'High-Latitude Polar LEO Network';
+            rawSt = [
+                { name: 'Svalbard SvalSat (Norway)', lat:  78.2297, lon:   15.4078, alt: 0.458 },
+                { name: 'TrollSat (Antarctica)',     lat: -72.0114, lon:    2.5350, alt: 1.270 },
+                { name: 'Fairbanks (ASF, Alaska)',   lat:  64.8590, lon: -147.8490, alt: 0.185 },
+                { name: 'Punta Arenas (Chile)',      lat: -52.9360, lon:  -70.8700, alt: 0.042 }
+            ];
+        }
+
+        const rOrbKm = Math.max(R_EQ + 150.0, kepTarg.a || (R_EQ + 10000.0));
+        const elRad  = elMask * DEG2RAD;
+        const cosArg = Math.max(-1, Math.min(1, (R_EQ / rOrbKm) * Math.cos(elRad)));
+        const lambdaConeDeg = Math.max(3.0, (Math.acos(cosArg) - elRad) * RAD2DEG);
+
+        const stations = rawSt.map((s, idx) => ({
+            station_id: idx,
+            name: s.name,
+            lat_deg: s.lat,
+            lon_deg: s.lon,
+            alt_km: s.alt,
+            min_el_deg: elMask,
+            contact_min_24h: 0.0,
+            passes_24h: 0,
+            max_el_deg: 0.0,
+            peak_slew_deg_s: 0.0,
+            footprint_deg: +lambdaConeDeg.toFixed(2),
+            ecef: geodeticToWGS84(s.lat, s.lon, s.alt)
+        }));
+
+        const sc = { drag_coeff: 2.2, drag_area: 4.0, isp: 316.0 };
+        let state = keplerianToCartesianC({ ...kepTarg, theta: 0.0 }, MU, finalMassKg || 464.0, 0.0);
+
+        const dtS = 30.0;
+        const nSteps24h = 2880;
+        const inPassSt = [false, false, false, false];
+        const aosMinSt = [0, 0, 0, 0];
+        const maxElPassSt = [0, 0, 0, 0];
+        const azAosSt  = [0, 0, 0, 0];
+        const peakSlewPassSt = [0, 0, 0, 0];
+        const prevAzSt = [0, 0, 0, 0];
+        const prevElSt = [0, 0, 0, 0];
+
+        let prevActiveSt = -1;
+        let curGapSec = 0.0, maxGapSec = 0.0, totalContactSec = 0.0;
+        let handoverCnt = 0, globalPeakSlew = 0.0;
+        const passes = [];
+
+        for (let step = 0; step <= nSteps24h; step++) {
+            const tSec = step * dtS;
+            const tMin = tSec / 60.0;
+            const gst  = OMEGA_E * tSec;
+            const satEcef = {
+                x:  Math.cos(gst) * state.position.x + Math.sin(gst) * state.position.y,
+                y: -Math.sin(gst) * state.position.x + Math.cos(gst) * state.position.y,
+                z: state.position.z
+            };
+
+            let bestSt = -1;
+            let bestEl = elMask;
+
+            for (let s = 0; s < 4; s++) {
+                const aer = computeTopocentricSezAerJS(satEcef, stations[s].ecef, stations[s].lat_deg, stations[s].lon_deg);
+                let slew = 0.0;
+                if (step > 0) {
+                    const dEl = (aer.el_deg - prevElSt[s]) / dtS;
+                    let dAz   = aer.az_deg - prevAzSt[s];
+                    if (dAz >  180.0) dAz -= 360.0;
+                    if (dAz < -180.0) dAz += 360.0;
+                    dAz /= dtS;
+                    const cosEl = Math.cos(aer.el_deg * DEG2RAD);
+                    slew = Math.hypot(dEl, dAz * cosEl);
+                }
+                prevAzSt[s] = aer.az_deg;
+                prevElSt[s] = aer.el_deg;
+
+                if (aer.el_deg >= elMask) {
+                    stations[s].contact_min_24h += (dtS / 60.0);
+                    if (aer.el_deg > stations[s].max_el_deg) stations[s].max_el_deg = aer.el_deg;
+                    if (slew > stations[s].peak_slew_deg_s) stations[s].peak_slew_deg_s = slew;
+                    if (slew > globalPeakSlew) globalPeakSlew = slew;
+
+                    if (!inPassSt[s]) {
+                        inPassSt[s] = true;
+                        aosMinSt[s] = tMin;
+                        maxElPassSt[s] = aer.el_deg;
+                        azAosSt[s] = aer.az_deg;
+                        peakSlewPassSt[s] = slew;
+                        stations[s].passes_24h++;
+                    } else {
+                        if (aer.el_deg > maxElPassSt[s]) maxElPassSt[s] = aer.el_deg;
+                        if (slew > peakSlewPassSt[s]) peakSlewPassSt[s] = slew;
+                    }
+                    if (aer.el_deg > bestEl) { bestEl = aer.el_deg; bestSt = s; }
+                } else if (inPassSt[s]) {
+                    inPassSt[s] = false;
+                    const durM = tMin - aosMinSt[s];
+                    if (durM >= 1.0 && passes.length < 64) {
+                        passes.push({
+                            station_id: s,
+                            station_name: stations[s].name,
+                            aos_min: +aosMinSt[s].toFixed(2),
+                            los_min: +tMin.toFixed(2),
+                            duration_min: +durM.toFixed(2),
+                            max_el_deg: +maxElPassSt[s].toFixed(1),
+                            az_aos_deg: +azAosSt[s].toFixed(1),
+                            az_los_deg: +aer.az_deg.toFixed(1),
+                            peak_slew_deg_s: +peakSlewPassSt[s].toFixed(3)
+                        });
+                    }
+                }
+            }
+
+            if (bestSt >= 0) {
+                totalContactSec += dtS;
+                if (curGapSec > maxGapSec) maxGapSec = curGapSec;
+                curGapSec = 0.0;
+                if (prevActiveSt >= 0 && prevActiveSt !== bestSt) handoverCnt++;
+                prevActiveSt = bestSt;
+            } else {
+                curGapSec += dtS;
+                if (curGapSec > maxGapSec) maxGapSec = curGapSec;
+                prevActiveSt = -1;
+            }
+
+            if (step < nSteps24h) state = propagateStepRK4C(state, dtS, sc);
+        }
+
+        for (let s = 0; s < 4; s++) {
+            if (inPassSt[s] && passes.length < 64) {
+                const durM = 1440.0 - aosMinSt[s];
+                if (durM >= 1.0) {
+                    passes.push({
+                        station_id: s,
+                        station_name: stations[s].name,
+                        aos_min: +aosMinSt[s].toFixed(2),
+                        los_min: 1440.0,
+                        duration_min: +durM.toFixed(2),
+                        max_el_deg: +maxElPassSt[s].toFixed(1),
+                        az_aos_deg: +azAosSt[s].toFixed(1),
+                        az_los_deg: +prevAzSt[s].toFixed(1),
+                        peak_slew_deg_s: +peakSlewPassSt[s].toFixed(3)
+                    });
+                }
+            }
+        }
+
+        let bestId = 0;
+        for (let s = 1; s < 4; s++) {
+            if (stations[s].contact_min_24h > stations[bestId].contact_min_24h) bestId = s;
+        }
+
+        const periodS    = 2.0 * Math.PI * Math.sqrt((rOrbKm * rOrbKm * rOrbKm) / MU);
+        const trackWinS  = Math.min(43200.0, Math.max(10800.0, 2.5 * periodS));
+        const nTrk       = 181;
+        const dtTrk      = trackWinS / (nTrk - 1);
+        let stTrk        = keplerianToCartesianC({ ...kepTarg, theta: 0.0 }, MU, finalMassKg || 464.0, 0.0);
+        let prevAz = 0.0, prevEl = 0.0, prevRng = 0.0;
+        const trajGroundTrack = [];
+
+        for (let k = 0; k < nTrk; k++) {
+            const tS  = k * dtTrk;
+            const geo = eciToGeodetic(stTrk.position.x, stTrk.position.y, stTrk.position.z, tS);
+            const satEcef = { x: geo.xe, y: geo.ye, z: geo.ze };
+
+            let actId = -1;
+            let bestElK = -90.0, bestAzK = 0.0, bestRngK = 0.0;
+            for (let s = 0; s < 4; s++) {
+                const aer = computeTopocentricSezAerJS(satEcef, stations[s].ecef, stations[s].lat_deg, stations[s].lon_deg);
+                if (aer.el_deg > bestElK) {
+                    bestElK  = aer.el_deg;
+                    bestAzK  = aer.az_deg;
+                    bestRngK = aer.range_km;
+                    if (aer.el_deg >= elMask) actId = s;
+                }
+            }
+
+            let rRate = 0.0, slewRate = 0.0;
+            if (k > 0) {
+                rRate = (bestRngK - prevRng) / dtTrk;
+                const dEl = (bestElK - prevEl) / dtTrk;
+                let dAz   = bestAzK - prevAz;
+                if (dAz >  180.0) dAz -= 360.0;
+                if (dAz < -180.0) dAz += 360.0;
+                dAz /= dtTrk;
+                slewRate = Math.hypot(dEl, dAz * Math.cos(bestElK * DEG2RAD));
+            }
+            prevAz = bestAzK; prevEl = bestElK; prevRng = bestRngK;
+
+            trajGroundTrack.push({
+                t_min: +(tS / 60.0).toFixed(2),
+                lat_deg: +geo.lat.toFixed(2),
+                lon_deg: +geo.lon.toFixed(2),
+                alt_km: +geo.alt.toFixed(2),
+                active_station_id: actId,
+                azimuth_deg: +bestAzK.toFixed(2),
+                elevation_deg: +bestElK.toFixed(2),
+                range_km: +bestRngK.toFixed(1),
+                range_rate_kms: +rRate.toFixed(3),
+                slew_rate_deg_s: actId >= 0 ? +slewRate.toFixed(4) : 0.0
+            });
+            if (k < nTrk - 1) stTrk = propagateStepRK4C(stTrk, dtTrk, sc);
+        }
+
+        const cleanStations = stations.map(s => ({
+            station_id: s.station_id,
+            name: s.name,
+            lat_deg: s.lat_deg,
+            lon_deg: s.lon_deg,
+            alt_km: s.alt_km,
+            min_el_deg: s.min_el_deg,
+            contact_min_24h: +s.contact_min_24h.toFixed(1),
+            passes_24h: s.passes_24h,
+            max_el_deg: +s.max_el_deg.toFixed(1),
+            peak_slew_deg_s: +s.peak_slew_deg_s.toFixed(3),
+            footprint_deg: s.footprint_deg
+        }));
+
+        return {
+            ground_segment_summary: {
+                network_type: netId,
+                network_name: netName,
+                elevation_mask_deg: +elMask.toFixed(1),
+                num_stations: 4,
+                total_contact_hours_24h: +Math.min(24.0, totalContactSec / 3600.0).toFixed(2),
+                coverage_duty_pct: +Math.min(100.0, (totalContactSec / 86400.0) * 100.0).toFixed(1),
+                max_comm_gap_min: +(maxGapSec / 60.0).toFixed(2),
+                total_handovers: handoverCnt,
+                best_station_id: bestId,
+                best_station_name: cleanStations[bestId].name,
+                best_station_contact_min: cleanStations[bestId].contact_min_24h,
+                peak_antenna_slew_deg_s: +globalPeakSlew.toFixed(4),
+                num_passes_24h: passes.length
+            },
+            ground_stations: cleanStations,
+            ground_passes: passes,
+            traj_ground_track: trajGroundTrack
+        };
+    }
+
+    function renderGroundSegmentSection(data) {
+        let gnd    = data.ground_segment_summary;
+        let sts    = data.ground_stations;
+        let passes = data.ground_passes;
+        let trk    = data.traj_ground_track;
+
+        if (!gnd || !sts || !sts.length || !trk || !trk.length) {
+            const r2 = data.target_report || {};
+            const kepTarg = {
+                a: (r2.alt_km !== undefined ? r2.alt_km : 10000.0) + R_EQ,
+                e: r2.ecc !== undefined ? r2.ecc : 0.02,
+                i: (r2.inc_deg !== undefined ? r2.inc_deg : 55.0) * DEG2RAD,
+                RAAN: (r2.raan_deg !== undefined ? r2.raan_deg : 50.0) * DEG2RAD,
+                omega: 0.0, theta: 0.0
+            };
+            const fMass = (data.maneuver && data.maneuver.final_mass_kg) ? data.maneuver.final_mass_kg : 464.0;
+            const fb = evaluateMultiStationCoverageJS(kepTarg, fMass, 0, 5.0);
+            gnd    = fb.ground_segment_summary;
+            sts    = fb.ground_stations;
+            passes = fb.ground_passes;
+            trk    = fb.traj_ground_track;
+            data.ground_segment_summary = gnd;
+            data.ground_stations        = sts;
+            data.ground_passes          = passes;
+            data.traj_ground_track      = trk;
+        }
+        if (!gnd || !sts || !sts.length) return;
+
+        const isContinuous = (gnd.max_comm_gap_min <= 15.0);
+        const badge = document.getElementById('gndStatusBadge');
+        badge.style.color       = isContinuous ? 'var(--green)' : 'var(--cyan)';
+        badge.style.borderColor = isContinuous ? 'var(--green)' : 'var(--cyan)';
+        badge.innerHTML         = `&#128225; ${gnd.network_name.toUpperCase()} &bull; COVERAGE ${Number(gnd.coverage_duty_pct).toFixed(1)}% (${Number(gnd.total_contact_hours_24h).toFixed(2)}h / 24h)`;
+
+        const shortNet = gnd.network_type === 1 ? 'ESA ESTRACK' : (gnd.network_type === 2 ? 'POLAR LEO' : 'NASA DSN');
+        document.getElementById('gndKpiNetBadge').textContent = shortNet;
+        document.getElementById('gndKpiMaxGap').textContent = Number(gnd.max_comm_gap_min).toFixed(1);
+        document.getElementById('gndKpiMaxGapSub').textContent =
+            gnd.max_comm_gap_min <= 1.0 ? 'Continuous 24/7 RF Handover Lock (Zero Blackout)' : `Max out-of-view window across ${sts.length} stations`;
+
+        document.getElementById('gndKpiContactH').textContent = Number(gnd.total_contact_hours_24h).toFixed(2);
+        document.getElementById('gndKpiContactHSub').textContent =
+            `Duty cycle: ${Number(gnd.coverage_duty_pct).toFixed(1)}% of 24h (${gnd.num_passes_24h} passes)`;
+
+        document.getElementById('gndKpiPeakSlew').textContent = Number(gnd.peak_antenna_slew_deg_s).toFixed(3);
+        document.getElementById('gndKpiPeakSlewSub').textContent =
+            `Zenith pass Az/El pedestal rate (< 2.5 deg/s limit)`;
+
+        document.getElementById('gndKpiHandovers').textContent = gnd.total_handovers;
+        document.getElementById('gndKpiHandoversSub').textContent =
+            `Seamless make-before-break station switches`;
+
+        document.getElementById('gndKpiMaskBadge').textContent = `EL \u2265 ${Number(gnd.elevation_mask_deg).toFixed(0)}\u00b0`;
+        document.getElementById('gndKpiBestSt').textContent = (gnd.best_station_name || 'Goldstone').split('(')[0].trim();
+        document.getElementById('gndKpiBestStSub').textContent =
+            `${Number(gnd.best_station_contact_min).toFixed(0)} min/24h (${(gnd.best_station_contact_min / 60.0).toFixed(1)} h contact)`;
+
+        // ---- Plot 23A (Left): 2D Map Coverage, Visibility Cones & Active Station Link ----
+        const stColors = ['#00e5ff', '#00e676', '#ffab00', '#e040fb'];
+        const mapTraces = [];
+
+        // Ground track trace
+        mapTraces.push({
+            type: 'scattergeo', mode: 'lines',
+            name: 'Spacecraft Ground Track',
+            lat: trk.map(p => p.lat_deg),
+            lon: trk.map(p => p.lon_deg),
+            line: { color: 'rgba(148, 163, 184, 0.55)', width: 1.8, dash: 'dot' },
+            hoverinfo: 'name'
+        });
+
+        // Visibility cones for each of the 4 stations
+        sts.forEach((stNode, idx) => {
+            const col = stColors[idx % stColors.length];
+            const radDeg = Math.min(72.0, stNode.footprint_deg || 25.0);
+            const lat0 = stNode.lat_deg * DEG2RAD;
+            const lon0 = stNode.lon_deg * DEG2RAD;
+            const dAng = radDeg * DEG2RAD;
+            const cLat = [], cLon = [];
+            for (let k = 0; k <= 72; k++) {
+                const brg = (k / 72) * 2.0 * Math.PI;
+                const sinLat = Math.sin(lat0) * Math.cos(dAng) + Math.cos(lat0) * Math.sin(dAng) * Math.cos(brg);
+                const latPt  = Math.asin(Math.max(-1, Math.min(1, sinLat)));
+                const y      = Math.sin(brg) * Math.sin(dAng) * Math.cos(lat0);
+                const x      = Math.cos(dAng) - Math.sin(lat0) * Math.sin(latPt);
+                let lonPt    = (lon0 + Math.atan2(y, x)) * RAD2DEG;
+                lonPt = ((lonPt + 540.0) % 360.0) - 180.0;
+                if (k > 0 && Math.abs(lonPt - cLon[cLon.length - 1]) > 160.0) {
+                    cLat.push(null); cLon.push(null);
+                }
+                cLat.push(+(latPt * RAD2DEG).toFixed(2));
+                cLon.push(+lonPt.toFixed(2));
+            }
+            mapTraces.push({
+                type: 'scattergeo', mode: 'lines',
+                name: `${stNode.name.split('(')[0].trim()} Cone (${stNode.passes_24h} passes)`,
+                lat: cLat, lon: cLon,
+                line: { color: col, width: 2.0 },
+                hoverinfo: 'name'
+            });
+        });
+
+        // Active contact points along ground track
+        const visPts = trk.filter(p => p.active_station_id >= 0);
+        if (visPts.length > 0) {
+            mapTraces.push({
+                type: 'scattergeo', mode: 'markers',
+                name: 'In-View Tracking Lock (El >= Mask)',
+                lat: visPts.map(p => p.lat_deg),
+                lon: visPts.map(p => p.lon_deg),
+                marker: {
+                    size: 5.5,
+                    color: visPts.map(p => stColors[p.active_station_id % stColors.length])
+                },
+                text: visPts.map(p => `${sts[p.active_station_id] ? sts[p.active_station_id].name : 'GS'} | El=${p.elevation_deg.toFixed(1)}\u00b0, Az=${p.azimuth_deg.toFixed(1)}\u00b0`),
+                hovertemplate: '<b>%{text}</b><br>Lat %{lat:.1f}\u00b0, Lon %{lon:.1f}\u00b0<extra></extra>'
+            });
+
+            // Active LoS RF Link line from station to first active point
+            const pLock = visPts[0];
+            const stLock = sts[pLock.active_station_id] || sts[0];
+            mapTraces.push({
+                type: 'scattergeo', mode: 'lines+markers',
+                name: `Active RF LoS Link (${stLock.name.split('(')[0].trim()})`,
+                lat: [stLock.lat_deg, pLock.lat_deg],
+                lon: [stLock.lon_deg, pLock.lon_deg],
+                line: { color: '#ff1744', width: 3.2 },
+                marker: { size: [9, 11], color: ['#ffab00', '#ff1744'], symbol: ['triangle-up', 'diamond'] }
+            });
+        }
+
+        // Ground station markers
+        mapTraces.push({
+            type: 'scattergeo', mode: 'markers+text',
+            name: 'Ground Network Stations',
+            lat: sts.map(s => s.lat_deg),
+            lon: sts.map(s => s.lon_deg),
+            text: sts.map(s => s.name.split('(')[0].trim()),
+            textposition: 'top center',
+            textfont: { color: '#ffffff', size: 10, family: 'Inter, sans-serif' },
+            marker: {
+                size: 10,
+                color: sts.map((s, idx) => stColors[idx % stColors.length]),
+                symbol: 'triangle-up',
+                line: { color: '#ffffff', width: 1.8 }
+            },
+            hovertemplate: '<b>%{text}</b><br>Lat %{lat:.2f}\u00b0, Lon %{lon:.2f}\u00b0<extra></extra>'
+        });
+
+        Plotly.react('plotMultiStationMap', mapTraces, {
+            title: { text: `23A. Global Multi-Station Visibility Cones (El \u2265 ${Number(gnd.elevation_mask_deg).toFixed(0)}\u00b0) & Active RF Link`, font: { color: '#e2e8f0', size: 12.2 } },
+            margin: { l: 8, r: 8, b: 8, t: 38 },
+            geo: {
+                projection: { type: 'equirectangular' },
+                showland: true, landcolor: '#162032',
+                showocean: true, oceancolor: '#090e17',
+                showcoastlines: true, coastlinecolor: '#334155',
+                showcountries: true, countrycolor: '#1e293b',
+                lonaxis: { showgrid: true, gridcolor: '#1e293b', range: [-180, 180] },
+                lataxis: { showgrid: true, gridcolor: '#1e293b', range: [-90, 90] },
+                bgcolor: 'rgba(0,0,0,0)'
+            },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.5 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.01, y: 0.02 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---- Plot 23B (Right): Antenna Azimuth-Elevation Polar Sky-Plot + Multi-Station Pass Timeline ----
+        const polarTraces = [];
+
+        // Horizon Elevation Mask ring on polar plot (r = 90 - El)
+        const maskRingR = [], maskRingTheta = [];
+        const rMask = 90.0 - (gnd.elevation_mask_deg || 5.0);
+        for (let a = 0; a <= 360; a += 10) {
+            maskRingTheta.push(a);
+            maskRingR.push(rMask);
+        }
+        polarTraces.push({
+            type: 'scatterpolar', mode: 'lines',
+            name: `Elevation Mask (El = ${Number(gnd.elevation_mask_deg).toFixed(0)}\u00b0)`,
+            r: maskRingR, theta: maskRingTheta,
+            line: { color: '#ef4444', width: 1.6, dash: 'dash' },
+            subplot: 'polar', hoverinfo: 'name'
+        });
+
+        // Sky-Plot tracks per station
+        sts.forEach((stNode, sIdx) => {
+            const ptsS = trk.filter(p => p.active_station_id === sIdx);
+            if (!ptsS.length) return;
+            polarTraces.push({
+                type: 'scatterpolar', mode: 'lines+markers',
+                name: `${stNode.name.split('(')[0].trim()} Sky-Track`,
+                r: ptsS.map(p => Math.max(0.0, 90.0 - p.elevation_deg)),
+                theta: ptsS.map(p => p.azimuth_deg),
+                line: { color: stColors[sIdx % stColors.length], width: 2.4 },
+                marker: { size: 5.5, color: stColors[sIdx % stColors.length] },
+                subplot: 'polar',
+                customdata: ptsS.map(p => [p.elevation_deg, p.range_km, p.slew_rate_deg_s]),
+                hovertemplate: `<b>${stNode.name.split('(')[0].trim()}</b><br>Az = %{theta:.1f}\u00b0 | El = %{customdata[0]:.1f}\u00b0<br>Range = %{customdata[1]:.0f} km | Slew = %{customdata[2]:.3f}\u00b0/s<extra></extra>`
+            });
+        });
+
+        // Gantt Pass Timeline on right domain (xaxis / yaxis)
+        const ganttX = [], ganttY = [], ganttColors = [], ganttText = [];
+        (passes || []).slice(0, 28).forEach(p => {
+            const sIdx = p.station_id || 0;
+            const stShort = (p.station_name || `GS-${sIdx}`).split('(')[0].trim();
+            ganttX.push(p.aos_min / 60.0, p.los_min / 60.0, null);
+            ganttY.push(stShort, stShort, null);
+            ganttColors.push(stColors[sIdx % stColors.length]);
+            ganttText.push(`${stShort}: AOS ${(p.aos_min/60).toFixed(1)}h -> LOS ${(p.los_min/60).toFixed(1)}h (${p.duration_min.toFixed(0)}m, Max El ${p.max_el_deg.toFixed(0)}\u00b0)`);
+        });
+
+        polarTraces.push({
+            type: 'scatter', mode: 'lines+markers',
+            name: '24h Station AOS/LOS Windows',
+            x: ganttX, y: ganttY,
+            xaxis: 'x', yaxis: 'y',
+            line: { color: '#00e5ff', width: 9 },
+            marker: { size: 7, color: '#ffab00', symbol: 'line-ns-open' },
+            hoverinfo: 'x+y'
+        });
+
+        Plotly.react('plotPolarSkyAndGantt', polarTraces, {
+            title: { text: `23B. Topocentric Az-El Sky-Plot (Zenith=Center) & 24h AOS/LOS Pass Timeline`, font: { color: '#e2e8f0', size: 12.2 } },
+            margin: { l: 24, r: 18, b: 46, t: 42 },
+            polar: {
+                domain: { x: [0.0, 0.46], y: [0.06, 0.94] },
+                bgcolor: 'rgba(15,23,42,0.55)',
+                angularaxis: {
+                    direction: 'clockwise', rotation: 90,
+                    tickvals: [0, 45, 90, 135, 180, 225, 270, 315],
+                    ticktext: ['N 0\u00b0', 'NE', 'E 90\u00b0', 'SE', 'S 180\u00b0', 'SW', 'W 270\u00b0', 'NW'],
+                    color: '#cbd5e1', gridcolor: '#222d42'
+                },
+                radialaxis: {
+                    range: [0, 90],
+                    tickvals: [0, 30, 60, 90],
+                    ticktext: ['90\u00b0 Zen', '60\u00b0 El', '30\u00b0 El', '0\u00b0 Hor'],
+                    color: '#94a3b8', gridcolor: '#222d42', tickfont: { size: 8.5 }
+                }
+            },
+            xaxis: {
+                domain: [0.58, 0.99],
+                title: '24-Hour Mission Time [Hours]',
+                color: '#e2e8f0', gridcolor: '#222d42', range: [0, 24]
+            },
+            yaxis: {
+                domain: [0.08, 0.92],
+                anchor: 'x', color: '#e2e8f0', gridcolor: '#222d42', tickfont: { size: 9.5 }
+            },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.4 }, bgcolor: 'rgba(15,23,42,0.85)', x: 0.01, y: -0.02, orientation: 'h' }
+        }, { responsive: true, displaylogo: false });
+    }
+
+    function gndRecomputeFromModal() {
+        if (!globalData) return;
+        const netId  = parseInt(document.getElementById('gndNetworkType').value, 10) || 0;
+        const elMask = parseFloat(document.getElementById('gndElMaskDeg').value);
+        const r2     = globalData.target_report || {};
+        const kepTarg = {
+            a: (r2.alt_km !== undefined ? r2.alt_km : 10000.0) + R_EQ,
+            e: r2.ecc !== undefined ? r2.ecc : 0.02,
+            i: (r2.inc_deg !== undefined ? r2.inc_deg : 55.0) * DEG2RAD,
+            RAAN: (r2.raan_deg !== undefined ? r2.raan_deg : 50.0) * DEG2RAD,
+            omega: 0.0, theta: 0.0
+        };
+        const fMass = (globalData.maneuver && globalData.maneuver.final_mass_kg) ? globalData.maneuver.final_mass_kg : 464.0;
+        const res   = evaluateMultiStationCoverageJS(kepTarg, fMass, netId, isNaN(elMask) ? 5.0 : elMask);
+        globalData.ground_segment_summary = res.ground_segment_summary;
+        globalData.ground_stations        = res.ground_stations;
+        globalData.ground_passes          = res.ground_passes;
+        globalData.traj_ground_track      = res.traj_ground_track;
+        renderGroundSegmentSection(globalData);
         resizeVisiblePlots();
     }
 
@@ -11253,6 +11891,16 @@
             islRateG
         );
 
+        // Sprint 30: Multi-Ground Station Tracking (NASA DSN / ESA ESTRACK / Polar LEO) & Handovers
+        const gndNetId  = parseInt(document.getElementById('gndNetworkType').value, 10) || 0;
+        const gndElMask = parseFloat(document.getElementById('gndElMaskDeg').value);
+        const gndRes    = evaluateMultiStationCoverageJS(
+            kepTarg,
+            finalMass,
+            gndNetId,
+            isNaN(gndElMask) ? 5.0 : gndElMask
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -11291,6 +11939,7 @@
             ops_scheduler_summary: opsRes.ops_scheduler_summary,
             space_weather_summary: swxRes.space_weather_summary,
             isl_network_summary: islRes.isl_network_summary,
+            ground_segment_summary: gndRes.ground_segment_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -11310,7 +11959,10 @@
             traj_decay: swxRes.traj_decay,
             density_profile: swxRes.density_profile,
             isl_nodes: islRes.isl_nodes,
-            isl_topology: islRes.isl_topology
+            isl_topology: islRes.isl_topology,
+            ground_stations: gndRes.ground_stations,
+            ground_passes: gndRes.ground_passes,
+            traj_ground_track: gndRes.traj_ground_track
         };
 
         document.getElementById('inputModal').classList.remove('open');
@@ -11343,6 +11995,9 @@
     });
     ['islMaxRangeKm', 'islLinkRateGbps'].forEach(id => {
         document.getElementById(id).addEventListener('change', islRecomputeFromModal);
+    });
+    ['gndNetworkType', 'gndElMaskDeg'].forEach(id => {
+        document.getElementById(id).addEventListener('change', gndRecomputeFromModal);
     });
     document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
     document.getElementById('btnCancelModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));

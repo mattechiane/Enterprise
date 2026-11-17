@@ -1232,4 +1232,83 @@ typedef struct {
     ISLEdge edges[MAX_ISL_EDGES];
 } ISLNetworkReport;
 
+// ==========================================
+// 5R. SPRINT 30: MULTI-GROUND STATION TRACKING, DEEP SPACE NETWORK (DSN) GEOMETRY & LINK HANDOVERS
+// ==========================================
+#define NUM_NET_STATIONS         4
+#define MAX_GROUND_PASSES        64
+#define MAX_GROUND_TRACK_SAMPLES 181
+
+typedef enum {
+    NET_NASA_DSN    = 0, // NASA Deep Space Network (Goldstone, Madrid, Canberra + Milano-Bovisa MOC)
+    NET_ESA_ESTRACK = 1, // ESA ESTRACK Global Network (Cebreros, Malargue, New Norcia, Kourou)
+    NET_POLAR_LEO   = 2  // High-Latitude Polar / LEO Network (Svalbard SvalSat, TrollSat, Fairbanks, Punta Arenas)
+} GroundNetworkType;
+
+typedef struct {
+    GroundNetworkType network_type; // Rete globale di stazioni di terra selezionata (0=DSN, 1=ESTRACK, 2=Polar LEO)
+    double elevation_mask_deg;      // Maschera di elevazione minima sopra l'orizzonte locale [deg] (default 5.0 deg)
+} GroundNetworkSpec;
+
+typedef struct {
+    int    station_id;              // Indice stazione nella rete [0 .. 3]
+    char   name[36];                // Nome della stazione (es. "Goldstone (DSN-14, USA)")
+    double lat_deg;                 // Latitudine geodetica WGS84 [deg]
+    double lon_deg;                 // Longitudine geodetica WGS84 [deg]
+    double alt_km;                  // Quota sul livello del mare [km]
+    double min_el_deg;              // Maschera di elevazione minima [deg]
+    double contact_time_min_24h;    // Tempo totale di contatto acquisito dalla stazione su 24h [min]
+    int    pass_count_24h;          // Numero di passaggi (AOS -> LOS) registrati su 24h
+    double max_el_deg;              // Massima elevazione raggiunta sulla stazione [deg]
+    double peak_slew_rate_deg_s;    // Velocità angolare massima richiesta ai motori del piedistallo antenna [deg/s]
+    double footprint_radius_deg;    // Raggio angolare del cono di visibilità terrestre Lambda [deg]
+} GroundStationNode;
+
+typedef struct {
+    int    station_id;              // Indice stazione [0 .. 3]
+    char   station_name[36];        // Nome della stazione
+    double aos_min;                 // Istante di Acquisition of Signal (AOS) [min]
+    double los_min;                 // Istante di Loss of Signal (LOS) [min]
+    double duration_min;            // Durata della finestra di visibilità [min]
+    double max_el_deg;              // Elevazione di culmine durante il passaggio [deg]
+    double az_at_aos_deg;           // Azimuth topocentrico all'AOS [deg]
+    double az_at_los_deg;           // Azimuth topocentrico al LOS [deg]
+    double peak_slew_deg_s;         // Picco di Slew Rate meccanico durante il passaggio [deg/s]
+} GroundStationPass;
+
+typedef struct {
+    double t_min;                   // Tempo trascorso nella finestra di tracking [min]
+    double sat_lat_deg;             // Latitudine sub-satellitare WGS84 [deg]
+    double sat_lon_deg;             // Longitudine sub-satellitare WGS84 [deg]
+    double sat_alt_km;              // Quota geodetica del satellite [km]
+    int    active_station_id;       // ID stazione attiva con massima elevazione (-1 = Comm Gap)
+    double azimuth_deg;             // Azimuth topocentrico SEZ della stazione attiva [0 .. 360 deg]
+    double elevation_deg;           // Elevazione topocentrica SEZ della stazione attiva [-90 .. +90 deg]
+    double range_km;                // Slant Range topocentrico rho [km]
+    double range_rate_kms;          // Range-rate radiale d(rho)/dt [km/s]
+    double slew_rate_deg_s;         // Velocità angolare istantanea dei motori dell'antenna [deg/s]
+} GroundTrackSample;
+
+typedef struct {
+    GroundNetworkSpec spec;
+    char   network_name[48];              // Nome descrittivo della rete attiva
+    int    num_stations;                  // Numero di stazioni nella rete (4)
+    GroundStationNode stations[NUM_NET_STATIONS];
+
+    double total_contact_hours_24h;       // Tempo totale di contatto combinato (senza sovrapposizioni) su 24h [ore]
+    double coverage_duty_pct;             // Percentuale del giorno con link di terra attivo [%]
+    double max_comm_gap_min;              // Massimo intervallo di blackout senza comunicazioni (Max Comm Gap) [min]
+    int    total_handovers;               // Numero totale di Handover automatici tra stazioni
+    int    best_station_id;               // Indice della stazione con il maggior tempo di contatto
+    char   best_station_name[36];         // Nome della stazione con il maggior tempo di contatto
+    double best_station_contact_min;      // Tempo di contatto della migliore stazione [min]
+    double peak_antenna_slew_deg_s;       // Massima velocità angolare richiesta ai motori d'antenna [deg/s]
+
+    int    num_passes;
+    GroundStationPass passes[MAX_GROUND_PASSES];
+
+    int    num_track_samples;
+    GroundTrackSample samples[MAX_GROUND_TRACK_SAMPLES];
+} GroundSegmentReport;
+
 #endif // ORBIT_TYPES_H

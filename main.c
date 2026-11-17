@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 29: OPTICAL ISL LASER MESH & WALKER TOPOLOGY \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 30: MULTI-STATION DSN/ESTRACK & HANDOVERS \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -20,10 +20,10 @@ int main(void) {
         .kep  = {.a = EARTH_RADIUS + 400.0, .e = 0.001, .i = 51.6 * DEG2RAD, .RAAN = 30.0 * DEG2RAD, .omega = 0.0, .theta = 0.0}
     };
 
-    // 3. INPUT ORBITA FINALE TARGET
+    // 3. INPUT ORBITA FINALE TARGET (Default: h = 10000 km, e = 0.02, i = 55.0 deg, RAAN = 50.0 deg)
     OrbitInputSpec input_target = {
         .mode = INPUT_KEPLERIAN,
-        .kep  = {.a = EARTH_RADIUS + 650.0, .e = 0.001, .i = 53.0 * DEG2RAD, .RAAN = 30.0 * DEG2RAD, .omega = 0.0, .theta = 0.0}
+        .kep  = {.a = EARTH_RADIUS + 10000.0, .e = 0.02, .i = 55.0 * DEG2RAD, .RAAN = 50.0 * DEG2RAD, .omega = 0.0, .theta = 0.0}
     };
 
     // Risoluzione automatica coordinate
@@ -206,6 +206,13 @@ int main(void) {
         .link_rate_gbps      = 10.0    // Throughput per singolo link coerente BPSK/Homodyne [Gbps]
     };
     ISLNetworkReport isl = evaluate_optical_isl_network(orb_target, sys, isl_spec);
+
+    // 21. SPRINT 30: MULTI-GROUND STATION TRACKING, DSN/ESTRACK GEOMETRY & LINK HANDOVERS
+    GroundNetworkSpec gnd_spec = {
+        .network_type       = NET_NASA_DSN, // NASA Deep Space Network (Goldstone, Madrid, Canberra + Milano-Bovisa)
+        .elevation_mask_deg = 5.0           // Maschera di elevazione minima sopra l'orizzonte [deg]
+    };
+    GroundSegmentReport gnd = evaluate_multi_station_coverage(orb_target, plan, &sc, gnd_spec, EARTH_MU);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -429,15 +436,25 @@ int main(void) {
     printf("  * Network Status        : %s (Mean Degree = %.2f links/sat)\n\n",
            isl.mesh_connectivity_status, isl.mean_node_degree);
 
+    printf("[MULTI-GROUND STATION TRACKING, DSN/ESTRACK GEOMETRY & LINK HANDOVERS]\n");
+    printf("  * Active Ground Network : %s | Elevation Mask = %.1f deg | Stations = %d\n",
+           gnd.network_name, gnd.spec.elevation_mask_deg, gnd.num_stations);
+    printf("  * 24h Network Coverage  : Total Contact = %.2f h/24h (%.1f%%) | Max Comm Gap = %.1f min | Handovers = %d\n",
+           gnd.total_contact_hours_24h, gnd.coverage_duty_pct, gnd.max_comm_gap_min, gnd.total_handovers);
+    printf("  * Primary Tracking Site : %s (Contact = %.1f min/24h) | Total Passes = %d\n",
+           gnd.best_station_name, gnd.best_station_contact_min, gnd.num_passes);
+    printf("  * Antenna Pedestal Slew : Peak Mechanical Slew Rate = %.4f deg/s (Zenith Tracking OK)\n\n",
+           gnd.peak_antenna_slew_deg_s);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Optical ISL Mesh Topology, Space Weather & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Multi-Station DSN/ESTRACK Tracking, ISL Mesh & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;
