@@ -118,6 +118,101 @@ static void write_trajectory_json_array(FILE *fp, KeplerianElements kep, double 
     *t_cum += duration_sec;
 }
 
+// Genera i punti 3D della traiettoria di trasferimento impulsiva mediante Base Vettoriale Ortonormale (u_hat, v_hat)
+// garantendo la chiusura geometrica cartesiana esatta al 100% tra r1 (BURN 1 su traj_initial) e r2 (BURN 2 su traj_target).
+static void write_transfer_vector_basis_json_array(FILE *fp,
+                                                   Vector3D r1_vec,
+                                                   Vector3D r2_vec,
+                                                   Vector3D v2_targ_vec,
+                                                   double duration_sec,
+                                                   int num_steps,
+                                                   const GroundStation *station,
+                                                   double *t_cum,
+                                                   double *soc_pct) {
+    Vector3D sun_dir = {1.0, 0.0, 0.0};
+    double dt = duration_sec / (double)num_steps;
+    const double P_SOLAR_MAX_W = 850.0;
+    const double P_LOAD_NOM_W  = 320.0;
+    const double BATT_CAP_WH   = 1200.0;
+
+    double r1_mag = vec_norm(r1_vec);
+    double r2_mag = vec_norm(r2_vec);
+    if (r1_mag < 1e-6) r1_mag = EARTH_RADIUS + 400.0;
+    if (r2_mag < 1e-6) r2_mag = EARTH_RADIUS + 650.0;
+
+    // 1. Costruisci la Base Ortonormale del Piano di Trasferimento (u_hat, v_hat)
+    Vector3D u_hat  = vec_scale(r1_vec, 1.0 / r1_mag);
+    Vector3D r2_hat = vec_scale(r2_vec, 1.0 / r2_mag);
+    Vector3D h_vec  = vec_cross(r1_vec, r2_vec);
+
+    // Gestione Singolarita 180 deg (Hohmann: vettori r1 e r2 collineari/opposti)
+    if (vec_norm(h_vec) < 1e-6 || vec_norm(vec_cross(u_hat, r2_hat)) < 1e-6) {
+        h_vec = vec_cross(r2_vec, v2_targ_vec);
+        if (vec_norm(h_vec) < 1e-6) {
+            Vector3D fallback_axis = (fabs(u_hat.z) < 0.9) ? (Vector3D){0.0, 0.0, 1.0} : (Vector3D){0.0, 1.0, 0.0};
+            h_vec = vec_cross(u_hat, fallback_axis);
+        }
+    }
+    Vector3D h_hat = vec_normalize(h_vec);
+    Vector3D v_hat = vec_normalize(vec_cross(h_hat, u_hat));
+
+    // 2. Calcola l'angolo di trasferimento totale Delta_theta e i parametri dell'ellisse (a, e, p)
+    double cos_dtheta = vec_dot(u_hat, r2_hat);
+    if (cos_dtheta >  1.0) cos_dtheta =  1.0;
+    if (cos_dtheta < -1.0) cos_dtheta = -1.0;
+    double delta_theta = acos(cos_dtheta);
+    if (delta_theta < 1e-6) delta_theta = PI;
+
+    double a = 0.5 * (r1_mag + r2_mag);
+    double e = fabs(r2_mag - r1_mag) / (r1_mag + r2_mag);
+    double p = a * (1.0 - e * e);
+    double sign_e = (r2_mag >= r1_mag) ? 1.0 : -1.0;
+
+    fprintf(fp, "[\n");
+    for (int k = 0; k <= num_steps; k++) {
+        double s = (double)k / (double)num_steps;
+        double theta = s * delta_theta;
+        double r_theta = p / (1.0 + sign_e * e * cos(s * PI));
+
+        Vector3D pos;
+        if (k == 0) {
+            pos = r1_vec;
+        } else if (k == num_steps) {
+            pos = r2_vec;
+        } else {
+            Vector3D dir_uv = vec_add(vec_scale(u_hat, cos(theta)), vec_scale(v_hat, sin(theta)));
+            pos = vec_scale(dir_uv, r_theta);
+        }
+
+        double r_now = vec_norm(pos);
+        double v_mag = sqrt(fmax(0.0, EARTH_MU * ((2.0 / fmax(r_now, 1.0)) - (1.0 / a))));
+
+        double t_global = *t_cum + s * duration_sec;
+        Vector3D ecef = eci_to_ecef(pos, t_global, 0.0);
+        GeodeticCoord geo = ecef_to_geodetic(ecef);
+        SpaceEnvironment env = evaluate_environment(pos, sun_dir);
+        AccessMetrics acc = compute_ground_access(ecef, station);
+
+        double p_gen = env.in_eclipse ? 0.0 : P_SOLAR_MAX_W;
+        if (k > 0) {
+            double net_p = (p_gen >= P_LOAD_NOM_W) ? (p_gen - P_LOAD_NOM_W) * 0.90 : (p_gen - P_LOAD_NOM_W);
+            double d_wh = net_p * (dt / 3600.0);
+            *soc_pct += (d_wh / BATT_CAP_WH) * 100.0;
+            if (*soc_pct > 100.0) *soc_pct = 100.0;
+            if (*soc_pct < 15.0)  *soc_pct = 15.0;
+        }
+
+        fprintf(fp, "    {\"t\":%.1f,\"x\":%.2f,\"y\":%.2f,\"z\":%.2f,\"v\":%.3f,\"lat\":%.2f,\"lon\":%.2f,\"alt\":%.2f,\"ecl\":%d,\"el\":%.2f,\"rng\":%.1f,\"pwr\":%.0f,\"soc\":%.1f}%s\n",
+                t_global, pos.x, pos.y, pos.z, v_mag,
+                geo.latitude * RAD2DEG, geo.longitude * RAD2DEG, geo.altitude,
+                env.in_eclipse ? 1 : 0,
+                acc.elevation * RAD2DEG, acc.range, p_gen, *soc_pct,
+                (k < num_steps) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+    *t_cum += duration_sec;
+}
+
 static void write_spiral_trajectory_json_array(FILE *fp, KeplerianElements k1, KeplerianElements k2,
                                                double total_tof_sec, int visual_revs, int num_steps,
                                                const GroundStation *station, double *t_cum, double *soc_pct) {
@@ -449,31 +544,52 @@ bool export_ccsds_oem_file(const char *filename,
 
     fprintf(fp, "\nCOMMENT  --- PHASE 2: ORBITAL TRANSFER SEGMENT (%s, dV = %.2f m/s) ---\n",
             plan.maneuver_name, plan.total_dv * 1000.0);
-    double r1 = rep_init.initial_kep.a;
-    double r2 = rep_target.initial_kep.a;
-    KeplerianElements kep_trans = rep_init.initial_kep;
-    kep_trans.a = 0.5 * (r1 + r2);
-    kep_trans.e = fabs(r2 - r1) / (r1 + r2);
-    kep_trans.omega = (r2 >= r1) ? rep_init.initial_kep.omega : (rep_init.initial_kep.omega + PI);
-    kep_trans.theta = (r2 >= r1) ? 0.0 : PI;
-    state = keplerian_to_cartesian(kep_trans, EARTH_MU, init_mass - 0.5 * plan.propellant_used, t_elapsed);
+    KeplerianElements kep_targ_start = rep_target.initial_kep;
+    kep_targ_start.theta = PI;
+    CartesianState s_burn1_oem = keplerian_to_cartesian(rep_init.initial_kep, EARTH_MU, init_mass, 0.0);
+    CartesianState s_burn2_oem = keplerian_to_cartesian(kep_targ_start, EARTH_MU, plan.final_mass, 0.0);
+    Vector3D r1_oem = s_burn1_oem.position;
+    Vector3D r2_oem = s_burn2_oem.position;
+    double r1_mag_oem = fmax(1e-6, vec_norm(r1_oem));
+    double r2_mag_oem = fmax(1e-6, vec_norm(r2_oem));
+    Vector3D u_hat_oem  = vec_scale(r1_oem, 1.0 / r1_mag_oem);
+    Vector3D r2_hat_oem = vec_scale(r2_oem, 1.0 / r2_mag_oem);
+    Vector3D h_oem      = vec_cross(r1_oem, r2_oem);
+    if (vec_norm(h_oem) < 1e-6 || vec_norm(vec_cross(u_hat_oem, r2_hat_oem)) < 1e-6) {
+        h_oem = vec_cross(r2_oem, s_burn2_oem.velocity);
+    }
+    Vector3D h_hat_oem = vec_normalize(h_oem);
+    Vector3D v_hat_oem = vec_normalize(vec_cross(h_hat_oem, u_hat_oem));
+    double cos_dt_oem = fmax(-1.0, fmin(1.0, vec_dot(u_hat_oem, r2_hat_oem)));
+    double dtheta_oem = acos(cos_dt_oem);
+    if (dtheta_oem < 1e-6) dtheta_oem = PI;
+    double a_oem = 0.5 * (r1_mag_oem + r2_mag_oem);
+    double e_oem = fabs(r2_mag_oem - r1_mag_oem) / (r1_mag_oem + r2_mag_oem);
+    double p_oem = a_oem * (1.0 - e_oem * e_oem);
+    double sgn_oem = (r2_mag_oem >= r1_mag_oem) ? 1.0 : -1.0;
 
     double dt_trans = dur_trans / (double)n_trans;
     for (int i = 1; i <= n_trans; i++) {
-        state = propagate_step_rk4(state, dt_trans, &sc_pass, &forces);
+        double s_oem = (double)i / (double)n_trans;
+        double theta_oem = s_oem * dtheta_oem;
+        double r_th_oem = p_oem / (1.0 + sgn_oem * e_oem * cos(s_oem * PI));
+        Vector3D dir_oem = vec_add(vec_scale(u_hat_oem, cos(theta_oem)), vec_scale(v_hat_oem, sin(theta_oem)));
+        Vector3D pos_oem = (i == n_trans) ? r2_oem : vec_scale(dir_oem, r_th_oem);
+        double v_mag_oem = sqrt(fmax(0.0, EARTH_MU * ((2.0 / fmax(vec_norm(pos_oem), 1.0)) - (1.0 / a_oem))));
+        Vector3D tan_oem = vec_normalize(vec_add(vec_scale(u_hat_oem, -sin(theta_oem)), vec_scale(v_hat_oem, cos(theta_oem))));
+        Vector3D vel_oem = vec_scale(tan_oem, v_mag_oem);
+
         t_elapsed += dt_trans;
         char t_str[40];
         format_oem_utc_timestamp(t_elapsed, t_str, sizeof(t_str));
         fprintf(fp, "%s  %14.6f  %14.6f  %14.6f  %12.7f  %12.7f  %12.7f\n",
                 t_str,
-                state.position.x, state.position.y, state.position.z,
-                state.velocity.x, state.velocity.y, state.velocity.z);
+                pos_oem.x, pos_oem.y, pos_oem.z,
+                vel_oem.x, vel_oem.y, vel_oem.z);
     }
 
     fprintf(fp, "\nCOMMENT  --- PHASE 3: TARGET OPERATIONAL ORBIT (h = %.1f km, i = %.2f deg) ---\n",
             rep_target.initial_kep.a - EARTH_RADIUS, rep_target.initial_kep.i * RAD2DEG);
-    KeplerianElements kep_targ_start = rep_target.initial_kep;
-    kep_targ_start.theta = PI;
     state = keplerian_to_cartesian(kep_targ_start, EARTH_MU, plan.final_mass, t_elapsed);
 
     double dt_targ = dur_targ / (double)n_targ;
@@ -940,23 +1056,20 @@ bool export_web_mission_json(const char *filename,
     write_trajectory_json_array(fp, rep_init.initial_kep, rep_init.period_min * 60.0 * 2.0, 240, sc, station, &t_cum, &soc_pct);
     fprintf(fp, ",\n");
 
+    KeplerianElements kep_targ_start = rep_target.initial_kep;
+    kep_targ_start.theta = PI;
+    CartesianState s_burn1 = keplerian_to_cartesian(rep_init.initial_kep, EARTH_MU, 500.0, 0.0);
+    CartesianState s_burn2 = keplerian_to_cartesian(kep_targ_start, EARTH_MU, 500.0, 0.0);
+
     fprintf(fp, "  \"traj_transfer\": ");
     if (plan.is_low_thrust) {
         write_spiral_trajectory_json_array(fp, rep_init.initial_kep, rep_target.initial_kep, plan.transfer_time_sec, 6, 360, station, &t_cum, &soc_pct);
     } else {
-        double r1 = rep_init.initial_kep.a;
-        double r2 = rep_target.initial_kep.a;
-        KeplerianElements kep_trans = rep_init.initial_kep;
-        kep_trans.a = 0.5 * (r1 + r2);
-        kep_trans.e = fabs(r2 - r1) / (r1 + r2);
-        kep_trans.omega = (r2 >= r1) ? rep_init.initial_kep.omega : (rep_init.initial_kep.omega + PI);
-        kep_trans.theta = (r2 >= r1) ? 0.0 : PI;
-        write_trajectory_json_array(fp, kep_trans, plan.transfer_time_sec, 100, sc, station, &t_cum, &soc_pct);
+        write_transfer_vector_basis_json_array(fp, s_burn1.position, s_burn2.position, s_burn2.velocity,
+                                               plan.transfer_time_sec, 100, station, &t_cum, &soc_pct);
     }
     fprintf(fp, ",\n");
 
-    KeplerianElements kep_targ_start = rep_target.initial_kep;
-    kep_targ_start.theta = PI;
     fprintf(fp, "  \"traj_target\": ");
     write_trajectory_json_array(fp, kep_targ_start, rep_target.period_min * 60.0 * 2.0, 240, sc, station, &t_cum, &soc_pct);
     fprintf(fp, ",\n");

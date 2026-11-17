@@ -490,7 +490,6 @@ OptimalTransferPlan optimize_orbital_transfer(KeplerianElements orb_init,
     best.burn1_geo     = ecef_to_geodetic(eci_to_ecef(s_b1.position, 0.0, 0.0));
 
     KeplerianElements k_b2_std = orb_target;
-    if (best.num_burns == 3) k_b2_std.a = best.transfer_apogee_km;
     k_b2_std.theta = PI;
     CartesianState s_b2 = keplerian_to_cartesian(k_b2_std, mu, init_mass, best.transfer_time_sec);
     best.burn2_pos_eci = s_b2.position;

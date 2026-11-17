@@ -2681,6 +2681,35 @@
         // ---------------------------------------------------------------------
         // BUILD UNIFIED TIMELINE & ENRICH SUBSYSTEM TELEMETRY
         // ---------------------------------------------------------------------
+        if (!isLowThrust && data.traj_initial && data.traj_initial.length > 0 && data.traj_target && data.traj_target.length > 1) {
+            const pInit0 = data.traj_initial[0];
+            const pTarg0 = data.traj_target[0];
+            const pTarg1 = data.traj_target[1];
+            const trArr  = data.traj_transfer || [];
+            const tr0    = trArr[0] || { x: 0, y: 0, z: 0 };
+            const trEnd  = trArr[trArr.length - 1] || { x: 0, y: 0, z: 0 };
+            const errStart = Math.hypot(tr0.x - pInit0.x, tr0.y - pInit0.y, tr0.z - pInit0.z);
+            const errEnd   = Math.hypot(trEnd.x - pTarg0.x, trEnd.y - pTarg0.y, trEnd.z - pTarg0.z);
+            if (errStart > 1e-2 || errEnd > 1e-2) {
+                const dtTarg = Math.max(1.0, (pTarg1.t || 30.0) - (pTarg0.t || 0.0));
+                const v2Est = {
+                    x: (pTarg1.x - pTarg0.x) / dtTarg,
+                    y: (pTarg1.y - pTarg0.y) / dtTarg,
+                    z: (pTarg1.z - pTarg0.z) / dtTarg
+                };
+                const lastInit = data.traj_initial[data.traj_initial.length - 1];
+                const simClk = { t_cum: lastInit.t || 0.0, soc_pct: lastInit.soc || 95.0 };
+                data.traj_transfer = writeTransferVectorBasisArrayC(
+                    { x: pInit0.x, y: pInit0.y, z: pInit0.z },
+                    { x: pTarg0.x, y: pTarg0.y, z: pTarg0.z },
+                    v2Est,
+                    (m.transfer_min || 45.0) * 60.0,
+                    Math.max(50, trArr.length - 1),
+                    st,
+                    simClk
+                );
+            }
+        }
         const trackMode = parseInt(document.getElementById('trackModeSelect').value, 10);
         const initSlice = trackMode === 1 ? data.traj_initial.slice(0, Math.ceil(data.traj_initial.length / 2)) : data.traj_initial;
         const targSlice = trackMode === 1 ? data.traj_target.slice(0, Math.ceil(data.traj_target.length / 2)) : data.traj_target;
@@ -5701,6 +5730,90 @@
                 pwr: Math.round(pGen), soc: +simClock.soc_pct.toFixed(1)
             });
             s = propagateStepRK4C(s, dt, sc);
+        }
+        simClock.t_cum += durationSec;
+        return pts;
+    }
+
+    // Genera i punti 3D della traiettoria di trasferimento impulsiva tramite Base Vettoriale Ortonormale (u_hat, v_hat)
+    // garantendo chiusura geometrica cartesiana esatta al 100% tra r1 (BURN 1) e r2 (BURN 2).
+    function writeTransferVectorBasisArrayC(r1Vec, r2Vec, v2TargVec, durationSec, numSteps, st, simClock) {
+        const dt = durationSec / numSteps;
+        const P_SOLAR_MAX_W = 850.0;
+        const P_LOAD_NOM_W  = 320.0;
+        const BATT_CAP_WH   = 1200.0;
+        const pts = [];
+
+        const r1Mag = Math.max(1e-6, vecNorm(r1Vec));
+        const r2Mag = Math.max(1e-6, vecNorm(r2Vec));
+
+        // 1. Costruisci la Base Ortonormale del Piano di Trasferimento (u_hat, v_hat)
+        const uHat  = vecScale(r1Vec, 1.0 / r1Mag);
+        const r2Hat = vecScale(r2Vec, 1.0 / r2Mag);
+        let hVec    = vecCross(r1Vec, r2Vec);
+
+        // Gestione Singolarita 180 deg (Hohmann: vettori collineari/opposti)
+        if (vecNorm(hVec) < 1e-6 || vecNorm(vecCross(uHat, r2Hat)) < 1e-6) {
+            hVec = vecCross(r2Vec, v2TargVec || { x: 0, y: 0, z: 1 });
+            if (vecNorm(hVec) < 1e-6) {
+                const fallbackAxis = (Math.abs(uHat.z) < 0.9) ? { x: 0, y: 0, z: 1 } : { x: 0, y: 1, z: 0 };
+                hVec = vecCross(uHat, fallbackAxis);
+            }
+        }
+        const hHat = vecNormalize(hVec);
+        const vHat = vecNormalize(vecCross(hHat, uHat));
+
+        // 2. Calcola l'angolo di trasferimento totale Delta_theta e i parametri dell'ellisse (a, e, p)
+        const cosDtheta = Math.max(-1.0, Math.min(1.0, vecDot(uHat, r2Hat)));
+        let deltaTheta = Math.acos(cosDtheta);
+        if (deltaTheta < 1e-6) deltaTheta = Math.PI;
+
+        const a = 0.5 * (r1Mag + r2Mag);
+        const e = Math.abs(r2Mag - r1Mag) / (r1Mag + r2Mag);
+        const p = a * (1.0 - e * e);
+        const signE = (r2Mag >= r1Mag) ? 1.0 : -1.0;
+
+        for (let k = 0; k <= numSteps; k++) {
+            const s = k / numSteps;
+            const theta = s * deltaTheta;
+            const rTheta = p / (1.0 + signE * e * Math.cos(s * Math.PI));
+
+            let pos;
+            if (k === 0) {
+                pos = { x: r1Vec.x, y: r1Vec.y, z: r1Vec.z };
+            } else if (k === numSteps) {
+                pos = { x: r2Vec.x, y: r2Vec.y, z: r2Vec.z };
+            } else {
+                const dirUv = vecAdd(vecScale(uHat, Math.cos(theta)), vecScale(vHat, Math.sin(theta)));
+                pos = vecScale(dirUv, rTheta);
+            }
+
+            const rNow = Math.max(1.0, vecNorm(pos));
+            const vMag = Math.sqrt(Math.max(0.0, MU * (2.0 / rNow - 1.0 / a)));
+
+            const tGlobal = simClock.t_cum + s * durationSec;
+            const geo = eciToGeodetic(pos.x, pos.y, pos.z, tGlobal);
+            const env = evaluateEnvironmentC(pos);
+            const rad = computeGroundRadarJS(geo.xe, geo.ye, geo.ze, st.lat, st.lon);
+            const pGen = env.in_eclipse ? 0.0 : P_SOLAR_MAX_W;
+
+            if (k > 0) {
+                const netP = (pGen >= P_LOAD_NOM_W) ? (pGen - P_LOAD_NOM_W) * 0.90 : (pGen - P_LOAD_NOM_W);
+                const dWh = netP * (dt / 3600.0);
+                simClock.soc_pct += (dWh / BATT_CAP_WH) * 100.0;
+                if (simClock.soc_pct > 100.0) simClock.soc_pct = 100.0;
+                if (simClock.soc_pct < 15.0)  simClock.soc_pct = 15.0;
+            }
+
+            pts.push({
+                t: +tGlobal.toFixed(1),
+                x: +pos.x.toFixed(2), y: +pos.y.toFixed(2), z: +pos.z.toFixed(2),
+                v: +vMag.toFixed(3),
+                lat: +geo.lat.toFixed(2), lon: +geo.lon.toFixed(2), alt: +geo.alt.toFixed(2),
+                ecl: env.in_eclipse ? 1 : 0,
+                el: +rad.el.toFixed(2), rng: +rad.rng.toFixed(1),
+                pwr: Math.round(pGen), soc: +simClock.soc_pct.toFixed(1)
+            });
         }
         simClock.t_cum += durationSec;
         return pts;
@@ -10045,7 +10158,6 @@
             burn1Geo = eciToGeodetic(sB1.position.x, sB1.position.y, sB1.position.z, 0.0);
 
             const kB2Std = { ...kepTarg, theta: Math.PI };
-            if (numBurns === 3) kB2Std.a = transferApogeeKm;
             const sB2 = keplerianToCartesianC(kB2Std, MU, mass0, tofSec);
             burn2PosEci = sB2.position;
             burn2Geo = eciToGeodetic(sB2.position.x, sB2.position.y, sB2.position.z, tofSec);
@@ -10080,28 +10192,31 @@
             lambertCurve.push({ tof_min: +(tTest / 60.0).toFixed(2), dv_ms: +dvSmooth.toFixed(2), fuel_kg: +fuelKg.toFixed(2) });
         }
 
-        // Propagazione RK4 continua Fase 1 -> Fase 2 -> Fase 3 (identica al 100% a telemetry.c)
+        // Propagazione Fase 1 -> Fase 2 (Base Vettoriale Ortonormale u,v) -> Fase 3 (identica al 100% a telemetry.c)
         const simClock = { t_cum: 0.0, soc_pct: 98.0 };
         const periodInitSec = 2.0 * Math.PI * Math.sqrt(kepInit.a * kepInit.a * kepInit.a / MU);
         const periodTargSec = 2.0 * Math.PI * Math.sqrt(kepTarg.a * kepTarg.a * kepTarg.a / MU);
         const trajInit = writeTrajectoryArrayC(kepInit, periodInitSec * 2.0, 240, sc, st, simClock);
 
+        const kepTargStart = { ...kepTarg, theta: Math.PI };
+        const sBurn1 = keplerianToCartesianC(kepInit, MU, 500.0, 0.0);
+        const sBurn2 = keplerianToCartesianC(kepTargStart, MU, 500.0, 0.0);
+
         let trajTrans;
         if (isLowThrust) {
             trajTrans = writeSpiralTrajectoryArrayC(kepInit, kepTarg, tofSec, 6, 360, st, simClock);
         } else {
-            const r1T = kepInit.a, r2T = kepTarg.a;
-            const kepTrans = {
-                ...kepInit,
-                a: 0.5 * (r1T + r2T),
-                e: Math.abs(r2T - r1T) / (r1T + r2T),
-                omega: (r2T >= r1T) ? kepInit.omega : (kepInit.omega + Math.PI),
-                theta: (r2T >= r1T) ? 0.0 : Math.PI
-            };
-            trajTrans = writeTrajectoryArrayC(kepTrans, tofSec, 100, sc, st, simClock);
+            trajTrans = writeTransferVectorBasisArrayC(
+                sBurn1.position,
+                sBurn2.position,
+                sBurn2.velocity,
+                tofSec,
+                100,
+                st,
+                simClock
+            );
         }
 
-        const kepTargStart = { ...kepTarg, theta: Math.PI };
         const trajTarg = writeTrajectoryArrayC(kepTargStart, periodTargSec * 2.0, 240, sc, st, simClock);
 
         // Sprint 12: Clohessy-Wiltshire Terminal Rendezvous & Proximity Operations
