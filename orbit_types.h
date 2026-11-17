@@ -538,7 +538,7 @@ typedef struct {
 } CAMReport;
 
 // ==========================================
-// 5I. SPRINT 20: END-OF-LIFE (EoL) DEORBIT, ATMOSPHERIC RE-ENTRY & SUTTON-GRAVES HEATING
+// 5I. SPRINT 20 & SPRINT 27: END-OF-LIFE (EoL) DEORBIT, 3-PHASE EDL, PARACHUTE & POWERED DESCENT
 // ==========================================
 #define MAX_REENTRY_SAMPLES 160
 
@@ -547,11 +547,49 @@ typedef struct {
     double alt_km;              // Quota sopra l'ellissoide terrestre h(t) [km]
     double vel_kms;             // Velocità relativa atmosferica V(t) [km/s]
     double fpa_deg;             // Angolo di rampa di volo (Flight-Path Angle) gamma(t) [deg]
-    double decel_g;             // Fattore di carico assiale aerodinamico n_g(t) = D / (m * g0) [g]
+    double decel_g;             // Fattore di carico assiale totale (aerodinamico + paracadute + retrorazzi) [g]
     double heat_flux_wcm2;      // Flusso termico convettivo di ristagno di Sutton-Graves q_dot(t) [W/cm^2]
     double qdyn_kpa;            // Pressione dinamica q_dyn(t) = 0.5 * rho(h) * V^2 [kPa]
     double downrange_km;        // Distanza percorsa lungo traccia a terra (Downrange) s(t) [km]
+    double mach;                // Numero di Mach locale M = V / a(h) [-]
+    double cd_eff;              // Coefficiente di resistenza aerodinamica effettivo C_D(M) [-]
+    double throttle_pct;        // Manetta retrorazzi Powered Descent [%] (0 in AERO/CHUTE, 10-100% in POWERED)
+    char   edl_phase[12];       // Fase EDL corrente: "AERO" | "CHUTE" | "POWERED"
 } ReentrySample;
+
+typedef struct {
+    double entry_fpa_deg;           // Flight-Path Angle all'Entry Interface gamma_EI [deg] (default -1.5 deg)
+    double nose_radius_m;           // Raggio di curvatura dello scudo termico R_n [m] (default 0.50 m)
+    double chute_deploy_mach;       // Numero di Mach di apertura paracadute Disk-Gap-Band [-] (default 2.1)
+    double chute_max_alt_km;        // Quota massima ammissibile apertura paracadute [km] (default 12.0 km)
+    double chute_area_m2;           // Area nominale paracadute supersonico dispiegato A_chute [m^2] (default 185.0 m^2)
+    double powered_descent_alt_m;   // Quota di sgancio paracadute e accensione retrorazzi [m] (default 2000.0 m)
+    double target_touchdown_vel_ms; // Velocità target di soft-touchdown a h = 0 [m/s] (default 1.80 m/s < 2.5 m/s)
+} EDLSequenceSpec;
+
+typedef struct {
+    EDLSequenceSpec spec;
+    // Phase 2: Supersonic Disk-Gap-Band Parachute Deployment
+    double chute_deploy_time_sec;   // Istante di apertura paracadute [s]
+    double chute_deploy_alt_km;     // Quota effettiva di apertura paracadute [km]
+    double chute_deploy_vel_ms;     // Velocità all'apertura del paracadute [m/s]
+    double chute_deploy_mach;       // Numero di Mach effettivo all'apertura del paracadute [-]
+    double chute_snatch_g;          // Picco impulsivo di decelerazione (Snatch Force Shock) all'apertura [g]
+    double chute_snatch_kn;         // Forza di picco sul cavo/riser del paracadute all'apertura [kN]
+
+    // Phase 3: Powered Descent (Gravity Turn / Skycrane Retro-Propulsion)
+    double pd_start_time_sec;       // Istante di sgancio paracadute e accensione Powered Descent [s]
+    double pd_start_alt_m;          // Quota effettiva di inizio Powered Descent [m]
+    double pd_start_vel_ms;         // Velocità all'inizio del Powered Descent [m/s]
+    double pd_peak_thrust_kn;       // Spinta massima erogata dai retrorazzi [kN]
+    double pd_mean_throttle_pct;    // Manetta media durante il Powered Descent [%]
+    double pd_dv_ms;                // Delta-V propulsivo speso nella fase di Powered Descent [m/s]
+    double pd_fuel_used_kg;         // Propellente consumato nel Powered Descent [kg]
+    double touchdown_vel_ms;        // Velocità finale di Touchdown a h = 0 m [m/s] (< 2.5 m/s)
+    double landed_mass_kg;          // Massa finale atterrata al suolo [kg]
+    bool   soft_landing_achieved;   // true se V_td < 2.5 m/s
+    char   edl_status[64];          // Stato qualifica sequenza EDL NASA JPL
+} EDLReport;
 
 typedef struct {
     double entry_alt_km;            // Quota di Entry Interface h_EI [km] (120.0 km)
@@ -566,13 +604,14 @@ typedef struct {
     double peak_heat_flux_wcm2;     // Picco di flusso termico di ristagno q_dot_max [W/cm^2]
     double peak_heat_alt_km;        // Quota del picco termico aerotermodinamico [km]
     double total_heat_load_jcm2;    // Carico termico integrale totale Q = int(q_dot dt) [J/cm^2]
-    double peak_decel_g;            // Decelerazione assiale massima n_g,max [g]
+    double peak_decel_g;            // Decelerazione assiale massima ipersonica n_g,max [g]
     double peak_decel_alt_km;       // Quota del picco di decelerazione meccanica [km]
     double peak_qdyn_kpa;           // Pressione dinamica massima q_dyn,max [kPa]
-    double breakup_alt_km;          // Quota di Demise / Breakup strutturale e ablazione catastale [km]
-    double breakup_vel_kms;         // Velocità al momento del Breakup strutturale [km/s]
+    double breakup_alt_km;          // Quota di Demise / Peak TPS Ablation [km]
+    double breakup_vel_kms;         // Velocità al momento del picco ablativo/breakup [km/s]
     double total_entry_time_sec;    // Durata complessiva della discesa atmosferica da 120 km a 0 km [s]
-    double total_downrange_km;      // Downrange complessivo dall'Entry Interface all'impatto/demise [km]
+    double total_downrange_km;      // Downrange complessivo dall'Entry Interface al Touchdown [km]
+    EDLReport edl;                  // Sprint 27: Report completo sequenza EDL a 3 fasi (Aero + Chute + Powered)
     int    num_samples;             // Numero di campioni temporali della traiettoria 3-DOF
     ReentrySample samples[MAX_REENTRY_SAMPLES];
 } EndOfLifeReport;

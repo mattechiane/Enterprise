@@ -267,8 +267,10 @@ static void write_reentry_trajectory_json_array(FILE *fp, EndOfLifeReport eol) {
     fprintf(fp, "[\n");
     for (int i = 0; i < eol.num_samples; i++) {
         ReentrySample s = eol.samples[i];
-        fprintf(fp, "    {\"t_sec\":%.1f,\"alt_km\":%.2f,\"vel_kms\":%.3f,\"fpa_deg\":%.2f,\"decel_g\":%.2f,\"heat_flux_wcm2\":%.2f,\"qdyn_kpa\":%.2f,\"downrange_km\":%.1f}%s\n",
+        const char *ph = (s.edl_phase[0] != '\0') ? s.edl_phase : "AERO";
+        fprintf(fp, "    {\"t_sec\":%.1f,\"alt_km\":%.3f,\"vel_kms\":%.4f,\"fpa_deg\":%.2f,\"decel_g\":%.2f,\"heat_flux_wcm2\":%.2f,\"qdyn_kpa\":%.2f,\"downrange_km\":%.1f,\"mach\":%.2f,\"cd_eff\":%.2f,\"throttle_pct\":%.1f,\"edl_phase\":\"%s\"}%s\n",
                 s.t_sec, s.alt_km, s.vel_kms, s.fpa_deg, s.decel_g, s.heat_flux_wcm2, s.qdyn_kpa, s.downrange_km,
+                s.mach, s.cd_eff, s.throttle_pct, ph,
                 (i < eol.num_samples - 1) ? "," : "");
     }
     fprintf(fp, "  ]");
@@ -744,6 +746,21 @@ bool export_web_mission_json(const char *filename,
             eol.breakup_alt_km, eol.breakup_vel_kms);
     fprintf(fp, "    \"total_entry_time_sec\": %.1f, \"total_downrange_km\": %.1f\n  },\n",
             eol.total_entry_time_sec, eol.total_downrange_km);
+
+    fprintf(fp, "  \"edl_summary\": {\n");
+    fprintf(fp, "    \"chute_deploy_mach_spec\": %.2f, \"chute_max_alt_km\": %.1f, \"chute_area_m2\": %.1f,\n",
+            eol.edl.spec.chute_deploy_mach, eol.edl.spec.chute_max_alt_km, eol.edl.spec.chute_area_m2);
+    fprintf(fp, "    \"chute_deploy_time_sec\": %.1f, \"chute_deploy_alt_km\": %.2f, \"chute_deploy_vel_ms\": %.1f, \"chute_deploy_mach\": %.2f,\n",
+            eol.edl.chute_deploy_time_sec, eol.edl.chute_deploy_alt_km, eol.edl.chute_deploy_vel_ms, eol.edl.chute_deploy_mach);
+    fprintf(fp, "    \"chute_snatch_g\": %.2f, \"chute_snatch_kn\": %.2f,\n",
+            eol.edl.chute_snatch_g, eol.edl.chute_snatch_kn);
+    fprintf(fp, "    \"powered_descent_alt_m\": %.1f, \"pd_start_time_sec\": %.1f, \"pd_start_alt_m\": %.1f, \"pd_start_vel_ms\": %.2f,\n",
+            eol.edl.spec.powered_descent_alt_m, eol.edl.pd_start_time_sec, eol.edl.pd_start_alt_m, eol.edl.pd_start_vel_ms);
+    fprintf(fp, "    \"pd_peak_thrust_kn\": %.2f, \"pd_mean_throttle_pct\": %.1f, \"pd_dv_ms\": %.2f, \"pd_fuel_used_kg\": %.2f,\n",
+            eol.edl.pd_peak_thrust_kn, eol.edl.pd_mean_throttle_pct, eol.edl.pd_dv_ms, eol.edl.pd_fuel_used_kg);
+    fprintf(fp, "    \"touchdown_vel_ms\": %.2f, \"landed_mass_kg\": %.2f, \"soft_landing_achieved\": %d,\n",
+            eol.edl.touchdown_vel_ms, eol.edl.landed_mass_kg, eol.edl.soft_landing_achieved ? 1 : 0);
+    fprintf(fp, "    \"edl_status\": \"%s\"\n  },\n", eol.edl.edl_status);
 
     fprintf(fp, "  \"cislunar_summary\": {\n");
     fprintf(fp, "    \"target_regime\": %d, \"regime_name\": \"%s\",\n",

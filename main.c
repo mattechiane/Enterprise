@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 26: AUTONOMOUS OPS SCHEDULER, SSR BUFFER & ECSS/NASA PDR \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 27: 3-PHASE EDL, PARACHUTE & POWERED DESCENT \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -115,11 +115,17 @@ int main(void) {
     };
     CAMReport cam = evaluate_debris_conjunction_and_cam(orb_target, rep_target, plan, deb_event, EARTH_MU);
 
-    // 12. SPRINT 20: END-OF-LIFE (EoL) DEORBIT, 3-DOF RE-ENTRY & SUTTON-GRAVES HEATING
-    double entry_fpa_deg = -1.5; // Angolo di rampa all'Entry Interface (h_EI = 120 km) [deg]
-    double nose_radius_m = 0.50; // Raggio di curvatura effettivo R_n [m]
-    EndOfLifeReport eol = simulate_eol_deorbit_and_reentry(orb_target, rep_target, plan,
-                                                           entry_fpa_deg, nose_radius_m, &sc, EARTH_MU);
+    // 12. SPRINT 20 & SPRINT 27: END-OF-LIFE (EoL) DEORBIT & 3-PHASE EDL (HYPERSONIC, PARACHUTE & POWERED DESCENT)
+    EDLSequenceSpec edl_spec = {
+        .entry_fpa_deg           = -1.5,   // Angolo di rampa all'Entry Interface (h_EI = 120 km) [deg]
+        .nose_radius_m           = 0.50,   // Raggio di curvatura effettivo R_n [m]
+        .chute_deploy_mach       = 2.1,    // Trigger apertura paracadute Supersonic Disk-Gap-Band (M < 2.1)
+        .chute_max_alt_km        = 12.0,   // Quota massima apertura paracadute (h < 12 km)
+        .chute_area_m2           = 185.0,  // Area paracadute dispiegato A_chute [m^2]
+        .powered_descent_alt_m   = 2000.0, // Quota sgancio paracadute e inizio Powered Descent [m]
+        .target_touchdown_vel_ms = 1.80    // Velocità nominale di Soft-Touchdown a h = 0 (< 2.5 m/s)
+    };
+    EndOfLifeReport eol = simulate_full_edl_sequence(orb_target, rep_target, plan, edl_spec, &sc, EARTH_MU);
 
     // 13. SPRINT 21: CISLUNAR ASTRODYNAMICS, CR3BP, LAGRANGE POINTS & LUNAR HALO ORBIT
     CR3BPSpec cr3bp_spec = {
@@ -291,6 +297,11 @@ int main(void) {
            eol.entry_alt_km, eol.entry_fpa_deg, eol.nose_radius_m, eol.ballistic_coeff_kgm2);
     printf("  * Aerothermal & G-Loads : Peak Sutton-Graves = %.1f W/cm^2 (at %.1f km) | Peak Decel = %.2f g (at %.1f km)\n",
            eol.peak_heat_flux_wcm2, eol.peak_heat_alt_km, eol.peak_decel_g, eol.peak_decel_alt_km);
+    printf("  * Phase 2 Parachute     : Deploy at h = %.2f km (M = %.2f, V = %.1f m/s) | Snatch Shock = %.2f g (%.1f kN)\n",
+           eol.edl.chute_deploy_alt_km, eol.edl.chute_deploy_mach, eol.edl.chute_deploy_vel_ms,
+           eol.edl.chute_snatch_g, eol.edl.chute_snatch_kn);
+    printf("  * Phase 3 Powered Desc. : Ignition at h = %.0f m (V = %.1f m/s) | dV_PD = %.1f m/s | Fuel = %.2f kg | Touchdown V_td = %.2f m/s\n",
+           eol.edl.pd_start_alt_m, eol.edl.pd_start_vel_ms, eol.edl.pd_dv_ms, eol.edl.pd_fuel_used_kg, eol.edl.touchdown_vel_ms);
     printf("  * Structural Demise     : Breakup Altitude = %.1f km (V = %.2f km/s) | Entry Time = %.0f s | Downrange = %.0f km\n\n",
            eol.breakup_alt_km, eol.breakup_vel_kms, eol.total_entry_time_sec, eol.total_downrange_km);
 

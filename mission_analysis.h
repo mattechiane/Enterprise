@@ -129,7 +129,15 @@ CAMReport evaluate_debris_conjunction_and_cam(KeplerianElements orb_target,
                                               ConjunctionEvent event,
                                               double mu);
 
-// Sprint 20: End-of-Life (EoL) Deorbit Disposal, Atmospheric Re-Entry Dynamics & Sutton-Graves Aerothermal Heating
+// Sprint 20 & Sprint 27: End-of-Life (EoL) Deorbit Disposal, 3-Phase EDL (Hypersonic Entry,
+// Supersonic Parachute Deployment & Powered Descent Gravity-Turn/Skycrane) & Sutton-Graves Heating
+EndOfLifeReport simulate_full_edl_sequence(KeplerianElements orb_target,
+                                           OrbitReport rep_target,
+                                           OptimalTransferPlan plan,
+                                           EDLSequenceSpec edl_spec,
+                                           const SpacecraftConfig *sc,
+                                           double mu);
+
 EndOfLifeReport simulate_eol_deorbit_and_reentry(KeplerianElements orb_target,
                                                  OrbitReport rep_target,
                                                  OptimalTransferPlan plan,
