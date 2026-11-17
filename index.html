@@ -1338,6 +1338,50 @@
         <div id="plotOpsTimeline" class="plot-container-rdv"></div>
     </div>
 </section>
+
+<!-- 21. SPACE WEATHER, ATMOSPHERIC DIURNAL BULGE & LONG-TERM ORBIT DECAY -->
+<section class="section-block" id="sec-21" data-tab="safety" style="--sec-order: 21;">
+    <div class="section-header">
+        <div>
+            <h2>21. Space Weather, Atmospheric Diurnal Bulge &amp; Long-Term Orbit Decay</h2>
+            <span>NRLMSISE-00 / Jacchia-Bowman Thermosphere &bull; Exospheric Temperature T<sub>&infin;</sub>(F<sub>10.7</sub>, K<sub>p</sub>) &bull; Diurnal Bulge (+30&deg; East, 14:00 LST) &bull; King-Hele Secular Decay &amp; 25-Year Rule</span>
+        </div>
+        <span class="badge" id="swxStatusBadge" style="color:var(--green); border-color:var(--green);">&#9728; PASS: IADC 25-YEAR DEBRIS RULE COMPLIANT</span>
+    </div>
+
+    <div class="ipl-kpi-grid">
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Estimated Orbital Lifetime</span><span class="kpi-micro-badge" id="swxKpiPhaseBadge">NOMINAL</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="swxKpiLifetime">---</span><span class="kpi-unit">years</span></div>
+            <div class="kpi-sub" id="swxKpiLifetimeSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--amber);">
+            <div class="kpi-top"><span class="kpi-label">Current F<sub>10.7</sub> Solar Flux</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="swxKpiFlux">---</span><span class="kpi-unit">SFU</span></div>
+            <div class="kpi-sub" id="swxKpiFluxSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--purple);">
+            <div class="kpi-top"><span class="kpi-label">Exospheric Temp T<sub>&infin;</sub></span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="swxKpiTemp">---</span><span class="kpi-unit">K</span></div>
+            <div class="kpi-sub" id="swxKpiTempSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Local Thermospheric &rho;(h)</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="swxKpiRho">---</span><span class="kpi-unit">kg/m&sup3;</span></div>
+            <div class="kpi-sub" id="swxKpiRhoSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--green);">
+            <div class="kpi-top"><span class="kpi-label">Compliance with 25-Year Rule</span><span class="kpi-micro-badge" id="swxKpiRuleBadge" style="color:var(--green);border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.14);">IADC 25-YR</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="swxKpiCompliance">---</span></div>
+            <div class="kpi-sub" id="swxKpiComplianceSub">---</div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotOrbitDecayYears" class="plot-container-rdv"></div>
+        <div id="plotDensityVsF107" class="plot-container-rdv"></div>
+    </div>
+</section>
         </div><!-- /sections-stack -->
     </main>
 </div><!-- /app-shell -->
@@ -1893,6 +1937,27 @@
             </div>
         </div>
 
+        <div class="form-section modal-cat-item" data-cat="safety" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--amber)">16. Space Weather (Solar Activity F<sub>10.7</sub>, Diurnal Bulge &amp; Geomagnetic Storm K<sub>p</sub>)</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Jacchia-Bowman / NRLMSISE-00 Thermospheric Breathing &bull; Secular King-Hele Orbit Decay &bull; IADC 25-Year Rule</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: 2fr 1fr;">
+                <div class="field">
+                    <label>Solar Cycle Phase (10.7 cm Solar Radio Flux F<sub>10.7</sub> [SFU])</label>
+                    <select id="swxCyclePhase">
+                        <option value="0|70">Solar Minimum (F10.7 = 70 SFU &bull; Quiet Thermosphere / Slow Decay)</option>
+                        <option value="1|140" selected>Average Solar Activity (F10.7 = 140 SFU &bull; Nominal 11-Yr Mean)</option>
+                        <option value="2|220">Solar Maximum (F10.7 = 220 SFU &bull; Expanded Thermosphere / Rapid Decay)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Geomagnetic Storm Index K<sub>p</sub> <span>[0 = Quiet .. 9 = Extreme Storm]</span></label>
+                    <input type="number" id="swxKpIndex" value="3.0" min="0.0" max="9.0" step="0.5">
+                </div>
+            </div>
+        </div>
+
         </div><!-- /modal-body-scroll -->
         <div class="modal-footer">
             <button class="btn-secondary" id="btnCancelModal">Cancel</button>
@@ -1931,10 +1996,10 @@
                       jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF'], ['sec-16', 'Flex/Slosh CSI'], ['sec-19', 'Formation ROEs']] },
         subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF, Payload & SSR)', sub: 'Kinematics/Radar/EPS, thermal & radiation, RF link budget, Walker constellation, SSR memory buffer & autonomous ops scheduler',
                       jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops']] },
-        safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL & FDIR)', sub: 'B-Plane collision avoidance, Sutton-Graves atmospheric re-entry, autonomous FDIR',
-                      jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL Re-Entry'], ['sec-17', 'FDIR']] },
-        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 20',
-                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20']] }
+        safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL, FDIR & Space Weather)', sub: 'B-Plane collision avoidance, 3-phase EDL re-entry, autonomous FDIR & NRLMSISE/Jacchia space weather orbital decay',
+                      jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL & EDL'], ['sec-17', 'FDIR'], ['sec-21', 'Space Weather']] },
+        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 21',
+                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21']] }
     };
 
     function resizeVisiblePlots() {
@@ -2479,6 +2544,21 @@
             const ops = data.ops_scheduler_summary;
             if (ops.ssr_capacity_gb !== undefined)        document.getElementById('ssrCapacityGb').value      = Math.round(ops.ssr_capacity_gb);
             if (ops.science_data_rate_mbps !== undefined) document.getElementById('ssrScienceRateMbps').value = Math.round(ops.science_data_rate_mbps);
+        }
+        if (data.space_weather_summary) {
+            const swx = data.space_weather_summary;
+            const selSwx = document.getElementById('swxCyclePhase');
+            if (selSwx && swx.cycle_phase !== undefined) {
+                for (let i = 0; i < selSwx.options.length; i++) {
+                    if (parseInt(selSwx.options[i].value.split('|')[0], 10) === swx.cycle_phase) {
+                        selSwx.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (swx.kp_index !== undefined && document.getElementById('swxKpIndex')) {
+                document.getElementById('swxKpIndex').value = swx.kp_index;
+            }
         }
 
         validateModalOrbits(false);
@@ -5091,6 +5171,11 @@
         // 20. AUTONOMOUS OPERATIONS TIMELINE SCHEDULER, SSR BUFFER & ECSS COMPLIANCE
         // =====================================================================
         renderOpsAndSsrSection(data);
+
+        // =====================================================================
+        // 21. SPACE WEATHER, ATMOSPHERIC DIURNAL BULGE & LONG-TERM ORBIT DECAY
+        // =====================================================================
+        renderSpaceWeatherSection(data);
 
         // =====================================================================
         // 17. ONBOARD FDIR AUTONOMY, REDUNDANCY SWITCHOVER & SAFE-MODE RECOVERY
@@ -9653,6 +9738,360 @@
         resizeVisiblePlots();
     }
 
+    // =========================================================================
+    // SPRINT 28: SPACE WEATHER (F10.7 / Kp), DIURNAL BULGE & JACCHIA/MSIS DRAG
+    // =========================================================================
+    function computeJacchiaMsisDensityJS(altKm, f107Sfu, f107AvgSfu, kpIndex) {
+        const f107    = Math.max(65.0, Math.min(320.0, f107Sfu || 140.0));
+        const f107Bar = (f107AvgSfu && f107AvgSfu > 50.0) ? Math.max(65.0, Math.min(320.0, f107AvgSfu)) : f107;
+        const kp      = Math.max(0.0, Math.min(9.0, isNaN(kpIndex) ? 3.0 : kpIndex));
+
+        const tC     = 379.0 + 3.24 * f107Bar + 1.3 * (f107 - f107Bar);
+        const dtGeo  = 28.0 * kp + 0.03 * Math.exp(kp);
+        const tNight = tC + 0.5 * dtGeo;
+        const tDay   = 1.28 * tC + dtGeo;
+        const tInf   = 1.15 * tC + dtGeo;
+
+        const tau = tInf / 1000.0;
+        const dh  = Math.max(0.0, altKm - 120.0);
+        const h1  = 20.6 + 17.5 * Math.pow(tau, 0.76) * (1.0 - Math.exp(-dh / 140.0)) * (1.0 + 0.00042 * dh);
+        const h2  = 95.0 + 46.0 * tau;
+
+        const rhoThermo = 2.20e-8 * Math.exp(-dh / h1);
+        const rhoExo    = 1.40e-14 * Math.pow(tau, 3.2) * Math.exp(-(altKm - 600.0) / h2);
+        return {
+            rho: rhoThermo + rhoExo,
+            tNight: tNight,
+            tDay: tDay,
+            tInf: tInf,
+            scaleHeightKm: h1
+        };
+    }
+
+    function integrateSecularOrbitLifetimeYrJS(h0Km, cdAOverM, f107Sfu, kpIndex) {
+        let h = Math.max(120.0, h0Km);
+        let tYr = 0.0;
+        const dtDays = (h0Km > 700.0) ? 4.0 : 2.0;
+        const maxYears = 100.0;
+
+        while (h > 120.0 && tYr < maxYears) {
+            const aKm = R_EQ + h;
+            const aM  = aKm * 1000.0;
+            const env = computeJacchiaMsisDensityJS(h, f107Sfu, f107Sfu, kpIndex);
+            const daRevM = -2.0 * Math.PI * cdAOverM * env.rho * (aM * aM);
+            const periodS = 2.0 * Math.PI * Math.sqrt((aKm * aKm * aKm) / MU);
+            const revsDay = 86400.0 / Math.max(1.0, periodS);
+            let dhKm = (daRevM * revsDay * dtDays) / 1000.0;
+            if (dhKm < -25.0) dhKm = -25.0;
+            h += dhKm;
+            tYr += (dtDays / 365.25);
+            if (h <= 120.0) break;
+        }
+        return tYr;
+    }
+
+    function simulateSpaceWeatherDecayJS(targetAltKm, finalMassKg, cyclePhaseId, f107Input, kpInput) {
+        const phase = isNaN(cyclePhaseId) ? 1 : cyclePhaseId;
+        let f107 = f107Input;
+        if (!f107 || f107 <= 0) {
+            f107 = (phase === 0) ? 70.0 : ((phase === 2) ? 220.0 : 140.0);
+        }
+        const kp = Math.max(0.0, Math.min(9.0, isNaN(kpInput) ? 3.0 : kpInput));
+        const h0 = Math.max(160.0, targetAltKm || 650.0);
+        const mass = Math.max(10.0, finalMassKg || 464.0);
+        const cd = 2.2, area = 4.0;
+        const cdAM = (cd * area) / mass;
+        const bCoeff = mass / (cd * area);
+        const apIdx = 2.0 * Math.exp(0.65 * kp);
+
+        let phaseName = `Nominal Solar Activity (F10.7 = ${f107.toFixed(0)} SFU)`;
+        if (f107 <= 95.0)       phaseName = `Solar Minimum (F10.7 = ${f107.toFixed(0)} SFU)`;
+        else if (f107 >= 180.0) phaseName = `Solar Maximum (F10.7 = ${f107.toFixed(0)} SFU)`;
+
+        const env0      = computeJacchiaMsisDensityJS(h0, f107, f107, kp);
+        const envDay    = computeJacchiaMsisDensityJS(h0, f107 * 1.15, f107, kp);
+        const envNight  = computeJacchiaMsisDensityJS(h0, Math.max(65.0, f107 * 0.82), f107, kp * 0.5);
+        const bulgeRat  = Math.max(1.15, envDay.rho / Math.max(1e-22, envNight.rho));
+
+        const a0Km = R_EQ + h0;
+        const a0M  = a0Km * 1000.0;
+        const revDecayM = 2.0 * Math.PI * cdAM * env0.rho * (a0M * a0M);
+        const per0S = 2.0 * Math.PI * Math.sqrt((a0Km * a0Km * a0Km) / MU);
+        const initDecayMDay = revDecayM * (86400.0 / Math.max(1.0, per0S));
+
+        const lifeAct = integrateSecularOrbitLifetimeYrJS(h0, cdAM, f107, kp);
+        const lifeMin = integrateSecularOrbitLifetimeYrJS(h0, cdAM, 70.0,  1.0);
+        const lifeAvg = integrateSecularOrbitLifetimeYrJS(h0, cdAM, 140.0, 3.0);
+        const lifeMax = integrateSecularOrbitLifetimeYrJS(h0, cdAM, 220.0, 6.0);
+
+        const ok25 = (lifeAct <= 25.0);
+        const ok5  = (lifeAct <= 5.0);
+        let verdict;
+        if (ok5) {
+            verdict = `PASS: IADC 25-YR & FCC/ESA 5-YR ZERO-DEBRIS COMPLIANT (${lifeAct.toFixed(2)} yrs)`;
+        } else if (ok25) {
+            verdict = `PASS: IADC 25-YEAR DEBRIS RULE COMPLIANT (${lifeAct.toFixed(2)} yrs <= 25 yrs)`;
+        } else {
+            verdict = `FAIL: EXCEEDS 25-YR RULE (${lifeAct.toFixed(1)} yrs > 25 yrs -> ACTIVE DEORBIT REQUIRED)`;
+        }
+
+        let horizonYr = Math.max(lifeAct * 1.15, Math.min(65.0, lifeMin * 1.05));
+        horizonYr = Math.max(2.0, Math.min(65.0, horizonYr));
+
+        const nDec = 151;
+        const dtStepYr   = horizonYr / (nDec - 1);
+        const dtStepDays = dtStepYr * 365.25;
+        let hAct = h0, hMin = h0, hAvg = h0, hMax = h0;
+        const trajDecay = [];
+
+        for (let i = 0; i < nDec; i++) {
+            const tYr = i * dtStepYr;
+            const fMod = Math.max(65.0, Math.min(260.0, f107 + 18.0 * Math.sin(2.0 * Math.PI * tYr / 11.0)));
+            trajDecay.push({
+                t_years: +tYr.toFixed(3),
+                alt_km: +hAct.toFixed(2),
+                solar_flux: +fMod.toFixed(1),
+                alt_solar_min_km: +hMin.toFixed(2),
+                alt_solar_avg_km: +hAvg.toFixed(2),
+                alt_solar_max_km: +hMax.toFixed(2)
+            });
+
+            const subSteps = 10;
+            const subDays  = dtStepDays / subSteps;
+            const stepAlt  = (hCur, fVal, kVal) => {
+                if (hCur <= 120.0) return 120.0;
+                const aKm = R_EQ + hCur;
+                const aM  = aKm * 1000.0;
+                const rho = computeJacchiaMsisDensityJS(hCur, fVal, fVal, kVal).rho;
+                const daRevM = -2.0 * Math.PI * cdAM * rho * (aM * aM);
+                const revsDay = 86400.0 / (2.0 * Math.PI * Math.sqrt((aKm * aKm * aKm) / MU));
+                return Math.max(120.0, hCur + (daRevM * revsDay * subDays) / 1000.0);
+            };
+            for (let s = 0; s < subSteps; s++) {
+                hAct = stepAlt(hAct, f107,  kp);
+                hMin = stepAlt(hMin, 70.0,  1.0);
+                hAvg = stepAlt(hAvg, 140.0, 3.0);
+                hMax = stepAlt(hMax, 220.0, 6.0);
+            }
+        }
+
+        const nDens = 91;
+        const densityProfile = [];
+        for (let j = 0; j < nDens; j++) {
+            const hProf = 120.0 + (j / (nDens - 1)) * 880.0;
+            densityProfile.push({
+                alt_km: +hProf.toFixed(1),
+                rho_min:    computeJacchiaMsisDensityJS(hProf, 70.0,  70.0,  1.0).rho,
+                rho_nom:    computeJacchiaMsisDensityJS(hProf, 140.0, 140.0, 3.0).rho,
+                rho_max:    computeJacchiaMsisDensityJS(hProf, 220.0, 220.0, 6.0).rho,
+                rho_active: computeJacchiaMsisDensityJS(hProf, f107,  f107,  kp).rho
+            });
+        }
+
+        return {
+            space_weather_summary: {
+                cycle_phase: phase,
+                phase_name: phaseName,
+                f107_sfu: +f107.toFixed(1),
+                f107_avg_sfu: +f107.toFixed(1),
+                kp_index: +kp.toFixed(1),
+                ap_index: +apIdx.toFixed(1),
+                diurnal_bulge_lag_deg: 30.0,
+                diurnal_bulge_ratio: +bulgeRat.toFixed(2),
+                initial_alt_km: +h0.toFixed(2),
+                ballistic_coeff_kgm2: +bCoeff.toFixed(2),
+                t_night_min_k: +env0.tNight.toFixed(1),
+                t_day_apex_k: +env0.tDay.toFixed(1),
+                t_exospheric_k: +env0.tInf.toFixed(1),
+                rho_at_target_kgm3: env0.rho,
+                scale_height_km: +env0.scaleHeightKm.toFixed(2),
+                initial_decay_m_day: +initDecayMDay.toFixed(2),
+                rev_decay_m: +revDecayM.toFixed(3),
+                estimated_lifetime_yr: +lifeAct.toFixed(2),
+                lifetime_solar_min_yr: +lifeMin.toFixed(2),
+                lifetime_solar_avg_yr: +lifeAvg.toFixed(2),
+                lifetime_solar_max_yr: +lifeMax.toFixed(2),
+                rule_25yr_compliant: ok25 ? 1 : 0,
+                fcc_5yr_compliant: ok5 ? 1 : 0,
+                compliance_verdict: verdict
+            },
+            traj_decay: trajDecay,
+            density_profile: densityProfile
+        };
+    }
+
+    function renderSpaceWeatherSection(data) {
+        let swx  = data.space_weather_summary;
+        let dec  = data.traj_decay;
+        let dens = data.density_profile;
+
+        if (!swx || !dec || !dec.length || !dens || !dens.length) {
+            const altTarg = (data.target_report && data.target_report.alt_km) ? data.target_report.alt_km : 650.0;
+            const fMass   = (data.maneuver && data.maneuver.final_mass_kg) ? data.maneuver.final_mass_kg : 464.0;
+            const fb      = simulateSpaceWeatherDecayJS(altTarg, fMass, 1, 140.0, 3.0);
+            swx  = fb.space_weather_summary;
+            dec  = fb.traj_decay;
+            dens = fb.density_profile;
+            data.space_weather_summary = swx;
+            data.traj_decay            = dec;
+            data.density_profile       = dens;
+        }
+        if (!swx || !dec || !dec.length) return;
+
+        const isPass = (swx.rule_25yr_compliant === 1 || swx.estimated_lifetime_yr <= 25.0);
+        const badge  = document.getElementById('swxStatusBadge');
+        badge.style.color       = isPass ? 'var(--green)' : 'var(--red)';
+        badge.style.borderColor = isPass ? 'var(--green)' : 'var(--red)';
+        badge.innerHTML         = `${isPass ? '&#9989;' : '&#9888;'} ${swx.compliance_verdict} &bull; T<sub>&infin;</sub> = ${Number(swx.t_exospheric_k).toFixed(0)} K`;
+
+        const shortPhase = swx.f107_sfu <= 95 ? 'SOLAR MIN' : (swx.f107_sfu >= 180 ? 'SOLAR MAX' : 'NOMINAL');
+        document.getElementById('swxKpiPhaseBadge').textContent = shortPhase;
+        document.getElementById('swxKpiLifetime').textContent = Number(swx.estimated_lifetime_yr) >= 99.5
+            ? '>100'
+            : Number(swx.estimated_lifetime_yr).toFixed(2);
+        document.getElementById('swxKpiLifetimeSub').textContent =
+            `Min: ${Number(swx.lifetime_solar_min_yr).toFixed(1)}y \u2022 Nom: ${Number(swx.lifetime_solar_avg_yr).toFixed(1)}y \u2022 Max: ${Number(swx.lifetime_solar_max_yr).toFixed(2)}y`;
+
+        document.getElementById('swxKpiFlux').textContent = Number(swx.f107_sfu).toFixed(0);
+        document.getElementById('swxKpiFluxSub').textContent =
+            `Kp = ${Number(swx.kp_index).toFixed(1)} (Ap \u2248 ${Number(swx.ap_index).toFixed(0)}) \u2022 Bulge +${Number(swx.diurnal_bulge_lag_deg).toFixed(0)}\u00b0 (${Number(swx.diurnal_bulge_ratio).toFixed(2)}\u00d7)`;
+
+        document.getElementById('swxKpiTemp').textContent = Number(swx.t_exospheric_k).toFixed(0);
+        document.getElementById('swxKpiTempSub').textContent =
+            `Night ${Number(swx.t_night_min_k).toFixed(0)} K \u2192 Day Bulge ${Number(swx.t_day_apex_k).toFixed(0)} K`;
+
+        document.getElementById('swxKpiRho').textContent = Number(swx.rho_at_target_kgm3).toExponential(2);
+        document.getElementById('swxKpiRhoSub').textContent =
+            `H = ${Number(swx.scale_height_km).toFixed(1)} km \u2022 |da/dt| = ${Number(swx.initial_decay_m_day).toFixed(2)} m/day`;
+
+        const compEl  = document.getElementById('swxKpiCompliance');
+        const ruleBdg = document.getElementById('swxKpiRuleBadge');
+        if (swx.fcc_5yr_compliant === 1 || swx.estimated_lifetime_yr <= 5.0) {
+            compEl.textContent = 'PASS (5-YR & 25-YR)';
+            compEl.style.color = 'var(--green)';
+            ruleBdg.textContent = 'FCC 5-YR OK';
+        } else if (isPass) {
+            compEl.textContent = 'PASS (<= 25 YRS)';
+            compEl.style.color = 'var(--green)';
+            ruleBdg.textContent = 'IADC 25-YR OK';
+        } else {
+            compEl.textContent = 'FAIL (> 25 YRS)';
+            compEl.style.color = 'var(--red)';
+            ruleBdg.textContent = 'DEORBIT REQ';
+        }
+        document.getElementById('swxKpiComplianceSub').textContent =
+            `Ballistic B = ${Number(swx.ballistic_coeff_kgm2).toFixed(1)} kg/m\u00b2 @ h\u2080 = ${Number(swx.initial_alt_km).toFixed(0)} km`;
+
+        // ---- Plot 21A (Left): Long-Term Altitude Decay Profile [Years] ----
+        const tYrs = dec.map(p => p.t_years);
+        const maxT = tYrs[tYrs.length - 1] || 30.0;
+
+        Plotly.react('plotOrbitDecayYears', [
+            {
+                x: tYrs, y: dec.map(p => p.alt_solar_min_km),
+                mode: 'lines', name: `Solar Minimum (F10.7=70, Kp=1 \u2192 ${Number(swx.lifetime_solar_min_yr).toFixed(1)} yr)`,
+                line: { color: '#64748b', width: 2.0, dash: 'dash' }
+            },
+            {
+                x: tYrs, y: dec.map(p => p.alt_solar_avg_km),
+                mode: 'lines', name: `Nominal Cycle (F10.7=140, Kp=3 \u2192 ${Number(swx.lifetime_solar_avg_yr).toFixed(1)} yr)`,
+                line: { color: '#38bdf8', width: 2.0, dash: 'dot' }
+            },
+            {
+                x: tYrs, y: dec.map(p => p.alt_solar_max_km),
+                mode: 'lines', name: `Solar Maximum (F10.7=220, Kp=6 \u2192 ${Number(swx.lifetime_solar_max_yr).toFixed(2)} yr)`,
+                line: { color: '#f43f5e', width: 2.2, dash: 'dashdot' }
+            },
+            {
+                x: tYrs, y: dec.map(p => p.alt_km),
+                mode: 'lines', name: `Active Profile (F10.7=${Number(swx.f107_sfu).toFixed(0)}, Kp=${Number(swx.kp_index).toFixed(1)} \u2192 ${Number(swx.estimated_lifetime_yr).toFixed(2)} yr)`,
+                line: { color: '#ffab00', width: 3.6 },
+                fill: 'tozeroy', fillcolor: 'rgba(255,171,0,0.08)'
+            },
+            {
+                x: [0, maxT], y: [120, 120],
+                mode: 'lines', name: 'Atmospheric Entry Interface (h_EI = 120 km)',
+                line: { color: '#10b981', width: 1.5, dash: 'dot' }, hoverinfo: 'name'
+            }
+        ], {
+            title: { text: `21A. Long-Term Secular Orbital Decay Profile h(t) [Years] vs. Solar Cycle`, font: { color: '#e2e8f0', size: 12.2 } },
+            margin: { l: 58, r: 24, b: 48, t: 40 },
+            xaxis: { title: 'Elapsed Mission Decay Time [Years]', color: '#e2e8f0', gridcolor: '#222d42', range: [0, maxT] },
+            yaxis: { title: 'Mean Orbital Altitude h [km]', color: '#e2e8f0', gridcolor: '#222d42', range: [100, Math.max(700, swx.initial_alt_km * 1.08)] },
+            shapes: maxT >= 25.0 ? [{
+                type: 'line', x0: 25.0, x1: 25.0, y0: 100, y1: Math.max(700, swx.initial_alt_km * 1.08),
+                line: { color: '#ef4444', width: 1.8, dash: 'dash' }
+            }] : [],
+            annotations: maxT >= 25.0 ? [{
+                x: 25.0, y: Math.max(620, swx.initial_alt_km * 0.92), xref: 'x', yref: 'y',
+                text: 'IADC 25-Yr Limit', showarrow: true, arrowhead: 2, ax: 42, ay: -14,
+                font: { color: '#ef4444', size: 10 }, bgcolor: 'rgba(15,23,42,0.88)', bordercolor: '#ef4444'
+            }] : [],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.8 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.34, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---- Plot 21B (Right): Logarithmic Atmospheric Density Profile rho(h) vs. F10.7 ----
+        const hProf = dens.map(p => p.alt_km);
+        Plotly.react('plotDensityVsF107', [
+            {
+                x: dens.map(p => p.rho_min), y: hProf,
+                mode: 'lines', name: 'Solar Minimum (F10.7 = 70 SFU, Kp = 1)',
+                line: { color: '#38bdf8', width: 2.3, dash: 'dash' },
+                hovertemplate: 'h = %{y:.0f} km<br>\u03c1_min = %{x:.2e} kg/m\u00b3<extra></extra>'
+            },
+            {
+                x: dens.map(p => p.rho_nom), y: hProf,
+                mode: 'lines', name: 'Nominal Solar Cycle (F10.7 = 140 SFU, Kp = 3)',
+                line: { color: '#10b981', width: 2.5 },
+                hovertemplate: 'h = %{y:.0f} km<br>\u03c1_nom = %{x:.2e} kg/m\u00b3<extra></extra>'
+            },
+            {
+                x: dens.map(p => p.rho_max), y: hProf,
+                mode: 'lines', name: 'Solar Maximum (F10.7 = 220 SFU, Kp = 6)',
+                line: { color: '#f43f5e', width: 2.5, dash: 'dashdot' },
+                hovertemplate: 'h = %{y:.0f} km<br>\u03c1_max = %{x:.2e} kg/m\u00b3<extra></extra>'
+            },
+            {
+                x: dens.map(p => p.rho_active), y: hProf,
+                mode: 'lines', name: `Active Selection (F10.7 = ${Number(swx.f107_sfu).toFixed(0)}, Kp = ${Number(swx.kp_index).toFixed(1)})`,
+                line: { color: '#ffab00', width: 3.2, dash: 'dot' },
+                hovertemplate: 'h = %{y:.0f} km<br>\u03c1_active = %{x:.2e} kg/m\u00b3<extra></extra>'
+            },
+            {
+                x: [swx.rho_at_target_kgm3], y: [swx.initial_alt_km],
+                mode: 'markers+text', name: `Target Orbit (h = ${Number(swx.initial_alt_km).toFixed(0)} km)`,
+                marker: { size: 11, color: '#ffab00', symbol: 'diamond', line: { color: '#ffffff', width: 2 } },
+                text: [`  h=${Number(swx.initial_alt_km).toFixed(0)} km (${Number(swx.rho_at_target_kgm3).toExponential(2)} kg/m\u00b3)`],
+                textposition: 'middle right',
+                textfont: { color: '#ffab00', size: 10.5 }
+            }
+        ], {
+            title: { text: `21B. Thermospheric Density Profile \u03c1(h) vs. Solar Flux F10.7 (NRLMSISE-00 / Jacchia)`, font: { color: '#e2e8f0', size: 12.2 } },
+            margin: { l: 58, r: 24, b: 48, t: 40 },
+            xaxis: { type: 'log', title: 'Atmospheric Mass Density \u03c1(h) [kg/m\u00b3] (Log Scale)', color: '#e2e8f0', gridcolor: '#222d42', exponentformat: 'e' },
+            yaxis: { title: 'Geometric Altitude h [km]', color: '#e2e8f0', gridcolor: '#222d42', range: [120, 1000] },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.8 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.36, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+    }
+
+    function swxRecomputeFromModal() {
+        if (!globalData) return;
+        const swxParts = (document.getElementById('swxCyclePhase').value || '1|140').split('|');
+        const phaseId  = parseInt(swxParts[0], 10) || 0;
+        const f107Val  = parseFloat(swxParts[1]) || 140.0;
+        const kpVal    = parseFloat(document.getElementById('swxKpIndex').value);
+        const altTarg  = (globalData.target_report && globalData.target_report.alt_km) ? globalData.target_report.alt_km : 650.0;
+        const fMass    = (globalData.maneuver && globalData.maneuver.final_mass_kg) ? globalData.maneuver.final_mass_kg : 464.0;
+        const res      = simulateSpaceWeatherDecayJS(altTarg, fMass, phaseId, f107Val, isNaN(kpVal) ? 3.0 : kpVal);
+        globalData.space_weather_summary = res.space_weather_summary;
+        globalData.traj_decay            = res.traj_decay;
+        globalData.density_profile       = res.density_profile;
+        renderSpaceWeatherSection(globalData);
+        resizeVisiblePlots();
+    }
+
     function openPdrReportModal() {
         const d = globalData || defaultJsonBackup;
         if (!d) return;
@@ -10362,6 +10801,19 @@
             parseFloat(document.getElementById('ssrScienceRateMbps').value) || 120.0
         );
 
+        // Sprint 28: Space Weather (Solar Cycle F10.7 / Kp), Diurnal Bulge & Long-Term Orbit Decay
+        const swxParts = (document.getElementById('swxCyclePhase').value || '1|140').split('|');
+        const swxPhase = parseInt(swxParts[0], 10);
+        const swxF107  = parseFloat(swxParts[1]) || 140.0;
+        const swxKp    = parseFloat(document.getElementById('swxKpIndex').value);
+        const swxRes   = simulateSpaceWeatherDecayJS(
+            kepTarg.a - R_EQ,
+            finalMass,
+            isNaN(swxPhase) ? 1 : swxPhase,
+            swxF107,
+            isNaN(swxKp) ? 3.0 : swxKp
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -10398,6 +10850,7 @@
             traj_interplanetary: iplRes.traj_interplanetary,
             formation_summary: formRes.formation_summary,
             ops_scheduler_summary: opsRes.ops_scheduler_summary,
+            space_weather_summary: swxRes.space_weather_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -10413,7 +10866,9 @@
             traj_csi: csiRes.traj_csi,
             traj_fdir: fdirRes.traj_fdir,
             traj_formation: formRes.traj_formation,
-            traj_ops_ssr: opsRes.traj_ops_ssr
+            traj_ops_ssr: opsRes.traj_ops_ssr,
+            traj_decay: swxRes.traj_decay,
+            density_profile: swxRes.density_profile
         };
 
         document.getElementById('inputModal').classList.remove('open');
@@ -10440,6 +10895,9 @@
     });
     ['ssrCapacityGb', 'ssrScienceRateMbps'].forEach(id => {
         document.getElementById(id).addEventListener('change', opsRecomputeFromModal);
+    });
+    ['swxCyclePhase', 'swxKpIndex'].forEach(id => {
+        document.getElementById(id).addEventListener('change', swxRecomputeFromModal);
     });
     document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
     document.getElementById('btnCancelModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));

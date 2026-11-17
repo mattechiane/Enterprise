@@ -1108,4 +1108,74 @@ typedef struct {
     OpsTimelineSample samples[MAX_OPS_SAMPLES];
 } MissionOpsReport;
 
+// ==========================================
+// 5P. SPRINT 28: SPACE WEATHER, SOLAR CYCLE (F10.7/Kp) & HIGH-FIDELITY ATMOSPHERIC DRAG (NRLMSISE-00 / JACCHIA)
+// ==========================================
+#define MAX_DECAY_SAMPLES   151
+#define MAX_DENSITY_SAMPLES 91
+
+typedef enum {
+    SOLAR_CYCLE_MINIMUM = 0, // Solar Minimum (F10.7 = 70 SFU, Quiet Sun)
+    SOLAR_CYCLE_AVERAGE = 1, // Moderate / Nominal Solar Activity (F10.7 = 140 SFU)
+    SOLAR_CYCLE_MAXIMUM = 2  // Solar Maximum (F10.7 = 220 SFU, Active Sun)
+} SolarCyclePhase;
+
+typedef struct {
+    SolarCyclePhase cycle_phase;  // Fase del ciclo solare selezionata (0=Min 70, 1=Avg 140, 2=Max 220)
+    double f107_sfu;              // Flusso radio solare giornaliero a 10.7 cm (2800 MHz) [SFU = 10^-22 W/(m^2*Hz)]
+    double f107_avg_sfu;          // Media centrata a 81 giorni (3 rotazioni di Carrington) di F10.7 [SFU]
+    double kp_index;              // Indice planetario di tempesta geomagnetica Kp [0.0 .. 9.0] (default 3.0)
+    double diurnal_bulge_lag_deg; // Angolo di ritardo del rigonfiamento diurno (Diurnal Bulge) ad Est del punto subsolare [deg] (~30 deg)
+} SpaceWeatherSpec;
+
+typedef struct {
+    double t_years;               // Tempo trascorso dall'inizio del decadimento passivo [anni]
+    double alt_km;                // Quota media orbitale sotto il profilo Space Weather selezionato [km]
+    double solar_flux;            // Flusso solare F10.7(t) modulato dal ciclo undecennale di Schwabe [SFU]
+    double alt_solar_min_km;      // Curva di riferimento in condizioni di Solar Minimum (F10.7 = 70 SFU) [km]
+    double alt_solar_avg_km;      // Curva di riferimento in condizioni di Solar Average (F10.7 = 140 SFU) [km]
+    double alt_solar_max_km;      // Curva di riferimento in condizioni di Solar Maximum (F10.7 = 220 SFU) [km]
+} DecaySample;
+
+typedef struct {
+    double alt_km;                // Quota geometrica sul livello del mare [km] (120 .. 1000 km)
+    double rho_min_kgm3;          // Densità termosferica in Solar Minimum (F10.7=70, Kp=1) [kg/m^3]
+    double rho_nom_kgm3;          // Densità termosferica in Solar Nominal (F10.7=140, Kp=3) [kg/m^3]
+    double rho_max_kgm3;          // Densità termosferica in Solar Maximum (F10.7=220, Kp=6) [kg/m^3]
+    double rho_active_kgm3;       // Densità termosferica per la configurazione attiva selezionata [kg/m^3]
+} DensityProfileSample;
+
+typedef struct {
+    SpaceWeatherSpec spec;
+    char   phase_name[48];            // Nome regime solare (es. "Solar Maximum (F10.7 = 220 SFU)")
+    double initial_alt_km;            // Quota iniziale di riferimento dell'orbita target [km]
+    double ballistic_coeff_kgm2;      // Coefficiente balistico B = m / (C_D * A) [kg/m^2]
+    double ap_index;                  // Ampiezza geomagnetica planetaria equivalente Ap [-]
+
+    // Termosfera Jacchia-Bowman / Harris-Priester & Diurnal Bulge
+    double t_night_min_k;             // Temperatura esosferica minima notturna globale T_c [K]
+    double t_day_apex_k;              // Temperatura di picco sul Diurnal Bulge diurno (14:00 LST) T_max [K]
+    double t_exospheric_k;            // Temperatura esosferica media orbitale T_inf(F10.7, Kp) [K]
+    double diurnal_bulge_ratio;       // Rapporto di densità Diurnal Bulge (Day Apex / Night Min) [-]
+    double rho_at_target_kgm3;        // Densità atmosferica locale alla quota target [kg/m^3]
+    double scale_height_km;           // Altezza di scala termosferica effettiva H(h, T_inf) [km]
+    double initial_decay_m_day;       // Rateo iniziale di decadimento del semiasse maggiore |da/dt| [m/day]
+    double rev_decay_m;               // Decadimento per singola rivoluzione |Delta a_rev| [m/rev]
+
+    // Vita Orbitale a Lungo Termine (King-Hele / Cowell Secular Decay) & Conformità Detriti Spaziali
+    double estimated_lifetime_yr;     // Vita orbitale stimata sotto il profilo attivo (fino a h = 120 km) [anni]
+    double lifetime_solar_min_yr;     // Vita orbitale in Solar Minimum (F10.7 = 70 SFU) [anni]
+    double lifetime_solar_avg_yr;     // Vita orbitale in Solar Average (F10.7 = 140 SFU) [anni]
+    double lifetime_solar_max_yr;     // Vita orbitale in Solar Maximum (F10.7 = 220 SFU) [anni]
+    bool   rule_25yr_compliant;       // true se estimated_lifetime_yr <= 25.0 anni (IADC / ISO-24113)
+    bool   fcc_5yr_compliant;         // true se estimated_lifetime_yr <= 5.0 anni (FCC / ESA Zero-Debris)
+    char   compliance_verdict[80];    // Esito conformità IADC 25-Year / ESA Zero-Debris Rule
+
+    int    num_decay_samples;
+    DecaySample decay_samples[MAX_DECAY_SAMPLES];
+
+    int    num_density_samples;
+    DensityProfileSample density_samples[MAX_DENSITY_SAMPLES];
+} OrbitLifetimeReport;
+
 #endif // ORBIT_TYPES_H

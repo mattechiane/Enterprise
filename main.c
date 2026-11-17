@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 27: 3-PHASE EDL, PARACHUTE & POWERED DESCENT \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 28: SPACE WEATHER (F10.7/Kp) & NRLMSISE/JACCHIA DRAG \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -187,6 +187,16 @@ int main(void) {
     };
     MissionOpsReport ops = evaluate_autonomous_ops_and_ssr(rep_init, plan, rep_target, adcs, tcs, telecom,
                                                            nav, cam, eol, csi, fdir, form, ops_spec);
+
+    // 19. SPRINT 28: SPACE WEATHER, SOLAR CYCLE (F10.7/Kp) & HIGH-FIDELITY ATMOSPHERIC DRAG (JACCHIA/NRLMSISE-00)
+    SpaceWeatherSpec swx_spec = {
+        .cycle_phase           = SOLAR_CYCLE_AVERAGE, // Nominal Solar Activity (F10.7 = 140 SFU)
+        .f107_sfu              = 140.0,               // Flusso radio solare giornaliero a 10.7 cm [SFU]
+        .f107_avg_sfu          = 140.0,               // Media centrata a 81 giorni F10.7 [SFU]
+        .kp_index              = 3.0,                 // Indice planetario geomagnetico Kp (0..9)
+        .diurnal_bulge_lag_deg = 30.0                 // Diurnal Bulge lag (~14:00 LST, +30 deg East)
+    };
+    OrbitLifetimeReport swx = simulate_lifetime_orbit_decay(orb_target, plan, &sc, swx_spec, EARTH_MU);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -387,15 +397,26 @@ int main(void) {
     printf("  * System Readiness Score: %.2f%% -> %s\n\n",
            ops.readiness_score_pct, ops.pdr_compliance_verdict);
 
+    printf("[SPACE WEATHER, SOLAR CYCLE (F10.7/Kp), DIURNAL BULGE & LONG-TERM ORBIT DECAY]\n");
+    printf("  * Solar Cycle & Geomagn.: %s | Kp = %.1f (Ap = %.1f) | Bulge Lag = +%.0f deg (Ratio = %.2fx)\n",
+           swx.phase_name, swx.spec.kp_index, swx.ap_index, swx.spec.diurnal_bulge_lag_deg, swx.diurnal_bulge_ratio);
+    printf("  * Exospheric Temp (J71) : T_night = %.0f K | T_day(Bulge) = %.0f K | Orbit Mean T_inf = %.0f K\n",
+           swx.t_night_min_k, swx.t_day_apex_k, swx.t_exospheric_k);
+    printf("  * Thermosphere @ %.0f km : rho = %.3e kg/m^3 | Scale Height H = %.1f km | |da/dt| = %.2f m/day\n",
+           swx.initial_alt_km, swx.rho_at_target_kgm3, swx.scale_height_km, swx.initial_decay_m_day);
+    printf("  * Lifetime Comparison   : Solar Min(70) = %.1f yr | Nominal(140) = %.2f yr | Solar Max(220) = %.2f yr\n",
+           swx.lifetime_solar_min_yr, swx.lifetime_solar_avg_yr, swx.lifetime_solar_max_yr);
+    printf("  * 25-Year Rule Verdict  : %s\n\n", swx.compliance_verdict);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Autonomous Ops Scheduler, SSR Buffer, Formation ROEs & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Space Weather (F10.7/Kp), Jacchia/MSIS Drag & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

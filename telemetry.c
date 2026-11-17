@@ -463,6 +463,29 @@ static void write_ops_ssr_trajectory_json_array(FILE *fp, MissionOpsReport ops) 
     fprintf(fp, "  ]");
 }
 
+static void write_decay_trajectory_json_array(FILE *fp, OrbitLifetimeReport swx) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < swx.num_decay_samples; i++) {
+        DecaySample s = swx.decay_samples[i];
+        fprintf(fp, "    {\"t_years\":%.3f,\"alt_km\":%.2f,\"solar_flux\":%.1f,\"alt_solar_min_km\":%.2f,\"alt_solar_avg_km\":%.2f,\"alt_solar_max_km\":%.2f}%s\n",
+                s.t_years, s.alt_km, s.solar_flux,
+                s.alt_solar_min_km, s.alt_solar_avg_km, s.alt_solar_max_km,
+                (i < swx.num_decay_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
+static void write_density_profile_json_array(FILE *fp, OrbitLifetimeReport swx) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < swx.num_density_samples; i++) {
+        DensityProfileSample s = swx.density_samples[i];
+        fprintf(fp, "    {\"alt_km\":%.1f,\"rho_min\":%.4e,\"rho_nom\":%.4e,\"rho_max\":%.4e,\"rho_active\":%.4e}%s\n",
+                s.alt_km, s.rho_min_kgm3, s.rho_nom_kgm3, s.rho_max_kgm3, s.rho_active_kgm3,
+                (i < swx.num_density_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 static void format_oem_utc_timestamp(double elapsed_sec, char *buf, size_t buf_size) {
     // Base Epoch: 2026-11-12T00:00:00.000 UTC
     int total_ms = (int)llround(fmax(0.0, elapsed_sec) * 1000.0);
@@ -627,6 +650,7 @@ bool export_web_mission_json(const char *filename,
                              const InterplanetaryReport *ipl,
                              FormationFlyingReport form,
                              MissionOpsReport ops,
+                             OrbitLifetimeReport swx,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -1024,6 +1048,24 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "      \"gnc_adcs_fdir\": {\"status\":\"%s\", \"score\":%.1f},\n", ops.status_gnc_adcs_fdir, ops.score_gnc_adcs_fdir);
     fprintf(fp, "      \"ssa_eol\": {\"status\":\"%s\", \"score\":%.1f}\n    }\n  },\n", ops.status_ssa_eol, ops.score_ssa_eol);
 
+    fprintf(fp, "  \"space_weather_summary\": {\n");
+    fprintf(fp, "    \"cycle_phase\": %d, \"phase_name\": \"%s\",\n",
+            (int)swx.spec.cycle_phase, swx.phase_name);
+    fprintf(fp, "    \"f107_sfu\": %.1f, \"f107_avg_sfu\": %.1f, \"kp_index\": %.1f, \"ap_index\": %.1f,\n",
+            swx.spec.f107_sfu, swx.spec.f107_avg_sfu, swx.spec.kp_index, swx.ap_index);
+    fprintf(fp, "    \"diurnal_bulge_lag_deg\": %.1f, \"diurnal_bulge_ratio\": %.2f,\n",
+            swx.spec.diurnal_bulge_lag_deg, swx.diurnal_bulge_ratio);
+    fprintf(fp, "    \"initial_alt_km\": %.2f, \"ballistic_coeff_kgm2\": %.2f,\n",
+            swx.initial_alt_km, swx.ballistic_coeff_kgm2);
+    fprintf(fp, "    \"t_night_min_k\": %.1f, \"t_day_apex_k\": %.1f, \"t_exospheric_k\": %.1f,\n",
+            swx.t_night_min_k, swx.t_day_apex_k, swx.t_exospheric_k);
+    fprintf(fp, "    \"rho_at_target_kgm3\": %.4e, \"scale_height_km\": %.2f, \"initial_decay_m_day\": %.2f, \"rev_decay_m\": %.3f,\n",
+            swx.rho_at_target_kgm3, swx.scale_height_km, swx.initial_decay_m_day, swx.rev_decay_m);
+    fprintf(fp, "    \"estimated_lifetime_yr\": %.2f, \"lifetime_solar_min_yr\": %.2f, \"lifetime_solar_avg_yr\": %.2f, \"lifetime_solar_max_yr\": %.2f,\n",
+            swx.estimated_lifetime_yr, swx.lifetime_solar_min_yr, swx.lifetime_solar_avg_yr, swx.lifetime_solar_max_yr);
+    fprintf(fp, "    \"rule_25yr_compliant\": %d, \"fcc_5yr_compliant\": %d, \"compliance_verdict\": \"%s\"\n  },\n",
+            swx.rule_25yr_compliant ? 1 : 0, swx.fcc_5yr_compliant ? 1 : 0, swx.compliance_verdict);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -1128,6 +1170,14 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_ops_ssr\": ");
     write_ops_ssr_trajectory_json_array(fp, ops);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_decay\": ");
+    write_decay_trajectory_json_array(fp, swx);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"density_profile\": ");
+    write_density_profile_json_array(fp, swx);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

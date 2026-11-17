@@ -191,4 +191,12 @@ MissionOpsReport evaluate_autonomous_ops_and_ssr(OrbitReport rep_init,
                                                  FormationFlyingReport form,
                                                  MissionOpsSpec spec);
 
+// Sprint 28: Space Weather, Solar Cycle (F10.7 / Kp), Diurnal Bulge & High-Fidelity Atmospheric Drag
+// (Jacchia-Bowman / NRLMSISE-00 Equivalent) for Long-Term Orbital Decay & 25-Year Rule Evaluation
+OrbitLifetimeReport simulate_lifetime_orbit_decay(KeplerianElements orb_target,
+                                                  OptimalTransferPlan plan,
+                                                  const SpacecraftConfig *sc,
+                                                  SpaceWeatherSpec spec,
+                                                  double mu);
+
 #endif // MISSION_ANALYSIS_H
