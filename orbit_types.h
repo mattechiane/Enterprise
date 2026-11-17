@@ -1001,4 +1001,72 @@ typedef struct {
     FormationSample samples[MAX_FORMATION_SAMPLES];
 } FormationFlyingReport;
 
+// ==========================================
+// 5O. SPRINT 26: AUTONOMOUS ONBOARD OPERATIONS SCHEDULER, SSR MEMORY BUFFER & ECSS/NASA PDR COMPLIANCE
+// ==========================================
+#define MAX_OPS_SAMPLES 160
+
+typedef enum {
+    OP_SCIENCE_IMAGING     = 0, // Acquisizione Payload Ottico/SAR (fuori eclissi, fuori manovra/downlink, SSR < 95%)
+    OP_GROUND_DOWNLINK     = 1, // Scaricamento radio ad alta velocità sulla Ground Station (Milano-Bovisa)
+    OP_ORBIT_MANEUVER_SLEW = 2, // Slew d'assetto ADCS e accensione propulsiva / riconfigurazione orbitale
+    OP_SUN_BATTERY_CHARGE  = 3, // Puntamento solare per ricarica batterie Li-Ion o hold anti-overflow SSR (>= 95%)
+    OP_ECLIPSE_STANDBY     = 4  // Attraversamento cono d'ombra terrestre (Payload standby, Survival Heaters / Batteria)
+} OperationalMode;
+
+typedef struct {
+    double ssr_capacity_gb;        // Capacità massima memoria flash NAND SSR con EDAC [GB] (default 128.0 GB)
+    double science_data_rate_mbps; // Rateo di generazione dati del Payload scientifico R_gen [Mbps] (default 120.0 Mbps)
+    double ssr_overflow_limit_pct; // Soglia di protezione anti-overflow SSR [%] (default 95.0%)
+} MissionOpsSpec;
+
+typedef struct {
+    double t_min;                  // Tempo cumulativo di missione [min]
+    int    op_mode_id;             // Modalità operativa autonoma attiva (0..4, enum OperationalMode)
+    double ssr_used_gb;            // Volume di dati istantaneo immagazzinato nel buffer SSR [GB]
+    double ssr_fill_pct;           // Percentuale di riempimento del buffer SSR [%]
+    double net_data_rate_mbps;     // Flusso netto di memoria dM_SSR/dt = R_gen(t) - R_downlink(t) [Mbps]
+} OpsTimelineSample;
+
+typedef struct {
+    MissionOpsSpec spec;
+
+    // Bilancio Memoria di Massa a Stato Solido (SSR - Solid-State Recorder)
+    double peak_ssr_used_gb;          // Picco di occupazione memoria SSR registrato [GB]
+    double peak_ssr_fill_pct;         // Picco percentuale di occupazione memoria SSR [%]
+    double total_acquired_gb;         // Volume totale di dati scientifici acquisiti dal Payload [GB]
+    double total_downlinked_gb;       // Volume totale di dati scaricati a terra via RF Downlink [GB]
+    double net_backlog_gb;            // Backlog residuo in memoria SSR a fine finestra simulata [GB]
+    int    overflow_prevented_events; // Numero di interventi automatici della protezione SSR >= 95%
+    int    downlink_dump_events;      // Numero di sessioni di scaricamento dati a terra
+
+    // Duty Cycle Operativo su 24 Ore / Finestra di Missione [%]
+    double duty_science_pct;          // Percentuale tempo in Science Observation [%]
+    double duty_downlink_pct;         // Percentuale tempo in RF Ground Downlink [%]
+    double duty_sun_charge_pct;       // Percentuale tempo in Battery Charging / Sun Pointing [%]
+    double duty_maneuver_pct;         // Percentuale tempo in GNC Maneuvers & Slew [%]
+    double duty_eclipse_pct;          // Percentuale tempo in Eclipse Standby [%]
+
+    // ECSS / NASA Preliminary Design Review (PDR) Compliance Matrix & Readiness Score
+    double readiness_score_pct;       // Global Mission System Readiness Score [0-100%]
+    char   status_propulsion[16];     // "PASS" / "WARN" (Delta-V, TCM 3-Sigma & Propellant Margin)
+    double score_propulsion;
+    char   status_eps_battery[16];    // "PASS" / "WARN" (Battery SoC > 20% & 28V Bus Stability)
+    double score_eps_battery;
+    char   status_thermal_rad[16];    // "PASS" / "WARN" (Bus Temp in [-10, +45] C & Radiation TID)
+    double score_thermal_rad;
+    char   status_rf_telecom[16];     // "PASS" / "WARN" (Eb/N0 Link Margin > 3.0 dB)
+    double score_rf_telecom;
+    char   status_ssr_buffer[16];     // "PASS" / "WARN" (SSR Fill < 95% & Downlink Throughput)
+    double score_ssr_buffer;
+    char   status_gnc_adcs_fdir[16];  // "PASS" / "WARN" (ADCS Pointing, EKF 3-Sigma, CSI Notch, Formation & FDIR)
+    double score_gnc_adcs_fdir;
+    char   status_ssa_eol[16];        // "PASS" / "WARN" (Post-CAM Pc < 1e-7 & ESA Zero-Debris EoL)
+    double score_ssa_eol;
+    char   pdr_compliance_verdict[80];// Esito globale revisione ECSS / NASA PDR
+
+    int    num_samples;
+    OpsTimelineSample samples[MAX_OPS_SAMPLES];
+} MissionOpsReport;
+
 #endif // ORBIT_TYPES_H

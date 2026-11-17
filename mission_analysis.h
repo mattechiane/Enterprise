@@ -167,4 +167,20 @@ FormationFlyingReport simulate_formation_flying_cluster(KeplerianElements orb_ch
                                                         FormationSpec spec,
                                                         double mu);
 
+// Sprint 26: Autonomous Onboard Operations Scheduler, Solid-State Recorder (SSR) Memory Buffer
+// & ECSS/NASA Preliminary Design Review (PDR) Compliance Matrix
+MissionOpsReport evaluate_autonomous_ops_and_ssr(OrbitReport rep_init,
+                                                 OptimalTransferPlan plan,
+                                                 OrbitReport rep_target,
+                                                 ADCSReport adcs,
+                                                 ThermalReport tcs,
+                                                 TelecomReport telecom,
+                                                 NavigationReport nav,
+                                                 CAMReport cam,
+                                                 EndOfLifeReport eol,
+                                                 StructuralReport csi,
+                                                 FDIRReport fdir,
+                                                 FormationFlyingReport form,
+                                                 MissionOpsSpec spec);
+
 #endif // MISSION_ANALYSIS_H

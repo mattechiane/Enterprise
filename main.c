@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 25: MULTI-SATELLITE FORMATION FLYING, ROEs & J2-INVARIANCE \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 26: AUTONOMOUS OPS SCHEDULER, SSR BUFFER & ECSS/NASA PDR \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -172,6 +172,15 @@ int main(void) {
         .tolerance_window_m = 5.0                          // Tolleranza di mantenimento baseline +/-5.0 m
     };
     FormationFlyingReport form = simulate_formation_flying_cluster(orb_target, plan, form_spec, EARTH_MU);
+
+    // 18. SPRINT 26: AUTONOMOUS ONBOARD OPERATIONS SCHEDULER, SSR MEMORY BUFFER & ECSS/NASA PDR COMPLIANCE
+    MissionOpsSpec ops_spec = {
+        .ssr_capacity_gb        = 128.0, // Memoria Flash NAND a stato solido (SSR) con EDAC = 128 GB
+        .science_data_rate_mbps = 120.0, // Rateo dati Payload Ottico/SAR = 120 Mbps
+        .ssr_overflow_limit_pct = 95.0   // Soglia di protezione anti-overflow = 95%
+    };
+    MissionOpsReport ops = evaluate_autonomous_ops_and_ssr(rep_init, plan, rep_target, adcs, tcs, telecom,
+                                                           nav, cam, eol, csi, fdir, form, ops_spec);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -354,15 +363,28 @@ int main(void) {
     printf("  * Fleet Delta-V Budget  : Reconfiguration dV = %.3f m/s | Formation-Keeping dV_FK = %.3f m/s/yr (Fuel = %.3f kg/yr)\n\n",
            form.reconfig_dv_ms, form.fk_dv_yr_ms, form.fk_fuel_yr_kg);
 
+    printf("[AUTONOMOUS ONBOARD OPERATIONS SCHEDULER, SSR MEMORY BUFFER & ECSS/NASA PDR COMPLIANCE]\n");
+    printf("  * SSR Flash Memory Spec : Capacity = %.1f GB | Science Rate R_gen = %.1f Mbps | Overflow Guard = %.0f%%\n",
+           ops.spec.ssr_capacity_gb, ops.spec.science_data_rate_mbps, ops.spec.ssr_overflow_limit_pct);
+    printf("  * SSR Memory Balance    : Peak Occupancy = %.2f GB (%.1f%%) | Acquired = %.2f GB | Downlinked = %.2f GB | Backlog = %.2f GB\n",
+           ops.peak_ssr_used_gb, ops.peak_ssr_fill_pct, ops.total_acquired_gb, ops.total_downlinked_gb, ops.net_backlog_gb);
+    printf("  * 24h Ops Duty Cycle    : Science = %.1f%% | Downlink = %.1f%% | Sun-Charge = %.1f%% | Maneuver = %.1f%% | Eclipse = %.1f%%\n",
+           ops.duty_science_pct, ops.duty_downlink_pct, ops.duty_sun_charge_pct, ops.duty_maneuver_pct, ops.duty_eclipse_pct);
+    printf("  * ECSS/NASA Compliance  : Prop=%s | EPS=%s | TCS=%s | RF=%s | SSR=%s | GNC/FDIR=%s | SSA/EoL=%s\n",
+           ops.status_propulsion, ops.status_eps_battery, ops.status_thermal_rad, ops.status_rf_telecom,
+           ops.status_ssr_buffer, ops.status_gnc_adcs_fdir, ops.status_ssa_eol);
+    printf("  * System Readiness Score: %.2f%% -> %s\n\n",
+           ops.readiness_score_pct, ops.pdr_compliance_verdict);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Multi-Satellite Formation Flying, ROEs, Interplanetary & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Autonomous Ops Scheduler, SSR Buffer, Formation ROEs & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

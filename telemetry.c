@@ -355,6 +355,17 @@ static void write_formation_trajectory_json_array(FILE *fp, FormationFlyingRepor
     fprintf(fp, "  ]");
 }
 
+static void write_ops_ssr_trajectory_json_array(FILE *fp, MissionOpsReport ops) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < ops.num_samples; i++) {
+        OpsTimelineSample s = ops.samples[i];
+        fprintf(fp, "    {\"t_min\":%.2f,\"op_mode_id\":%d,\"ssr_used_gb\":%.2f,\"ssr_fill_pct\":%.2f,\"net_data_rate_mbps\":%.2f}%s\n",
+                s.t_min, s.op_mode_id, s.ssr_used_gb, s.ssr_fill_pct, s.net_data_rate_mbps,
+                (i < ops.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 static void format_oem_utc_timestamp(double elapsed_sec, char *buf, size_t buf_size) {
     // Base Epoch: 2026-11-12T00:00:00.000 UTC
     int total_ms = (int)llround(fmax(0.0, elapsed_sec) * 1000.0);
@@ -497,6 +508,7 @@ bool export_web_mission_json(const char *filename,
                              FDIRReport fdir,
                              const InterplanetaryReport *ipl,
                              FormationFlyingReport form,
+                             MissionOpsReport ops,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -857,6 +869,28 @@ bool export_web_mission_json(const char *filename,
             form.roe_deputy[2].dex_m, form.roe_deputy[2].dey_m,
             form.roe_deputy[2].dix_m, form.roe_deputy[2].diy_m);
 
+    fprintf(fp, "  \"ops_scheduler_summary\": {\n");
+    fprintf(fp, "    \"ssr_capacity_gb\": %.2f, \"science_data_rate_mbps\": %.2f, \"ssr_overflow_limit_pct\": %.1f,\n",
+            ops.spec.ssr_capacity_gb, ops.spec.science_data_rate_mbps, ops.spec.ssr_overflow_limit_pct);
+    fprintf(fp, "    \"peak_ssr_used_gb\": %.2f, \"peak_ssr_fill_pct\": %.2f,\n",
+            ops.peak_ssr_used_gb, ops.peak_ssr_fill_pct);
+    fprintf(fp, "    \"total_acquired_gb\": %.2f, \"total_downlinked_gb\": %.2f, \"net_backlog_gb\": %.2f,\n",
+            ops.total_acquired_gb, ops.total_downlinked_gb, ops.net_backlog_gb);
+    fprintf(fp, "    \"overflow_prevented_events\": %d, \"downlink_dump_events\": %d,\n",
+            ops.overflow_prevented_events, ops.downlink_dump_events);
+    fprintf(fp, "    \"duty_science_pct\": %.1f, \"duty_downlink_pct\": %.1f, \"duty_sun_charge_pct\": %.1f, \"duty_maneuver_pct\": %.1f, \"duty_eclipse_pct\": %.1f,\n",
+            ops.duty_science_pct, ops.duty_downlink_pct, ops.duty_sun_charge_pct, ops.duty_maneuver_pct, ops.duty_eclipse_pct);
+    fprintf(fp, "    \"readiness_score_pct\": %.2f, \"pdr_compliance_verdict\": \"%s\",\n",
+            ops.readiness_score_pct, ops.pdr_compliance_verdict);
+    fprintf(fp, "    \"compliance_matrix\": {\n");
+    fprintf(fp, "      \"propulsion\": {\"status\":\"%s\", \"score\":%.1f},\n", ops.status_propulsion, ops.score_propulsion);
+    fprintf(fp, "      \"eps_battery\": {\"status\":\"%s\", \"score\":%.1f},\n", ops.status_eps_battery, ops.score_eps_battery);
+    fprintf(fp, "      \"thermal_rad\": {\"status\":\"%s\", \"score\":%.1f},\n", ops.status_thermal_rad, ops.score_thermal_rad);
+    fprintf(fp, "      \"rf_telecom\": {\"status\":\"%s\", \"score\":%.1f},\n", ops.status_rf_telecom, ops.score_rf_telecom);
+    fprintf(fp, "      \"ssr_buffer\": {\"status\":\"%s\", \"score\":%.1f},\n", ops.status_ssr_buffer, ops.score_ssr_buffer);
+    fprintf(fp, "      \"gnc_adcs_fdir\": {\"status\":\"%s\", \"score\":%.1f},\n", ops.status_gnc_adcs_fdir, ops.score_gnc_adcs_fdir);
+    fprintf(fp, "      \"ssa_eol\": {\"status\":\"%s\", \"score\":%.1f}\n    }\n  },\n", ops.status_ssa_eol, ops.score_ssa_eol);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -960,6 +994,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_formation\": ");
     write_formation_trajectory_json_array(fp, form);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_ops_ssr\": ");
+    write_ops_ssr_trajectory_json_array(fp, ops);
     fprintf(fp, "\n}\n");
 
     fclose(fp);
