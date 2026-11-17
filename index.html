@@ -1382,6 +1382,50 @@
         <div id="plotDensityVsF107" class="plot-container-rdv"></div>
     </div>
 </section>
+
+<!-- 22. OPTICAL INTER-SATELLITE LINKS (ISL) & CONSTELLATION MESH NETWORK -->
+<section class="section-block" id="sec-22" data-tab="subsystems" style="--sec-order: 22;">
+    <div class="section-header">
+        <div>
+            <h2>22. Optical Inter-Satellite Links (ISL) &amp; Constellation Mesh Network</h2>
+            <span>1550 nm Coherent Laser Terminals (LCT 10 Gbps) &bull; 3D Line-of-Sight (LoS) Atmospheric Limb Occultation (R<sub>occ</sub> = R<sub>E</sub> + 80 km) &bull; Intra-Plane &amp; Cross-Plane Walker Mesh</span>
+        </div>
+        <span class="badge" id="islStatusBadge" style="color:var(--green); border-color:var(--green);">&#128752; FULL 3D SPHERICAL LASER MESH LOCKED</span>
+    </div>
+
+    <div class="ipl-kpi-grid">
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Active Laser Links</span><span class="kpi-micro-badge" id="islKpiMeshBadge">3D MESH</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="islKpiActiveLinks">---</span><span class="kpi-unit">links</span></div>
+            <div class="kpi-sub" id="islKpiActiveLinksSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--amber);">
+            <div class="kpi-top"><span class="kpi-label">Max ISL Distance</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="islKpiMaxDist">---</span><span class="kpi-unit">km</span></div>
+            <div class="kpi-sub" id="islKpiMaxDistSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--purple);">
+            <div class="kpi-top"><span class="kpi-label">Average Network Latency</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="islKpiLatency">---</span><span class="kpi-unit">ms</span></div>
+            <div class="kpi-sub" id="islKpiLatencySub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--green);">
+            <div class="kpi-top"><span class="kpi-label">Data Throughput Capacity</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="islKpiCapacity">---</span><span class="kpi-unit">Gbps</span></div>
+            <div class="kpi-sub" id="islKpiCapacitySub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Optical Link Margin (1550 nm)</span><span class="kpi-micro-badge" id="islKpiLctBadge" style="color:var(--green);border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.14);">LCT 10G</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="islKpiMargin">---</span><span class="kpi-unit">dB</span></div>
+            <div class="kpi-sub" id="islKpiMarginSub">---</div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotIslTopology3D" class="plot-container-rdv"></div>
+        <div id="plotIslHistogram" class="plot-container-rdv"></div>
+    </div>
+</section>
         </div><!-- /sections-stack -->
     </main>
 </div><!-- /app-shell -->
@@ -1757,6 +1801,23 @@
             </div>
         </div>
 
+        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--green)">19. Optical Inter-Satellite Links (ISL) &amp; Constellation Laser Mesh Network</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">1550 nm Laser Communication Terminals (LCT) &bull; 3D Line-of-Sight Limb Occultation (R<sub>E</sub> + 80 km) &bull; 10 Gbps/Link</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="field">
+                    <label>Optical Link Range Limit d<sub>ISL,max</sub> [km] <span>[500 - 25,000 km]</span></label>
+                    <input type="number" id="islMaxRangeKm" value="5000" min="500" max="25000" step="250">
+                </div>
+                <div class="field">
+                    <label>Per-Link Laser Data Rate [Gbps] <span>[Coherent BPSK LCT]</span></label>
+                    <input type="number" id="islLinkRateGbps" value="10.0" min="1.0" max="100.0" step="1.0">
+                </div>
+            </div>
+        </div>
+
         <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
             <div class="form-section-header">
                 <h3 style="color:var(--cyan)">10. Onboard GNSS / Extended Kalman Filter (EKF) Autonomous Navigation</h3>
@@ -1994,12 +2055,12 @@
                       jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary']] },
         gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, multi-satellite formation flying (ROEs), reaction wheels, EKF, structure/slosh CSI',
                       jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF'], ['sec-16', 'Flex/Slosh CSI'], ['sec-19', 'Formation ROEs']] },
-        subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF, Payload & SSR)', sub: 'Kinematics/Radar/EPS, thermal & radiation, RF link budget, Walker constellation, SSR memory buffer & autonomous ops scheduler',
-                      jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops']] },
+        subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF, Payload, SSR & Optical ISL)', sub: 'Kinematics/Radar/EPS, thermal & radiation, RF link budget, Walker constellation, SSR memory buffer & optical laser ISL mesh network',
+                      jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops'], ['sec-22', 'Optical ISL']] },
         safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL, FDIR & Space Weather)', sub: 'B-Plane collision avoidance, 3-phase EDL re-entry, autonomous FDIR & NRLMSISE/Jacchia space weather orbital decay',
                       jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL & EDL'], ['sec-17', 'FDIR'], ['sec-21', 'Space Weather']] },
-        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 21',
-                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21']] }
+        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 22',
+                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22']] }
     };
 
     function resizeVisiblePlots() {
@@ -2558,6 +2619,15 @@
             }
             if (swx.kp_index !== undefined && document.getElementById('swxKpIndex')) {
                 document.getElementById('swxKpIndex').value = swx.kp_index;
+            }
+        }
+        if (data.isl_network_summary) {
+            const isl = data.isl_network_summary;
+            if (isl.max_range_km !== undefined && document.getElementById('islMaxRangeKm')) {
+                document.getElementById('islMaxRangeKm').value = Math.round(isl.max_range_km);
+            }
+            if (isl.link_rate_gbps !== undefined && document.getElementById('islLinkRateGbps')) {
+                document.getElementById('islLinkRateGbps').value = isl.link_rate_gbps;
             }
         }
 
@@ -5176,6 +5246,11 @@
         // 21. SPACE WEATHER, ATMOSPHERIC DIURNAL BULGE & LONG-TERM ORBIT DECAY
         // =====================================================================
         renderSpaceWeatherSection(data);
+
+        // =====================================================================
+        // 22. OPTICAL INTER-SATELLITE LINKS (ISL) & CONSTELLATION MESH NETWORK
+        // =====================================================================
+        renderOpticalIslSection(data);
 
         // =====================================================================
         // 17. ONBOARD FDIR AUTONOMY, REDUNDANCY SWITCHOVER & SAFE-MODE RECOVERY
@@ -10092,6 +10167,358 @@
         resizeVisiblePlots();
     }
 
+    // =========================================================================
+    // SPRINT 29: OPTICAL INTER-SATELLITE LINKS (ISL) & CONSTELLATION MESH
+    // =========================================================================
+    function evaluateOpticalIslNetworkJS(targetAltKm, incDeg, raan0Deg, walkerSubpoints, maxRangeKmInput, linkRateGbpsInput) {
+        const maxRangeKm = Math.max(500.0, Math.min(50000.0, maxRangeKmInput || 5000.0));
+        const occAltKm   = 80.0;
+        const lambdaNm   = 1550.0;
+        const rateGbps   = Math.max(1.0, Math.min(100.0, linkRateGbpsInput || 10.0));
+
+        const rOrbKm = Math.max(R_EQ + 150.0, R_EQ + (targetAltKm || 650.0));
+        const rOccKm = R_EQ + occAltKm;
+        const incRad = (incDeg !== undefined ? incDeg : 53.0) * DEG2RAD;
+        const horizonLimKm = (rOrbKm > rOccKm) ? (2.0 * Math.sqrt(rOrbKm * rOrbKm - rOccKm * rOccKm)) : 0.0;
+
+        let wPts = walkerSubpoints;
+        if (!wPts || !wPts.length) {
+            wPts = [];
+            const T = 24, P = 3, F = 1;
+            const r0 = (raan0Deg !== undefined) ? raan0Deg : 30.0;
+            let idx = 0;
+            for (let p = 0; p < P; p++) {
+                const raanP = (r0 + p * (360.0 / P)) % 360.0;
+                for (let m = 0; m < 8; m++) {
+                    const uDeg = (m * 45.0 + p * F * 15.0) % 360.0;
+                    const uRad = uDeg * DEG2RAD;
+                    const lat  = Math.asin(Math.max(-1, Math.min(1, Math.sin(incRad) * Math.sin(uRad)))) * RAD2DEG;
+                    const dlon = Math.atan2(Math.cos(incRad) * Math.sin(uRad), Math.cos(uRad)) * RAD2DEG;
+                    const lon  = ((raanP + dlon + 540.0) % 360.0) - 180.0;
+                    wPts.push({ sat_id: idx, plane: p, plane_id: p, raan: raanP, raan_deg: raanP, u: uDeg, arg_lat_deg: uDeg, lat: lat, lat_deg: lat, lon: lon, lon_deg: lon });
+                    idx++;
+                }
+            }
+        }
+
+        const N = wPts.length;
+        const nodes = [];
+        const cosI = Math.cos(incRad), sinI = Math.sin(incRad);
+
+        for (let i = 0; i < N; i++) {
+            const wp = wPts[i];
+            const pId     = (wp.plane_id !== undefined) ? wp.plane_id : (wp.plane !== undefined ? wp.plane : (i % 3));
+            const raanDeg = (wp.raan_deg !== undefined) ? wp.raan_deg : (wp.raan !== undefined ? wp.raan : (30.0 + pId * 120.0));
+            const uDeg    = (wp.arg_lat_deg !== undefined) ? wp.arg_lat_deg : (wp.u !== undefined ? wp.u : ((i * 45.0) % 360.0));
+            const latDeg  = (wp.lat_deg !== undefined) ? wp.lat_deg : (wp.lat || 0.0);
+            const lonDeg  = (wp.lon_deg !== undefined) ? wp.lon_deg : (wp.lon || 0.0);
+
+            const raanRad = raanDeg * DEG2RAD;
+            const uRad    = uDeg * DEG2RAD;
+            const cosO = Math.cos(raanRad), sinO = Math.sin(raanRad);
+            const cosU = Math.cos(uRad),    sinU = Math.sin(uRad);
+
+            nodes.push({
+                sat_id: i,
+                plane_id: pId,
+                x_km: +(rOrbKm * (cosO * cosU - sinO * sinU * cosI)).toFixed(2),
+                y_km: +(rOrbKm * (sinO * cosU + cosO * sinU * cosI)).toFixed(2),
+                z_km: +(rOrbKm * (sinU * sinI)).toFixed(2),
+                lat_deg: +latDeg.toFixed(2),
+                lon_deg: +lonDeg.toFixed(2),
+                degree: 0
+            });
+        }
+
+        const cLightKms = 299792.458;
+        const lambdaM   = lambdaNm * 1.0e-9;
+        const eirpRxBudgetDb = 286.74;
+
+        const edges = [];
+        let intraCnt = 0, interCnt = 0;
+        let sumDist = 0.0, minDist = 1e12, maxDist = 0.0;
+        let sumLat  = 0.0, maxLat  = 0.0;
+        let sumMarg = 0.0, minMarg = 1e12;
+
+        for (let i = 0; i < N; i++) {
+            const ni = nodes[i];
+            for (let j = i + 1; j < N; j++) {
+                const nj = nodes[j];
+                const dx = nj.x_km - ni.x_km, dy = nj.y_km - ni.y_km, dz = nj.z_km - ni.z_km;
+                const dSq = dx * dx + dy * dy + dz * dz;
+                if (dSq < 1e-6) continue;
+                const dKm = Math.sqrt(dSq);
+
+                const samePlane   = (ni.plane_id === nj.plane_id);
+                const rangeGateKm = samePlane ? (maxRangeKm * 1.08) : maxRangeKm;
+                if (dKm > rangeGateKm) continue;
+
+                let sStar = -(ni.x_km * dx + ni.y_km * dy + ni.z_km * dz) / dSq;
+                if (sStar < 0.0) sStar = 0.0;
+                if (sStar > 1.0) sStar = 1.0;
+
+                const mx = ni.x_km + sStar * dx;
+                const my = ni.y_km + sStar * dy;
+                const mz = ni.z_km + sStar * dz;
+                const rMinKm = Math.hypot(mx, my, mz);
+                if (rMinKm <= rOccKm) continue;
+
+                const tauMs  = (dKm / cLightKms) * 1000.0;
+                const fsplDb = 20.0 * Math.log10((4.0 * Math.PI * (dKm * 1000.0)) / lambdaM);
+                const margDb = eirpRxBudgetDb - fsplDb;
+
+                edges.push({
+                    sat_A: i,
+                    sat_B: j,
+                    intra_plane: samePlane ? 1 : 0,
+                    distance_km: +dKm.toFixed(2),
+                    latency_ms: +tauMs.toFixed(3),
+                    min_ray_alt_km: +(rMinKm - R_EQ).toFixed(1),
+                    fspl_db: +fsplDb.toFixed(2),
+                    margin_db: +margDb.toFixed(2)
+                });
+
+                ni.degree++;
+                nj.degree++;
+                if (samePlane) intraCnt++; else interCnt++;
+
+                sumDist += dKm;
+                if (dKm < minDist) minDist = dKm;
+                if (dKm > maxDist) maxDist = dKm;
+
+                sumLat += tauMs;
+                if (tauMs > maxLat) maxLat = tauMs;
+
+                sumMarg += margDb;
+                if (margDb < minMarg) minMarg = margDb;
+            }
+        }
+
+        const edgeCnt = edges.length;
+        let meshStatus = 'NO ACTIVE LINKS (INCREASE RANGE LIMIT OR CONSTELLATION SIZE)';
+        if (intraCnt >= N && interCnt >= Math.floor(N / 3)) {
+            meshStatus = 'FULL 3D SPHERICAL LASER MESH (RING + CROSS-PLANE LOCKED)';
+        } else if (edgeCnt > 0) {
+            meshStatus = `PARTIAL OPTICAL MESH (${edgeCnt} ACTIVE LASER LINKS)`;
+        }
+
+        return {
+            isl_network_summary: {
+                max_range_km: +maxRangeKm.toFixed(1),
+                occ_alt_km: occAltKm,
+                laser_wavelength_nm: lambdaNm,
+                link_rate_gbps: +rateGbps.toFixed(1),
+                num_nodes: N,
+                num_active_links: edgeCnt,
+                intra_plane_links: intraCnt,
+                inter_plane_links: interCnt,
+                mean_distance_km: edgeCnt > 0 ? +(sumDist / edgeCnt).toFixed(2) : 0.0,
+                min_distance_km: edgeCnt > 0 ? +minDist.toFixed(2) : 0.0,
+                max_distance_km: edgeCnt > 0 ? +maxDist.toFixed(2) : 0.0,
+                horizon_limit_km: +horizonLimKm.toFixed(2),
+                mean_latency_ms: edgeCnt > 0 ? +(sumLat / edgeCnt).toFixed(3) : 0.0,
+                max_latency_ms: edgeCnt > 0 ? +maxLat.toFixed(3) : 0.0,
+                mean_margin_db: edgeCnt > 0 ? +(sumMarg / edgeCnt).toFixed(2) : 0.0,
+                min_margin_db: edgeCnt > 0 ? +minMarg.toFixed(2) : 0.0,
+                total_capacity_gbps: +(edgeCnt * rateGbps).toFixed(1),
+                mean_node_degree: N > 0 ? +((2.0 * edgeCnt) / N).toFixed(2) : 0.0,
+                mesh_connectivity_status: meshStatus
+            },
+            isl_nodes: nodes,
+            isl_topology: edges
+        };
+    }
+
+    function renderOpticalIslSection(data) {
+        let isl   = data.isl_network_summary;
+        let nodes = data.isl_nodes;
+        let edges = data.isl_topology;
+
+        if (!isl || !nodes || !nodes.length || !edges) {
+            const altTarg = (data.target_report && data.target_report.alt_km) ? data.target_report.alt_km : 650.0;
+            const incTarg = (data.target_report && data.target_report.inc_deg) ? data.target_report.inc_deg : 53.0;
+            const raanTarg = (data.target_report && data.target_report.raan_deg !== undefined) ? data.target_report.raan_deg : 30.0;
+            const wSub = (data.systems_engineering && data.systems_engineering.walker_subpoints) ? data.systems_engineering.walker_subpoints : null;
+            const fb = evaluateOpticalIslNetworkJS(altTarg, incTarg, raanTarg, wSub, 5000.0, 10.0);
+            isl   = fb.isl_network_summary;
+            nodes = fb.isl_nodes;
+            edges = fb.isl_topology;
+            data.isl_network_summary = isl;
+            data.isl_nodes           = nodes;
+            data.isl_topology        = edges;
+        }
+        if (!isl || !nodes || !nodes.length) return;
+
+        const isFullMesh = (isl.num_active_links >= isl.num_nodes);
+        const badge = document.getElementById('islStatusBadge');
+        badge.style.color       = isFullMesh ? 'var(--green)' : 'var(--amber)';
+        badge.style.borderColor = isFullMesh ? 'var(--green)' : 'var(--amber)';
+        badge.innerHTML         = `&#128752; ${isl.mesh_connectivity_status} &bull; ${Number(isl.total_capacity_gbps).toFixed(0)} Gbps AGGREGATE`;
+
+        document.getElementById('islKpiMeshBadge').textContent = `${isl.num_nodes} NODES`;
+        document.getElementById('islKpiActiveLinks').textContent = isl.num_active_links;
+        document.getElementById('islKpiActiveLinksSub').textContent =
+            `${isl.intra_plane_links} Intra-Plane Ring + ${isl.inter_plane_links} Cross-Plane (\u2300 ${Number(isl.mean_node_degree).toFixed(1)} LCT/sat)`;
+
+        document.getElementById('islKpiMaxDist').textContent = Number(isl.max_distance_km).toFixed(0);
+        document.getElementById('islKpiMaxDistSub').textContent =
+            `Mean ${Number(isl.mean_distance_km).toFixed(0)} km \u2022 LoS Limb Horizon ${Number(isl.horizon_limit_km).toFixed(0)} km`;
+
+        document.getElementById('islKpiLatency').textContent = Number(isl.mean_latency_ms).toFixed(2);
+        document.getElementById('islKpiLatencySub').textContent =
+            `Max single-hop: ${Number(isl.max_latency_ms).toFixed(2)} ms (c = 299,792 km/s)`;
+
+        document.getElementById('islKpiCapacity').textContent = Number(isl.total_capacity_gbps).toFixed(0);
+        document.getElementById('islKpiCapacitySub').textContent =
+            `${isl.num_active_links} links \u00d7 ${Number(isl.link_rate_gbps).toFixed(0)} Gbps Coherent BPSK LCT`;
+
+        document.getElementById('islKpiMargin').textContent = `+${Number(isl.mean_margin_db).toFixed(2)}`;
+        document.getElementById('islKpiMarginSub').textContent =
+            `Min Margin +${Number(isl.min_margin_db).toFixed(2)} dB @ \u03bb = ${Number(isl.laser_wavelength_nm).toFixed(0)} nm`;
+
+        // ---- Plot 22A (Left): 3D Constellation Optical ISL Mesh Network Topology Graph ----
+        const sphX = [], sphY = [], sphZ = [];
+        const nLat = 20, nLon = 24;
+        for (let i = 0; i <= nLat; i++) {
+            const lat = ((i / nLat) - 0.5) * Math.PI;
+            const rX = [], rY = [], rZ = [];
+            for (let j = 0; j <= nLon; j++) {
+                const lon = (j / nLon) * 2.0 * Math.PI;
+                rX.push(R_EQ * Math.cos(lat) * Math.cos(lon));
+                rY.push(R_EQ * Math.cos(lat) * Math.sin(lon));
+                rZ.push(R_EQ * Math.sin(lat));
+            }
+            sphX.push(rX); sphY.push(rY); sphZ.push(rZ);
+        }
+
+        const intraX = [], intraY = [], intraZ = [];
+        const interX = [], interY = [], interZ = [];
+        edges.forEach(e => {
+            const na = nodes[e.sat_A], nb = nodes[e.sat_B];
+            if (!na || !nb) return;
+            if (e.intra_plane === 1) {
+                intraX.push(na.x_km, nb.x_km, null);
+                intraY.push(na.y_km, nb.y_km, null);
+                intraZ.push(na.z_km, nb.z_km, null);
+            } else {
+                interX.push(na.x_km, nb.x_km, null);
+                interY.push(na.y_km, nb.y_km, null);
+                interZ.push(na.z_km, nb.z_km, null);
+            }
+        });
+
+        const planeColors = ['#00e5ff', '#00e676', '#ffab00', '#e040fb', '#38bdf8', '#f43f5e'];
+        Plotly.react('plotIslTopology3D', [
+            {
+                type: 'surface', x: sphX, y: sphY, z: sphZ,
+                colorscale: [[0, '#06152d'], [0.5, '#0b2b53'], [1, '#123e73']],
+                showscale: false, opacity: 0.90, hoverinfo: 'skip', name: 'Earth + 80km Limb'
+            },
+            {
+                type: 'scatter3d', mode: 'lines',
+                name: `Intra-Plane Laser Ring (${isl.intra_plane_links} ISL)`,
+                x: intraX, y: intraY, z: intraZ,
+                line: { color: '#00e5ff', width: 4.0 },
+                hoverinfo: 'name'
+            },
+            {
+                type: 'scatter3d', mode: 'lines',
+                name: `Cross-Plane Laser Mesh (${isl.inter_plane_links} ISL)`,
+                x: interX, y: interY, z: interZ,
+                line: { color: '#ffab00', width: 3.0, dash: 'solid' },
+                hoverinfo: 'name'
+            },
+            {
+                type: 'scatter3d', mode: 'markers+text',
+                name: `Walker Nodes (${isl.num_nodes} Sats)`,
+                x: nodes.map(n => n.x_km),
+                y: nodes.map(n => n.y_km),
+                z: nodes.map(n => n.z_km),
+                text: nodes.map(n => `S${n.sat_id}`),
+                textposition: 'top center',
+                textfont: { color: '#e2e8f0', size: 8.5 },
+                marker: {
+                    size: 5.5,
+                    color: nodes.map(n => planeColors[n.plane_id % planeColors.length]),
+                    line: { color: '#ffffff', width: 1.2 }
+                },
+                hovertemplate: '<b>SAT #%{text}</b><br>ECI: [%{x:.0f}, %{y:.0f}, %{z:.0f}] km<extra></extra>'
+            }
+        ], {
+            title: { text: `22A. 3D Optical ISL Constellation Mesh Network (${isl.num_active_links} Active Laser Links)`, font: { color: '#e2e8f0', size: 12.2 } },
+            margin: { l: 0, r: 0, b: 0, t: 36 },
+            scene: {
+                xaxis: { title: 'X ECI [km]', color: '#94a3b8', gridcolor: '#1e293b', zerolinecolor: '#334155' },
+                yaxis: { title: 'Y ECI [km]', color: '#94a3b8', gridcolor: '#1e293b', zerolinecolor: '#334155' },
+                zaxis: { title: 'Z ECI [km]', color: '#94a3b8', gridcolor: '#1e293b', zerolinecolor: '#334155' },
+                aspectmode: 'data',
+                camera: { eye: { x: 1.48, y: 1.35, z: 0.95 } }
+            },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.8 }, bgcolor: 'rgba(15,23,42,0.85)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---- Plot 22B (Right): ISL Distance & Latency Distribution Histogram + Link Margin Curve ----
+        const distIntra = edges.filter(e => e.intra_plane === 1).map(e => e.distance_km);
+        const distInter = edges.filter(e => e.intra_plane === 0).map(e => e.distance_km);
+        const sortedEdges = edges.slice().sort((a, b) => a.distance_km - b.distance_km);
+
+        Plotly.react('plotIslHistogram', [
+            {
+                type: 'histogram',
+                x: distInter,
+                name: 'Cross-Plane ISL Links [km]',
+                marker: { color: 'rgba(255, 171, 0, 0.78)', line: { color: '#ffab00', width: 1.5 } },
+                xbins: { size: 450 },
+                hovertemplate: 'Range Bin: %{x} km<br>Cross-Plane Links = %{y}<extra></extra>'
+            },
+            {
+                type: 'histogram',
+                x: distIntra,
+                name: 'Intra-Plane Ring ISL Links [km]',
+                marker: { color: 'rgba(0, 229, 255, 0.78)', line: { color: '#00e5ff', width: 1.5 } },
+                xbins: { size: 450 },
+                hovertemplate: 'Range Bin: %{x} km<br>Intra-Plane Links = %{y}<extra></extra>'
+            },
+            {
+                type: 'scatter', mode: 'lines+markers',
+                x: sortedEdges.map(e => e.distance_km),
+                y: sortedEdges.map(e => e.margin_db),
+                yaxis: 'y2',
+                name: 'Optical Link Margin [dB @ 10 Gbps]',
+                line: { color: '#10b981', width: 2.6 },
+                marker: { size: 6.5, color: '#10b981' },
+                hovertemplate: 'd_ISL = %{x:.0f} km (\u03c4 = %{customdata:.2f} ms)<br>LCT Margin = +%{y:.2f} dB<extra></extra>',
+                customdata: sortedEdges.map(e => e.latency_ms)
+            }
+        ], {
+            title: { text: `22B. ISL Distance & Latency Histogram + 1550 nm Optical Link Margin [dB]`, font: { color: '#e2e8f0', size: 12.2 } },
+            barmode: 'stack',
+            margin: { l: 56, r: 58, b: 48, t: 40 },
+            xaxis: { title: 'Inter-Satellite Link Distance d_ISL [km] (Latency \u03c4 = d_ISL / c)', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Number of Active Laser Links', color: '#00e5ff', gridcolor: '#222d42' },
+            yaxis2: { title: '10 Gbps Optical Link Margin [dB]', color: '#10b981', overlaying: 'y', side: 'right', showgrid: false },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.8 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.02, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+    }
+
+    function islRecomputeFromModal() {
+        if (!globalData) return;
+        const maxRng  = parseFloat(document.getElementById('islMaxRangeKm').value) || 5000.0;
+        const rateG   = parseFloat(document.getElementById('islLinkRateGbps').value) || 10.0;
+        const altTarg = (globalData.target_report && globalData.target_report.alt_km) ? globalData.target_report.alt_km : 650.0;
+        const incTarg = (globalData.target_report && globalData.target_report.inc_deg) ? globalData.target_report.inc_deg : 53.0;
+        const raanTarg = (globalData.target_report && globalData.target_report.raan_deg !== undefined) ? globalData.target_report.raan_deg : 30.0;
+        const wSub    = (globalData.systems_engineering && globalData.systems_engineering.walker_subpoints) ? globalData.systems_engineering.walker_subpoints : null;
+        const res     = evaluateOpticalIslNetworkJS(altTarg, incTarg, raanTarg, wSub, maxRng, rateG);
+        globalData.isl_network_summary = res.isl_network_summary;
+        globalData.isl_nodes           = res.isl_nodes;
+        globalData.isl_topology        = res.isl_topology;
+        renderOpticalIslSection(globalData);
+        resizeVisiblePlots();
+    }
+
     function openPdrReportModal() {
         const d = globalData || defaultJsonBackup;
         if (!d) return;
@@ -10814,6 +11241,18 @@
             isNaN(swxKp) ? 3.0 : swxKp
         );
 
+        // Sprint 29: Optical Inter-Satellite Links (ISL), Line-of-Sight & Constellation Mesh Network
+        const islMaxRng = parseFloat(document.getElementById('islMaxRangeKm').value) || 5000.0;
+        const islRateG  = parseFloat(document.getElementById('islLinkRateGbps').value) || 10.0;
+        const islRes    = evaluateOpticalIslNetworkJS(
+            kepTarg.a - R_EQ,
+            orb2.i,
+            orb2.raan,
+            sysRes.systems_engineering.walker_subpoints,
+            islMaxRng,
+            islRateG
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -10851,6 +11290,7 @@
             formation_summary: formRes.formation_summary,
             ops_scheduler_summary: opsRes.ops_scheduler_summary,
             space_weather_summary: swxRes.space_weather_summary,
+            isl_network_summary: islRes.isl_network_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -10868,7 +11308,9 @@
             traj_formation: formRes.traj_formation,
             traj_ops_ssr: opsRes.traj_ops_ssr,
             traj_decay: swxRes.traj_decay,
-            density_profile: swxRes.density_profile
+            density_profile: swxRes.density_profile,
+            isl_nodes: islRes.isl_nodes,
+            isl_topology: islRes.isl_topology
         };
 
         document.getElementById('inputModal').classList.remove('open');
@@ -10898,6 +11340,9 @@
     });
     ['swxCyclePhase', 'swxKpIndex'].forEach(id => {
         document.getElementById(id).addEventListener('change', swxRecomputeFromModal);
+    });
+    ['islMaxRangeKm', 'islLinkRateGbps'].forEach(id => {
+        document.getElementById(id).addEventListener('change', islRecomputeFromModal);
     });
     document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
     document.getElementById('btnCancelModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));

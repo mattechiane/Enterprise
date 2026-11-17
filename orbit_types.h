@@ -1178,4 +1178,58 @@ typedef struct {
     DensityProfileSample density_samples[MAX_DENSITY_SAMPLES];
 } OrbitLifetimeReport;
 
+// ==========================================
+// 5Q. SPRINT 29: OPTICAL INTER-SATELLITE LINKS (ISL), LINE-OF-SIGHT & CONSTELLATION MESH NETWORK
+// ==========================================
+#define MAX_ISL_EDGES 512
+
+typedef struct {
+    double max_range_km;          // Portata ottica massima del terminale laser LCT [km] (default 5000.0 km)
+    double occ_alt_km;            // Quota atmosferica opaca di occultazione del fascio laser [km] (default 80.0 km)
+    double laser_wavelength_nm;   // Lunghezza d'onda laser ottico C-Band / Nd:YAG [nm] (default 1550.0 nm)
+    double link_rate_gbps;        // Capacità per singolo link laser coerente BPSK/Homodyne [Gbps] (default 10.0 Gbps)
+} ISLNetworkSpec;
+
+typedef struct {
+    int    sat_id;                // Indice globale del satellite Walker [0 .. T-1]
+    int    plane_id;              // Indice del piano orbitale [0 .. P-1]
+    double x_km, y_km, z_km;      // Posizione cartesiana ECI 3D a t = 0 [km]
+    double lat_deg, lon_deg;      // Punto sub-satellitare geodetico [deg]
+    int    active_degree;         // Grado del nodo (numero di link laser attivi connessi)
+} ISLNode3D;
+
+typedef struct {
+    int    sat_a;                 // Indice nodo sorgente i
+    int    sat_b;                 // Indice nodo destinazione j
+    int    is_intra_plane;        // 1 = link intra-piano (anello orbitale), 0 = link inter-piano (cross-plane)
+    double distance_km;           // Distanza geometrica euclidea d_ij = ||r_j - r_i|| [km]
+    double latency_ms;            // Latenza di propagazione ottica nel vuoto tau = d_ij / c [ms]
+    double min_ray_alt_km;        // Quota minima del raggio laser sopra la superficie terrestre r_min - R_E [km]
+    double fspl_db;               // Attenuazione ottica in spazio libero FSPL (lambda = 1550 nm) [dB]
+    double link_margin_db;        // Margine di potenza del collegamento laser a 10 Gbps [dB]
+} ISLEdge;
+
+typedef struct {
+    ISLNetworkSpec spec;
+    int    num_nodes;                     // Numero totale di satelliti nella costellazione Walker T
+    ISLNode3D nodes[MAX_WALKER_SATS];
+
+    int    num_active_links;              // Numero totale di link laser attivi (in LoS e entro portata)
+    int    intra_plane_links;             // Link attivi lungo lo stesso piano orbitale (Forward/Aft)
+    int    inter_plane_links;             // Link attivi tra piani orbitali adiacenti (Cross-Plane)
+    double mean_distance_km;              // Distanza media dei link laser attivi [km]
+    double min_distance_km;               // Distanza minima tra satelliti connessi [km]
+    double max_distance_km;               // Distanza massima tra satelliti connessi [km]
+    double horizon_limit_km;              // Distanza geometrica massima di orizzonte non occultata a h_target [km]
+    double mean_latency_ms;               // Latenza ottica media di singolo salto (single-hop) [ms]
+    double max_latency_ms;                // Latenza ottica massima di singolo salto [ms]
+    double mean_margin_db;                // Margine medio del link budget ottico a 10 Gbps [dB]
+    double min_margin_db;                 // Margine minimo del link budget ottico a 10 Gbps [dB]
+    double total_capacity_gbps;           // Capacità aggregata della rete Mesh spaziale [Gbps]
+    double mean_node_degree;              // Grado medio di connessione per satellite (LCT terminals/sat)
+    char   mesh_connectivity_status[64];  // Stato topologico della rete ("FULL SPHERICAL MESH" / "PARTIAL MESH")
+
+    ISLEdge edges[MAX_ISL_EDGES];
+} ISLNetworkReport;
+
 #endif // ORBIT_TYPES_H

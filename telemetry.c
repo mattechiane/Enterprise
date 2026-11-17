@@ -486,6 +486,28 @@ static void write_density_profile_json_array(FILE *fp, OrbitLifetimeReport swx) 
     fprintf(fp, "  ]");
 }
 
+static void write_isl_nodes_json_array(FILE *fp, ISLNetworkReport isl) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < isl.num_nodes; i++) {
+        ISLNode3D n = isl.nodes[i];
+        fprintf(fp, "    {\"sat_id\":%d,\"plane_id\":%d,\"x_km\":%.2f,\"y_km\":%.2f,\"z_km\":%.2f,\"lat_deg\":%.2f,\"lon_deg\":%.2f,\"degree\":%d}%s\n",
+                n.sat_id, n.plane_id, n.x_km, n.y_km, n.z_km, n.lat_deg, n.lon_deg, n.active_degree,
+                (i < isl.num_nodes - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
+static void write_isl_topology_json_array(FILE *fp, ISLNetworkReport isl) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < isl.num_active_links; i++) {
+        ISLEdge e = isl.edges[i];
+        fprintf(fp, "    {\"sat_A\":%d,\"sat_B\":%d,\"intra_plane\":%d,\"distance_km\":%.2f,\"latency_ms\":%.3f,\"min_ray_alt_km\":%.1f,\"fspl_db\":%.2f,\"margin_db\":%.2f}%s\n",
+                e.sat_a, e.sat_b, e.is_intra_plane, e.distance_km, e.latency_ms, e.min_ray_alt_km, e.fspl_db, e.link_margin_db,
+                (i < isl.num_active_links - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 static void format_oem_utc_timestamp(double elapsed_sec, char *buf, size_t buf_size) {
     // Base Epoch: 2026-11-12T00:00:00.000 UTC
     int total_ms = (int)llround(fmax(0.0, elapsed_sec) * 1000.0);
@@ -651,6 +673,7 @@ bool export_web_mission_json(const char *filename,
                              FormationFlyingReport form,
                              MissionOpsReport ops,
                              OrbitLifetimeReport swx,
+                             ISLNetworkReport isl,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -1066,6 +1089,20 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"rule_25yr_compliant\": %d, \"fcc_5yr_compliant\": %d, \"compliance_verdict\": \"%s\"\n  },\n",
             swx.rule_25yr_compliant ? 1 : 0, swx.fcc_5yr_compliant ? 1 : 0, swx.compliance_verdict);
 
+    fprintf(fp, "  \"isl_network_summary\": {\n");
+    fprintf(fp, "    \"max_range_km\": %.1f, \"occ_alt_km\": %.1f, \"laser_wavelength_nm\": %.1f, \"link_rate_gbps\": %.1f,\n",
+            isl.spec.max_range_km, isl.spec.occ_alt_km, isl.spec.laser_wavelength_nm, isl.spec.link_rate_gbps);
+    fprintf(fp, "    \"num_nodes\": %d, \"num_active_links\": %d, \"intra_plane_links\": %d, \"inter_plane_links\": %d,\n",
+            isl.num_nodes, isl.num_active_links, isl.intra_plane_links, isl.inter_plane_links);
+    fprintf(fp, "    \"mean_distance_km\": %.2f, \"min_distance_km\": %.2f, \"max_distance_km\": %.2f, \"horizon_limit_km\": %.2f,\n",
+            isl.mean_distance_km, isl.min_distance_km, isl.max_distance_km, isl.horizon_limit_km);
+    fprintf(fp, "    \"mean_latency_ms\": %.3f, \"max_latency_ms\": %.3f,\n",
+            isl.mean_latency_ms, isl.max_latency_ms);
+    fprintf(fp, "    \"mean_margin_db\": %.2f, \"min_margin_db\": %.2f,\n",
+            isl.mean_margin_db, isl.min_margin_db);
+    fprintf(fp, "    \"total_capacity_gbps\": %.1f, \"mean_node_degree\": %.2f, \"mesh_connectivity_status\": \"%s\"\n  },\n",
+            isl.total_capacity_gbps, isl.mean_node_degree, isl.mesh_connectivity_status);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -1178,6 +1215,14 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"density_profile\": ");
     write_density_profile_json_array(fp, swx);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"isl_nodes\": ");
+    write_isl_nodes_json_array(fp, isl);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"isl_topology\": ");
+    write_isl_topology_json_array(fp, isl);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

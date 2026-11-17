@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 28: SPACE WEATHER (F10.7/Kp) & NRLMSISE/JACCHIA DRAG \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 29: OPTICAL ISL LASER MESH & WALKER TOPOLOGY \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -197,6 +197,15 @@ int main(void) {
         .diurnal_bulge_lag_deg = 30.0                 // Diurnal Bulge lag (~14:00 LST, +30 deg East)
     };
     OrbitLifetimeReport swx = simulate_lifetime_orbit_decay(orb_target, plan, &sc, swx_spec, EARTH_MU);
+
+    // 20. SPRINT 29: OPTICAL INTER-SATELLITE LINKS (ISL), LINE-OF-SIGHT & CONSTELLATION MESH NETWORK
+    ISLNetworkSpec isl_spec = {
+        .max_range_km        = 5000.0, // Portata massima del terminale laser LCT [km]
+        .occ_alt_km          = 80.0,   // Quota atmosferica opaca di occultazione R_occ = R_E + 80 km
+        .laser_wavelength_nm = 1550.0, // Lunghezza d'onda laser C-Band [nm]
+        .link_rate_gbps      = 10.0    // Throughput per singolo link coerente BPSK/Homodyne [Gbps]
+    };
+    ISLNetworkReport isl = evaluate_optical_isl_network(orb_target, sys, isl_spec);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -408,15 +417,27 @@ int main(void) {
            swx.lifetime_solar_min_yr, swx.lifetime_solar_avg_yr, swx.lifetime_solar_max_yr);
     printf("  * 25-Year Rule Verdict  : %s\n\n", swx.compliance_verdict);
 
+    printf("[OPTICAL INTER-SATELLITE LINKS (ISL), LINE-OF-SIGHT & WALKER MESH TOPOLOGY]\n");
+    printf("  * Laser Terminal Spec   : lambda = %.0f nm | Rate = %.0f Gbps/link | Max Range = %.0f km | Limb R_occ = R_E+%.0f km\n",
+           isl.spec.laser_wavelength_nm, isl.spec.link_rate_gbps, isl.spec.max_range_km, isl.spec.occ_alt_km);
+    printf("  * Active Mesh Topology  : %d Active Links (%d Intra-Plane Ring + %d Cross-Plane) across %d Walker Nodes\n",
+           isl.num_active_links, isl.intra_plane_links, isl.inter_plane_links, isl.num_nodes);
+    printf("  * ISL Range & Latency   : d = [ %.1f, %.1f ] km (Mean = %.1f km) | Mean Latency = %.2f ms (Max = %.2f ms)\n",
+           isl.min_distance_km, isl.max_distance_km, isl.mean_distance_km, isl.mean_latency_ms, isl.max_latency_ms);
+    printf("  * Optical Link Budget   : Mean Margin = +%.2f dB (Min = +%.2f dB) | Aggregate Mesh Capacity = %.0f Gbps\n",
+           isl.mean_margin_db, isl.min_margin_db, isl.total_capacity_gbps);
+    printf("  * Network Status        : %s (Mean Degree = %.2f links/sat)\n\n",
+           isl.mesh_connectivity_status, isl.mean_node_degree);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Space Weather (F10.7/Kp), Jacchia/MSIS Drag & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Optical ISL Mesh Topology, Space Weather & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

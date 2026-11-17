@@ -199,4 +199,10 @@ OrbitLifetimeReport simulate_lifetime_orbit_decay(KeplerianElements orb_target,
                                                   SpaceWeatherSpec spec,
                                                   double mu);
 
+// Sprint 29: Optical Inter-Satellite Links (ISL), 3D Line-of-Sight (LoS) Limb Occultation
+// & Walker Constellation Laser Mesh Network Topology (10 Gbps LCT Link Budget)
+ISLNetworkReport evaluate_optical_isl_network(KeplerianElements orb_target,
+                                              SystemEngineeringReport sys,
+                                              ISLNetworkSpec spec);
+
 #endif // MISSION_ANALYSIS_H

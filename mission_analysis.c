@@ -4751,5 +4751,142 @@ OrbitLifetimeReport simulate_lifetime_orbit_decay(KeplerianElements orb_target,
     return rep;
 }
 
+// =========================================================================
+// SPRINT 29: OPTICAL INTER-SATELLITE LINKS (ISL), 3D LINE-OF-SIGHT (LoS)
+// LIMB OCCULTATION & CONSTELLATION LASER MESH NETWORK TOPOLOGY (10 Gbps)
+// =========================================================================
+ISLNetworkReport evaluate_optical_isl_network(KeplerianElements orb_target,
+                                              SystemEngineeringReport sys,
+                                              ISLNetworkSpec spec) {
+    ISLNetworkReport rep = {0};
+
+    if (spec.max_range_km < 500.0 || spec.max_range_km > 50000.0) spec.max_range_km = 5000.0;
+    if (spec.occ_alt_km <= 0.0)          spec.occ_alt_km          = 80.0;
+    if (spec.laser_wavelength_nm <= 0.0) spec.laser_wavelength_nm = 1550.0;
+    if (spec.link_rate_gbps <= 0.0)      spec.link_rate_gbps      = 10.0;
+    rep.spec = spec;
+
+    double r_orb_km = fmax(EARTH_RADIUS + 150.0, orb_target.a);
+    double r_occ_km = EARTH_RADIUS + spec.occ_alt_km;
+    double inc_rad  = orb_target.i;
+    rep.horizon_limit_km = (r_orb_km > r_occ_km) ? (2.0 * sqrt(r_orb_km * r_orb_km - r_occ_km * r_occ_km)) : 0.0;
+
+    int N = sys.num_walker_sats;
+    if (N < 1) N = 24;
+    if (N > MAX_WALKER_SATS) N = MAX_WALKER_SATS;
+    rep.num_nodes = N;
+
+    for (int i = 0; i < N; i++) {
+        WalkerSatPoint wp = sys.walker_subpoints[i];
+        double raan_rad = wp.raan_deg * DEG2RAD;
+        double u_rad    = wp.arg_lat_deg * DEG2RAD;
+
+        double cos_O = cos(raan_rad), sin_O = sin(raan_rad);
+        double cos_u = cos(u_rad),    sin_u = sin(u_rad);
+        double cos_i = cos(inc_rad),  sin_i = sin(inc_rad);
+
+        rep.nodes[i].sat_id        = i;
+        rep.nodes[i].plane_id      = wp.plane_id;
+        rep.nodes[i].x_km          = r_orb_km * (cos_O * cos_u - sin_O * sin_u * cos_i);
+        rep.nodes[i].y_km          = r_orb_km * (sin_O * cos_u + cos_O * sin_u * cos_i);
+        rep.nodes[i].z_km          = r_orb_km * (sin_u * sin_i);
+        rep.nodes[i].lat_deg       = wp.lat_deg;
+        rep.nodes[i].lon_deg       = wp.lon_deg;
+        rep.nodes[i].active_degree = 0;
+    }
+
+    const double c_light_kms = 299792.458;
+    const double lambda_m    = spec.laser_wavelength_nm * 1.0e-9; // 1550 nm = 1.55e-6 m
+    // Bilancio ottico LCT 10 Gbps (P_tx=2.5W/+3.98dBW, D_opt=13.5cm -> G_tx=G_rx=106.88dBi, L_sys=4.5dB, P_req=-43.5dBm=-73.5dBW)
+    const double eirp_plus_rx_budget_db = 286.74;
+
+    int edge_cnt = 0;
+    int intra_cnt = 0, inter_cnt = 0;
+    double sum_dist = 0.0, min_dist = 1e12, max_dist = 0.0;
+    double sum_lat  = 0.0, max_lat  = 0.0;
+    double sum_marg = 0.0, min_marg = 1e12;
+
+    for (int i = 0; i < N; i++) {
+        Vector3D ri = {rep.nodes[i].x_km, rep.nodes[i].y_km, rep.nodes[i].z_km};
+        for (int j = i + 1; j < N; j++) {
+            Vector3D rj = {rep.nodes[j].x_km, rep.nodes[j].y_km, rep.nodes[j].z_km};
+            Vector3D dij = vec_sub(rj, ri);
+            double d_sq = vec_dot(dij, dij);
+            if (d_sq < 1e-6) continue;
+            double d_km = sqrt(d_sq);
+
+            bool same_plane = (rep.nodes[i].plane_id == rep.nodes[j].plane_id);
+            double range_gate_km = same_plane ? (spec.max_range_km * 1.08) : spec.max_range_km;
+            if (d_km > range_gate_km) continue;
+
+            // Verifica Geometrica 3D Line-of-Sight (LoS) rispetto alla sfera occultante terrestre + atmosfera (R_E + 80 km)
+            double s_star = -vec_dot(ri, dij) / d_sq;
+            if (s_star < 0.0) s_star = 0.0;
+            if (s_star > 1.0) s_star = 1.0;
+
+            Vector3D r_closest = vec_add(ri, vec_scale(dij, s_star));
+            double r_min_km    = vec_norm(r_closest);
+            if (r_min_km <= r_occ_km) continue; // Fascio laser occultato dal limbo terrestre/atmosferico
+
+            double tau_ms   = (d_km / c_light_kms) * 1000.0;
+            double fspl_db  = 20.0 * log10((4.0 * PI * (d_km * 1000.0)) / lambda_m);
+            double marg_db  = eirp_plus_rx_budget_db - fspl_db;
+
+            if (edge_cnt < MAX_ISL_EDGES) {
+                rep.edges[edge_cnt].sat_a          = i;
+                rep.edges[edge_cnt].sat_b          = j;
+                rep.edges[edge_cnt].is_intra_plane = same_plane ? 1 : 0;
+                rep.edges[edge_cnt].distance_km    = d_km;
+                rep.edges[edge_cnt].latency_ms     = tau_ms;
+                rep.edges[edge_cnt].min_ray_alt_km = r_min_km - EARTH_RADIUS;
+                rep.edges[edge_cnt].fspl_db        = fspl_db;
+                rep.edges[edge_cnt].link_margin_db = marg_db;
+                edge_cnt++;
+            }
+
+            rep.nodes[i].active_degree++;
+            rep.nodes[j].active_degree++;
+            if (same_plane) intra_cnt++; else inter_cnt++;
+
+            sum_dist += d_km;
+            if (d_km < min_dist) min_dist = d_km;
+            if (d_km > max_dist) max_dist = d_km;
+
+            sum_lat += tau_ms;
+            if (tau_ms > max_lat) max_lat = tau_ms;
+
+            sum_marg += marg_db;
+            if (marg_db < min_marg) min_marg = marg_db;
+        }
+    }
+
+    rep.num_active_links    = edge_cnt;
+    rep.intra_plane_links   = intra_cnt;
+    rep.inter_plane_links   = inter_cnt;
+    rep.mean_distance_km    = (edge_cnt > 0) ? (sum_dist / (double)edge_cnt) : 0.0;
+    rep.min_distance_km     = (edge_cnt > 0) ? min_dist : 0.0;
+    rep.max_distance_km     = (edge_cnt > 0) ? max_dist : 0.0;
+    rep.mean_latency_ms     = (edge_cnt > 0) ? (sum_lat / (double)edge_cnt) : 0.0;
+    rep.max_latency_ms      = (edge_cnt > 0) ? max_lat : 0.0;
+    rep.mean_margin_db      = (edge_cnt > 0) ? (sum_marg / (double)edge_cnt) : 0.0;
+    rep.min_margin_db       = (edge_cnt > 0) ? min_marg : 0.0;
+    rep.total_capacity_gbps = (double)edge_cnt * spec.link_rate_gbps;
+    rep.mean_node_degree    = (N > 0) ? ((2.0 * (double)edge_cnt) / (double)N) : 0.0;
+
+    if (rep.intra_plane_links >= N && rep.inter_plane_links >= N / 3) {
+        snprintf(rep.mesh_connectivity_status, sizeof(rep.mesh_connectivity_status),
+                 "FULL 3D SPHERICAL LASER MESH (RING + CROSS-PLANE LOCKED)");
+    } else if (edge_cnt > 0) {
+        snprintf(rep.mesh_connectivity_status, sizeof(rep.mesh_connectivity_status),
+                 "PARTIAL OPTICAL MESH (%d ACTIVE LASER LINKS)", edge_cnt);
+    } else {
+        snprintf(rep.mesh_connectivity_status, sizeof(rep.mesh_connectivity_status),
+                 "NO ACTIVE LINKS (INCREASE RANGE LIMIT OR CONSTELLATION SIZE)");
+    }
+
+    return rep;
+}
+
+
 
 
