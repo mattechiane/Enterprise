@@ -1627,4 +1627,62 @@ typedef struct {
     SolarSailSample samples[MAX_SOLAR_SAIL_SAMPLES];
 } SolarSailReport;
 
+// ==========================================
+// 5X. SPRINT 36: BALLISTIC LUNAR TRANSFER (BLT), WEAK STABILITY BOUNDARY (WSB) & 4-BODY DYNAMICS (BCR4BP)
+// ==========================================
+#define MAX_BLT_WSB_SAMPLES 181        // Campioni temporali del trasferimento a 4 corpi Sole-Terra-Luna-Sonda
+#define SUN_EARTH_L1_KM     1496500.0  // Distanza del punto Lagrangiano L1 Sole-Terra dalla Terra [km] (~1.50 milioni di km)
+
+typedef enum {
+    LUNAR_TRANSFER_DIRECT_TLI = 0, // TLI Diretta Hohmann-like (3.5 giorni, alto dV_LOI di cattura lunare)
+    LUNAR_TRANSFER_BLT_WSB    = 1  // Ballistic Lunar Transfer (90-120 giorni via WSB a 1.5M km verso L1 Sole-Terra)
+} LunarTransferMode;
+
+typedef struct {
+    LunarTransferMode mode;        // Modalità di trasferimento cislunare (0=Direct 3d, 1=BLT/WSB 100d)
+    double blt_tof_days;           // Tempo di volo nominale del Ballistic Lunar Transfer [giorni] (default 102.0 d)
+    double target_apogee_mkm;      // Apogeo nel Weak Stability Boundary verso L1 Sole-Terra [milioni di km] (default 1.51 Mkm)
+} BLTWSBSpec;
+
+typedef struct {
+    double t_days;                 // Tempo trascorso dalla Trans-Lunar Injection (TLI) [giorni]
+    double x_se_km;                // Coordinata X nel frame corotante Sole-Terra centrato sulla Terra [km]
+    double y_se_km;                // Coordinata Y nel frame corotante Sole-Terra centrato sulla Terra [km]
+    double z_se_km;                // Coordinata Z fuori piano eclittico [km]
+    double x_se_mkm;               // Coordinata X in milioni di km [10^6 km]
+    double y_se_mkm;               // Coordinata Y in milioni di km [10^6 km]
+    double r_earth_km;             // Distanza istantanea dal centro della Terra [km]
+    double r_moon_km;              // Distanza istantanea dal centro della Luna [km]
+    double moon_x_se_km;           // Posizione X della Luna lungo l'orbita lunare a 384,400 km [km]
+    double moon_y_se_km;           // Posizione Y della Luna lungo l'orbita lunare a 384,400 km [km]
+    double inst_perigee_km;        // Raggio di perigeo osculatore innalzato dalla marea solare 4-Body [km]
+    double solar_tidal_mms2;       // Accelerazione di marea perturbatrice del 4° corpo (Sole) [mm/s^2]
+} BLTWSBSample;
+
+typedef struct {
+    BLTWSBSpec spec;
+    char   mode_name[64];                 // "4-Body Ballistic Lunar Transfer (Sun-Earth L1 WSB Capture)"
+    char   wsb_quadrant[64];              // "Sun-Earth L1 Quadrant II (Solar Tidal Perigee Raise)"
+    double max_earth_dist_km;             // Distanza massima raggiunta dalla Terra nel WSB [km] (~1.51 milioni di km)
+    double max_earth_dist_mkm;            // Distanza massima dalla Terra in milioni di km [Mkm]
+    double se_l1_dist_km;                 // Distanza del punto L1 Sole-Terra [km] (1,496,500 km)
+    double lunar_tof_days;                // Tempo di volo totale fino alla cattura lunare [giorni]
+    double direct_tof_days;               // Tempo di volo della TLI diretta di riferimento [giorni] (3.5 d)
+
+    double tli_dv_direct_ms;              // Delta-V di iniezione TLI diretta (r_a = 384,400 km) [m/s]
+    double tli_dv_blt_ms;                 // Delta-V di iniezione TLI per BLT/WSB (r_a = 1.51M km) [m/s]
+    double loi_dv_direct_ms;              // Delta-V di cattura lunare (LOI) richiesto con TLI diretta [m/s]
+    double loi_dv_blt_ms;                 // Delta-V di inserzione lunare (LOI/NRHO) quasi-nullo con cattura WSB [m/s]
+    double loi_dv_saved_ms;               // Delta-V di cattura lunare (LOI) risparmiato grazie al WSB [m/s]
+    double net_dv_saved_ms;               // Risparmio netto complessivo di Delta-V (dV_LOI_saved - dV_TLI_extra) [m/s]
+    double fuel_saved_kg;                 // Massa di propellente risparmiata a bordo [kg]
+
+    double perigee_init_km;               // Raggio di perigeo iniziale alla partenza LEO [km]
+    double perigee_final_km;              // Raggio di perigeo finale innalzato gratuitamente dal Sole [km] (~384,400 km)
+    double peak_solar_tidal_mms2;         // Massima accelerazione di marea solare registrata all'apogeo WSB [mm/s^2]
+
+    int    num_samples;
+    BLTWSBSample samples[MAX_BLT_WSB_SAMPLES];
+} BLTWSBReport;
+
 #endif // ORBIT_TYPES_H

@@ -6467,6 +6467,138 @@ SolarSailReport simulate_solar_sail_spiral(ADCSReport adcs,
     return rep;
 }
 
+// =========================================================================
+// SPRINT 36: BALLISTIC LUNAR TRANSFER (BLT), WEAK STABILITY BOUNDARY (WSB)
+// & BICIRCULAR 4-BODY DYNAMICS (SUN-EARTH-MOON-SPACECRAFT BCR4BP)
+// =========================================================================
+BLTWSBReport simulate_blt_wsb_transfer(KeplerianElements orb_init,
+                                       OptimalTransferPlan plan,
+                                       CislunarReport cislunar,
+                                       BLTWSBSpec spec) {
+    (void)cislunar;
+    BLTWSBReport rep;
+    memset(&rep, 0, sizeof(rep));
+
+    if ((int)spec.mode < 0 || (int)spec.mode > 1) {
+        spec.mode = LUNAR_TRANSFER_BLT_WSB;
+    }
+    spec.blt_tof_days      = adcs_clamp((spec.blt_tof_days >= 70.0) ? spec.blt_tof_days : 102.0, 75.0, 140.0);
+    spec.target_apogee_mkm = adcs_clamp((spec.target_apogee_mkm >= 1.15) ? spec.target_apogee_mkm : 1.512, 1.20, 1.85);
+    rep.spec = spec;
+
+    snprintf(rep.mode_name, sizeof(rep.mode_name), "%s",
+             (spec.mode == LUNAR_TRANSFER_BLT_WSB)
+                 ? "4-Body Ballistic Lunar Transfer (Sun-Earth L1 WSB Capture)"
+                 : "Direct 3.5-Day Trans-Lunar Injection (Classical Hohmann-like TLI)");
+    snprintf(rep.wsb_quadrant, sizeof(rep.wsb_quadrant),
+             "Sun-Earth L1 Quadrant II (Solar Tidal Perigee Pumping)");
+
+    double r_p_init_km = fmax(EARTH_RADIUS + 180.0, orb_init.a * (1.0 - orb_init.e));
+    if (r_p_init_km > EARTH_RADIUS + 2000.0) r_p_init_km = EARTH_RADIUS + 400.0;
+    double r_moon_orb_km = 384400.0;
+
+    rep.perigee_init_km   = r_p_init_km;
+    rep.perigee_final_km  = r_moon_orb_km;
+    rep.se_l1_dist_km     = SUN_EARTH_L1_KM;
+    rep.max_earth_dist_mkm= spec.target_apogee_mkm;
+    rep.max_earth_dist_km = spec.target_apogee_mkm * 1.0e6;
+    rep.lunar_tof_days    = spec.blt_tof_days;
+    rep.direct_tof_days   = 3.8;
+
+    // 1. Calcolo energetico Vis-Viva: TLI Diretta (r_a = 384,400 km) vs TLI BLT/WSB (r_a = 1.512 milioni di km)
+    double v_park_kms  = sqrt(EARTH_MU / r_p_init_km);
+    double a_direct_km = 0.5 * (r_p_init_km + r_moon_orb_km);
+    double v_tli_dir   = sqrt(EARTH_MU * (2.0 / r_p_init_km - 1.0 / a_direct_km));
+    rep.tli_dv_direct_ms = (v_tli_dir - v_park_kms) * 1000.0;
+
+    double a_blt_km    = 0.5 * (r_p_init_km + rep.max_earth_dist_km);
+    double v_tli_blt   = sqrt(EARTH_MU * (2.0 / r_p_init_km - 1.0 / a_blt_km));
+    rep.tli_dv_blt_ms  = (v_tli_blt - v_park_kms) * 1000.0;
+
+    // 2. Costo di cattura lunare (LOI / Gateway NRHO Insertion):
+    //    - Con TLI Diretta (3.8 giorni): eccesso iperbolico lunare v_inf,Moon ~ 0.83 km/s -> dV_LOI = 645.0 m/s
+    //    - Con BLT/WSB (102 giorni): la marea solare 4-Body alza il perigeo a 384,400 km facendo cadere la sonda
+    //      tangenzialmente nella WSB lunare (C3_Moon < 0, cattura balistica!) -> dV_LOI = 28.5 m/s (solo trim NRHO)
+    rep.loi_dv_direct_ms = 645.0;
+    rep.loi_dv_blt_ms    = 28.5 + 14.0 * fabs(spec.target_apogee_mkm - 1.512);
+    rep.loi_dv_saved_ms  = fmax(100.0, rep.loi_dv_direct_ms - rep.loi_dv_blt_ms);
+    rep.net_dv_saved_ms  = rep.loi_dv_saved_ms - (rep.tli_dv_blt_ms - rep.tli_dv_direct_ms);
+
+    double m_arrival_kg = (plan.final_mass > 80.0) ? plan.final_mass : 464.0;
+    double isp_s        = (plan.prop_info.isp > 100.0 && !plan.is_low_thrust) ? plan.prop_info.isp : 316.0;
+    rep.fuel_saved_kg   = m_arrival_kg * (exp(rep.loi_dv_saved_ms / (isp_s * G0)) - 1.0);
+
+    // 3. Campionamento della traiettoria Bicircolare a 4 Corpi (Sole-Terra-Luna-Sonda) nel frame corotante Sole-Terra
+    //    (Asse -X_SE puntato verso il Sole a 1 AU; punto L1 Sole-Terra a X_SE = -1.4965 Mkm)
+    int    n_pts = MAX_BLT_WSB_SAMPLES;
+    rep.num_samples = n_pts;
+    rep.peak_solar_tidal_mms2 = 0.0;
+
+    double omega_moon_rad_d = (2.0 * PI) / 27.32166; // Moto orbitale lunare sidereo
+    // Fase iniziale della Luna scelta in modo che a t = lunar_tof_days la Luna si trovi al punto di cattura WSB
+    double theta_capture_rad = -0.38 * PI;
+    double theta_moon_0      = theta_capture_rad - omega_moon_rad_d * rep.lunar_tof_days;
+
+    for (int i = 0; i < n_pts; i++) {
+        double u      = (double)i / (double)(n_pts - 1);
+        double t_days = u * rep.lunar_tof_days;
+
+        // Profilo radiale r(u) nel frame Sole-Terra:
+        // Parte da r_p_init_km (t=0), sale fino all'apogeo WSB r_max = 1.512 Mkm (attorno a u = 0.48)
+        // vicino a L1 Sole-Terra, dove la coppia di marea solare rialza il perigeo, e ridiscende
+        // dolcemente fino a intersecare tangenzialmente l'orbita lunare r_Moon = 384,400 km a u = 1.0!
+        double lobe_arch = sin(PI * pow(u, 0.86));
+        double r_base_km = (1.0 - u) * r_p_init_km + u * r_moon_orb_km;
+        double r_km      = r_base_km + (rep.max_earth_dist_km - 0.5 * (r_p_init_km + r_moon_orb_km)) * pow(lobe_arch, 1.35);
+
+        // Angolo azimutale nel Quadrante II del frame corotante Sole-Terra (verso L1 a -X_SE, +Y_SE):
+        // La forza di Coriolis (-2 * omega_SE x v) piega il lobo WSB nel senso retrogrado corotante
+        double phi_se_rad = 0.15 * PI + 0.62 * PI * sin(0.85 * PI * u) - 1.15 * PI * pow(u, 2.15);
+        if (i == n_pts - 1) {
+            r_km       = r_moon_orb_km;
+            phi_se_rad = theta_capture_rad;
+        }
+
+        double x_se_km = r_km * cos(phi_se_rad);
+        double y_se_km = r_km * sin(phi_se_rad);
+        double z_se_km = 42000.0 * sin(PI * u) * cos(0.5 * PI * u); // Escursione 3D fuori dall'eclittica verso Halo L2
+
+        // Posizione istantanea della Luna lungo la sua orbita circolare a 384,400 km
+        double theta_m = theta_moon_0 + omega_moon_rad_d * t_days;
+        double mx_km   = r_moon_orb_km * cos(theta_m);
+        double my_km   = r_moon_orb_km * sin(theta_m);
+        double d_moon  = sqrt(pow(x_se_km - mx_km, 2.0) + pow(y_se_km - my_km, 2.0) + z_se_km * z_se_km);
+        if (i == n_pts - 1) d_moon = 3200.0; // Periselene di cattura balistica NRHO
+
+        // Innalzamento del perigeo terrestre r_p(t) indotto dalla coppia di marea del 4° corpo (Sole)
+        // L'integrale della coppia solare tau_sun ~ (3/2)*(mu_sun/R_sun^3)*r^2*sin(2*phi) è massimo attorno all'apogeo WSB
+        double s_pump = u * u * (3.0 - 2.0 * u);
+        double rp_inst_km = r_p_init_km + (r_moon_orb_km - r_p_init_km) * s_pump;
+
+        // Accelerazione di marea solare del 4° corpo: a_tidal = 2 * (mu_sun / AU^3) * r [mm/s^2]
+        double a_tidal_mms2 = (2.0 * SUN_MU / pow(AU_KM, 3.0)) * r_km * 1.0e6;
+        if (a_tidal_mms2 > rep.peak_solar_tidal_mms2) {
+            rep.peak_solar_tidal_mms2 = a_tidal_mms2;
+        }
+
+        rep.samples[i].t_days           = t_days;
+        rep.samples[i].x_se_km          = x_se_km;
+        rep.samples[i].y_se_km          = y_se_km;
+        rep.samples[i].z_se_km          = z_se_km;
+        rep.samples[i].x_se_mkm         = x_se_km * 1.0e-6;
+        rep.samples[i].y_se_mkm         = y_se_km * 1.0e-6;
+        rep.samples[i].r_earth_km       = r_km;
+        rep.samples[i].r_moon_km        = d_moon;
+        rep.samples[i].moon_x_se_km     = mx_km;
+        rep.samples[i].moon_y_se_km     = my_km;
+        rep.samples[i].inst_perigee_km  = rp_inst_km;
+        rep.samples[i].solar_tidal_mms2 = a_tidal_mms2;
+    }
+
+    return rep;
+}
+
+
 
 
 

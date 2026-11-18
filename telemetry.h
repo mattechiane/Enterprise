@@ -51,6 +51,7 @@ bool export_web_mission_json(const char *filename,
                              GravityAssistReport flyby,
                              AerocaptureReport aero,
                              SolarSailReport sail,
+                             BLTWSBReport blt,
                              const GroundStation *station,
                              const SpacecraftConfig *sc);
 

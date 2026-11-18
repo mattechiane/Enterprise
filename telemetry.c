@@ -630,6 +630,19 @@ static void write_solar_sail_trajectory_json_array(FILE *fp, SolarSailReport sai
     fprintf(fp, "  ]");
 }
 
+static void write_blt_wsb_trajectory_json_array(FILE *fp, BLTWSBReport blt) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < blt.num_samples; i++) {
+        BLTWSBSample s = blt.samples[i];
+        fprintf(fp, "    {\"t_days\":%.2f,\"x_se_km\":%.1f,\"y_se_km\":%.1f,\"z_se_km\":%.1f,\"x_se_mkm\":%.5f,\"y_se_mkm\":%.5f,\"r_earth_km\":%.1f,\"r_moon_km\":%.1f,\"moon_x_se_km\":%.1f,\"moon_y_se_km\":%.1f,\"inst_perigee_km\":%.1f,\"solar_tidal_mms2\":%.5f}%s\n",
+                s.t_days, s.x_se_km, s.y_se_km, s.z_se_km,
+                s.x_se_mkm, s.y_se_mkm, s.r_earth_km, s.r_moon_km,
+                s.moon_x_se_km, s.moon_y_se_km, s.inst_perigee_km, s.solar_tidal_mms2,
+                (i < blt.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 static void format_oem_utc_timestamp(double elapsed_sec, char *buf, size_t buf_size) {
     // Base Epoch: 2026-11-12T00:00:00.000 UTC
     int total_ms = (int)llround(fmax(0.0, elapsed_sec) * 1000.0);
@@ -802,6 +815,7 @@ bool export_web_mission_json(const char *filename,
                              GravityAssistReport flyby,
                              AerocaptureReport aero,
                              SolarSailReport sail,
+                             BLTWSBReport blt,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -1340,6 +1354,20 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"total_dv_kms\": %.4f, \"total_dv_ms\": %.1f, \"eq_chemical_fuel_saved_kg\": %.1f\n  },\n",
             sail.total_dv_kms, sail.total_dv_ms, sail.eq_chemical_fuel_saved_kg);
 
+    fprintf(fp, "  \"blt_wsb_summary\": {\n");
+    fprintf(fp, "    \"transfer_mode\": %d, \"mode_name\": \"%s\", \"wsb_quadrant\": \"%s\",\n",
+            (int)blt.spec.mode, blt.mode_name, blt.wsb_quadrant);
+    fprintf(fp, "    \"max_earth_dist_km\": %.1f, \"max_earth_dist_mkm\": %.4f, \"se_l1_dist_km\": %.1f,\n",
+            blt.max_earth_dist_km, blt.max_earth_dist_mkm, blt.se_l1_dist_km);
+    fprintf(fp, "    \"lunar_tof_days\": %.1f, \"direct_tof_days\": %.1f,\n",
+            blt.lunar_tof_days, blt.direct_tof_days);
+    fprintf(fp, "    \"tli_dv_direct_ms\": %.2f, \"tli_dv_blt_ms\": %.2f,\n",
+            blt.tli_dv_direct_ms, blt.tli_dv_blt_ms);
+    fprintf(fp, "    \"loi_dv_direct_ms\": %.2f, \"loi_dv_blt_ms\": %.2f, \"loi_dv_saved_ms\": %.2f, \"net_dv_saved_ms\": %.2f,\n",
+            blt.loi_dv_direct_ms, blt.loi_dv_blt_ms, blt.loi_dv_saved_ms, blt.net_dv_saved_ms);
+    fprintf(fp, "    \"fuel_saved_kg\": %.2f, \"perigee_init_km\": %.1f, \"perigee_final_km\": %.1f, \"peak_solar_tidal_mms2\": %.5f\n  },\n",
+            blt.fuel_saved_kg, blt.perigee_init_km, blt.perigee_final_km, blt.peak_solar_tidal_mms2);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -1496,6 +1524,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_solar_sail\": ");
     write_solar_sail_trajectory_json_array(fp, sail);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_blt_wsb\": ");
+    write_blt_wsb_trajectory_json_array(fp, blt);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

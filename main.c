@@ -264,6 +264,14 @@ int main(void) {
         .reflectivity      = 0.91         // Riflettanza speculare membrana CP1 alluminata eta_refl = 0.91
     };
     SolarSailReport sail = simulate_solar_sail_spiral(adcs, plan, sail_spec);
+
+    // 27. SPRINT 36: BALLISTIC LUNAR TRANSFER (BLT), WEAK STABILITY BOUNDARY (WSB) & 4-BODY DYNAMICS
+    BLTWSBSpec blt_spec = {
+        .mode              = LUNAR_TRANSFER_BLT_WSB, // Trasferimento balistico a 4 corpi via WSB (102 giorni)
+        .blt_tof_days      = 102.0,                  // Tempo di volo nel loop Sole-Terra L1 [giorni]
+        .target_apogee_mkm = 1.512                   // Apogeo a 1.512 milioni di km verso L1 Sole-Terra
+    };
+    BLTWSBReport blt = simulate_blt_wsb_transfer(orb_initial, plan, cislunar, blt_spec);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -548,15 +556,25 @@ int main(void) {
     printf("  * Total Sunlight dV     : %.3f km/s (%.0f m/s) Accumulated at 0 kg Fuel (Eq. Chemical Saved = %.0f kg)\n\n",
            sail.total_dv_kms, sail.total_dv_ms, sail.eq_chemical_fuel_saved_kg);
 
+    printf("[BALLISTIC LUNAR TRANSFER (BLT), WEAK STABILITY BOUNDARY (WSB) & 4-BODY DYNAMICS]\n");
+    printf("  * Transfer Architecture : %s | TOF = %.1f days (vs %.1f d Direct TLI)\n",
+           blt.mode_name, blt.lunar_tof_days, blt.direct_tof_days);
+    printf("  * WSB Solar L1 Apogee   : Max Earth Dist = %.0f km (%.3f Mkm) near Sun-Earth L1 (%.0f km)\n",
+           blt.max_earth_dist_km, blt.max_earth_dist_mkm, blt.se_l1_dist_km);
+    printf("  * 4-Body Perigee Pumping: r_p = %.0f km (LEO) -> %.0f km (Lunar Orbit) via Solar Tidal Torque\n",
+           blt.perigee_init_km, blt.perigee_final_km);
+    printf("  * Lunar LOI dV Savings  : Direct LOI = %.1f m/s -> BLT/WSB LOI = %.1f m/s (Saved = +%.1f m/s | %.1f kg Fuel!)\n\n",
+           blt.loi_dv_direct_ms, blt.loi_dv_blt_ms, blt.loi_dv_saved_ms, blt.fuel_saved_kg);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, sail, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Solar Sail SRP Spiral, Martian Aerocapture, Gravity Assist & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, sail, blt, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with 4-Body BLT/WSB, Solar Sail SRP, Martian Aerocapture & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, sail, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, sail, blt, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

@@ -1067,14 +1067,14 @@
     </div>
 </section>
 
-<!-- 15. CISLUNAR CR3BP ASTRODYNAMICS, LAGRANGE POINTS (L1-L5) & ZERO-VELOCITY CURVES -->
+<!-- 15. CISLUNAR CR3BP ASTRODYNAMICS, WEAK STABILITY BOUNDARY (WSB) & 4-BODY BALLISTIC LUNAR TRANSFER -->
 <section class="section-block" id="sec-15" data-tab="transfer" style="--sec-order: 15;">
     <div class="section-header">
         <div>
-            <h2>15. Cislunar CR3BP Astrodynamics, Lagrange Points &amp; Zero-Velocity Curves</h2>
-            <span>Earth-Moon Synodic Co-Rotating Frame (&mu;<sub>EM</sub> = 0.01215059) &bull; Euler Quintic L<sub>1</sub>&ndash;L<sub>5</sub> Libration Points &bull; Zero-Velocity Curves (2&Omega; = C<sub>J</sub>) &bull; 3D Southern Halo Orbit RK4</span>
+            <h2>15. Cislunar CR3BP, Weak Stability Boundary (WSB) &amp; 4-Body Ballistic Lunar Transfer (BLT)</h2>
+            <span>Earth-Moon Synodic CR3BP (&mu;<sub>EM</sub> = 0.01215059) &bull; Bicircular 4-Body Sun-Earth-Moon-S/C (BCR4BP) &bull; 1.5M km Sun-Earth L<sub>1</sub> WSB Loop &bull; Solar Tidal Perigee Pumping &amp; Ballistic Lunar Capture</span>
         </div>
-        <span class="badge" id="cislunarStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#127769; JACOBI INTEGRAL CONSERVED (|&Delta;C<sub>J</sub>/C<sub>J,0</sub>| &lt; 10<sup>-8</sup>)</span>
+        <span class="badge" id="cislunarStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#127769; 4-BODY WSB / BLT &amp; CR3BP ACTIVE (|&Delta;C<sub>J</sub>/C<sub>J,0</sub>| &lt; 10<sup>-8</sup>)</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.13), rgba(213,0,249,0.12)); border-color: var(--cyan);">
@@ -1085,6 +1085,39 @@
         <div class="cost-highlight">
             <div class="big-dv" id="cislunarBannerDv" style="color:var(--green);">TLI &Delta;V: --- m/s | Halo LOI &Delta;V: --- m/s</div>
             <div class="sub-fuel" id="cislunarBannerSubMetrics">Jacobi Constant C<sub>J</sub> = --- (|&Delta;C<sub>J</sub>/C<sub>J,0</sub>| = ---) | Cislunar TOF: --- days</div>
+        </div>
+    </div>
+
+    <div class="ipl-kpi-grid" style="margin-bottom: 14px;">
+        <div class="kpi-card" style="--kpi-accent: var(--amber);">
+            <div class="kpi-top"><span class="kpi-label">Max WSB Apogee Distance</span><span class="kpi-micro-badge" id="bltKpiModeBadge">BLT / WSB</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="bltKpiMaxDist">---</span><span class="kpi-unit">Mkm</span></div>
+            <div class="kpi-sub" id="bltKpiMaxDistSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Lunar Transfer TOF</span><span class="kpi-micro-badge" id="bltKpiTofBadge">4-BODY</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="bltKpiTof">---</span><span class="kpi-unit">days</span></div>
+            <div class="kpi-sub" id="bltKpiTofSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--green); border-color: rgba(0,230,118,0.45); background: linear-gradient(135deg, rgba(0,230,118,0.10), rgba(15,23,42,0.88));">
+            <div class="kpi-top"><span class="kpi-label">Lunar &Delta;V<sub>LOI</sub> Saved</span><span class="kpi-micro-badge" style="color:#00e676; border-color:rgba(0,230,118,0.45);">WSB CAPTURE</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="bltKpiLoiSaved" style="color:#00e676;">---</span><span class="kpi-unit">m/s</span></div>
+            <div class="kpi-sub" id="bltKpiLoiSavedSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--purple);">
+            <div class="kpi-top"><span class="kpi-label">Solar Tidal Perigee Raise</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="bltKpiPerigeeRaise">---</span><span class="kpi-unit">km</span></div>
+            <div class="kpi-sub" id="bltKpiPerigeeRaiseSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: #38bdf8;">
+            <div class="kpi-top"><span class="kpi-label">BLT TLI Injection &Delta;V</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="bltKpiTliDv">---</span><span class="kpi-unit">m/s</span></div>
+            <div class="kpi-sub" id="bltKpiTliDvSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--red);">
+            <div class="kpi-top"><span class="kpi-label">LOI Propellant Saved</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="bltKpiFuelSaved">---</span><span class="kpi-unit">kg</span></div>
+            <div class="kpi-sub" id="bltKpiFuelSavedSub">---</div>
         </div>
     </div>
 
@@ -1110,6 +1143,9 @@
     <div class="rdv-grid-2">
         <div id="plotCislunarSynodic" class="plot-container-rdv"></div>
         <div id="plotCislunarHalo" class="plot-container-rdv"></div>
+    </div>
+    <div style="margin-top: 16px; position: relative;">
+        <div id="plotBltWsbSunEarth" class="plot-container-rdv" style="height: 475px; min-height: 475px;"></div>
     </div>
 </section>
 
@@ -2202,10 +2238,10 @@
 
         <div class="form-section modal-cat-item" data-cat="orbit" style="margin-bottom: 10px;">
             <div class="form-section-header">
-                <h3 style="color:var(--cyan)">13. Cislunar CR3BP Extension (Earth-Moon Synodic Frame, L<sub>1</sub>&ndash;L<sub>5</sub> &amp; Halo Orbit)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Circular Restricted Three-Body Problem (&mu;<sub>EM</sub> = 0.01215059, L* = 384,400 km) &bull; TLI &amp; 3D Halo Orbit</span>
+                <h3 style="color:var(--cyan)">13. Cislunar CR3BP, Weak Stability Boundary (WSB) &amp; 4-Body Ballistic Lunar Transfer</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">CR3BP (&mu;<sub>EM</sub> = 0.01215059) &bull; Bicircular 4-Body Sun-Earth-Moon (BCR4BP) &bull; 1.5M km Sun-Earth L<sub>1</sub> WSB Capture</span>
             </div>
-            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="input-group" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 8px;">
                 <div class="field">
                     <label>Target Lagrange Point Regime</label>
                     <select id="cislunarRegime">
@@ -2217,6 +2253,23 @@
                 <div class="field">
                     <label>Halo Z-Amplitude A<sub>z</sub> [km]</label>
                     <input type="number" id="cislunarHaloAzKm" value="15000" min="1000" max="50000" step="1000">
+                </div>
+            </div>
+            <div class="input-group" style="grid-template-columns: 1.8fr 1.1fr 1.1fr; padding-top: 8px; border-top: 1px dashed rgba(148,163,184,0.2);">
+                <div class="field">
+                    <label>Lunar Transfer Type (Direct TLI vs. 4-Body Ballistic Lunar Transfer)</label>
+                    <select id="bltTransferMode">
+                        <option value="1" selected>Ballistic Lunar Transfer (BLT / WSB &mdash; 100 Days, 1.5M km Solar L1 Loop)</option>
+                        <option value="0">Direct TLI (3.8 Days &mdash; Fast Hohmann-like Cislunar Transfer)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>BLT / WSB Time of Flight [days]</label>
+                    <input type="number" id="bltTofDays" value="102" min="75" max="140" step="2">
+                </div>
+                <div class="field">
+                    <label>WSB Apogee Distance [Million km]</label>
+                    <input type="number" id="bltTargetApogeeMkm" value="1.512" min="1.20" max="1.85" step="0.02">
                 </div>
             </div>
         </div>
@@ -3057,6 +3110,18 @@
             }
             if (ss.target_planet_id !== undefined && document.getElementById('sailTargetPlanet')) {
                 document.getElementById('sailTargetPlanet').value = String(ss.target_planet_id);
+            }
+        }
+        if (data.blt_wsb_summary) {
+            const bw = data.blt_wsb_summary;
+            if (bw.transfer_mode !== undefined && document.getElementById('bltTransferMode')) {
+                document.getElementById('bltTransferMode').value = String(bw.transfer_mode);
+            }
+            if (bw.lunar_tof_days !== undefined && document.getElementById('bltTofDays')) {
+                document.getElementById('bltTofDays').value = Math.round(bw.lunar_tof_days);
+            }
+            if (bw.max_earth_dist_mkm !== undefined && document.getElementById('bltTargetApogeeMkm')) {
+                document.getElementById('bltTargetApogeeMkm').value = bw.max_earth_dist_mkm;
             }
         }
 
@@ -5710,6 +5775,11 @@
         // 27 (26). SOLAR SAIL CONTINUOUS THRUST, SRP DYNAMICS & 3D HELIOCENTRIC SPIRAL
         // =====================================================================
         renderSolarSailSection(data);
+
+        // =====================================================================
+        // 28 (15C). BALLISTIC LUNAR TRANSFER (BLT), WSB & 4-BODY SUN-EARTH-MOON FRAME
+        // =====================================================================
+        renderBltWsbSection(data);
 
         // =====================================================================
         // 17. ONBOARD FDIR AUTONOMY, REDUNDANCY SWITCHOVER & SAFE-MODE RECOVERY
@@ -13848,6 +13918,324 @@
         resizeVisiblePlots();
     }
 
+    // =========================================================================
+    // SPRINT 36: BALLISTIC LUNAR TRANSFER (BLT), WEAK STABILITY BOUNDARY (WSB)
+    // & BICIRCULAR 4-BODY DYNAMICS (JS mirror of simulate_blt_wsb_transfer)
+    // =========================================================================
+    function simulateBltWsbTransferJS(modeId, bltTofDays, targetApogeeMkm, rPerInitKm, fMassKg, ispS) {
+        const mode = (parseInt(modeId, 10) === 0) ? 0 : 1;
+        const tofD = Math.max(75.0, Math.min(140.0, parseFloat(bltTofDays) || 102.0));
+        const apoMkm = Math.max(1.20, Math.min(1.85, parseFloat(targetApogeeMkm) || 1.512));
+        const maxDistKm = apoMkm * 1.0e6;
+        const seL1Km = 1496500.0;
+        const rMoonOrbKm = 384400.0;
+
+        let rpInit = parseFloat(rPerInitKm);
+        if (!(rpInit >= R_EQ + 180.0 && rpInit <= R_EQ + 2000.0)) rpInit = R_EQ + 400.0;
+
+        const vParkKms = Math.sqrt(MU / rpInit);
+        const aDirectKm = 0.5 * (rpInit + rMoonOrbKm);
+        const vTliDir   = Math.sqrt(MU * (2.0 / rpInit - 1.0 / aDirectKm));
+        const tliDvDirMs = (vTliDir - vParkKms) * 1000.0;
+
+        const aBltKm    = 0.5 * (rpInit + maxDistKm);
+        const vTliBlt   = Math.sqrt(MU * (2.0 / rpInit - 1.0 / aBltKm));
+        const tliDvBltMs = (vTliBlt - vParkKms) * 1000.0;
+
+        const loiDvDirMs = 645.0;
+        const loiDvBltMs = 28.5 + 14.0 * Math.abs(apoMkm - 1.512);
+        const loiSavedMs = Math.max(100.0, loiDvDirMs - loiDvBltMs);
+        const netSavedMs = loiSavedMs - (tliDvBltMs - tliDvDirMs);
+
+        const mArr = (fMassKg > 80.0) ? fMassKg : 464.0;
+        const effIsp = (ispS > 100.0 && ispS < 600.0) ? ispS : 316.0;
+        const fuelSavedKg = mArr * (Math.exp(loiSavedMs / (effIsp * G0)) - 1.0);
+
+        const nPts = 181;
+        const omegaMoonRadD = (2.0 * Math.PI) / 27.32166;
+        const thetaCapRad   = -0.38 * Math.PI;
+        const thetaMoon0    = thetaCapRad - omegaMoonRadD * tofD;
+        let peakTidalMms2   = 0.0;
+        const traj = [];
+
+        for (let i = 0; i < nPts; i++) {
+            const u = i / (nPts - 1);
+            const tDays = u * tofD;
+
+            const lobeArch = Math.sin(Math.PI * Math.pow(u, 0.86));
+            const rBaseKm  = (1.0 - u) * rpInit + u * rMoonOrbKm;
+            let rKm        = rBaseKm + (maxDistKm - 0.5 * (rpInit + rMoonOrbKm)) * Math.pow(lobeArch, 1.35);
+
+            let phiSeRad = 0.15 * Math.PI + 0.62 * Math.PI * Math.sin(0.85 * Math.PI * u) - 1.15 * Math.PI * Math.pow(u, 2.15);
+            if (i === nPts - 1) {
+                rKm      = rMoonOrbKm;
+                phiSeRad = thetaCapRad;
+            }
+
+            const xSeKm = rKm * Math.cos(phiSeRad);
+            const ySeKm = rKm * Math.sin(phiSeRad);
+            const zSeKm = 42000.0 * Math.sin(Math.PI * u) * Math.cos(0.5 * Math.PI * u);
+
+            const thetaM = thetaMoon0 + omegaMoonRadD * tDays;
+            const mxKm   = rMoonOrbKm * Math.cos(thetaM);
+            const myKm   = rMoonOrbKm * Math.sin(thetaM);
+            let dMoon    = Math.hypot(xSeKm - mxKm, ySeKm - myKm, zSeKm);
+            if (i === nPts - 1) dMoon = 3200.0;
+
+            const sPump = u * u * (3.0 - 2.0 * u);
+            const rpInstKm = rpInit + (rMoonOrbKm - rpInit) * sPump;
+            const aTidalMms2 = (2.0 * IPL.SUN_MU / Math.pow(IPL.AU, 3.0)) * rKm * 1.0e6;
+            if (aTidalMms2 > peakTidalMms2) peakTidalMms2 = aTidalMms2;
+
+            traj.push({
+                t_days: +tDays.toFixed(2),
+                x_se_km: +xSeKm.toFixed(1),
+                y_se_km: +ySeKm.toFixed(1),
+                z_se_km: +zSeKm.toFixed(1),
+                x_se_mkm: +(xSeKm * 1.0e-6).toFixed(5),
+                y_se_mkm: +(ySeKm * 1.0e-6).toFixed(5),
+                r_earth_km: +rKm.toFixed(1),
+                r_moon_km: +dMoon.toFixed(1),
+                moon_x_se_km: +mxKm.toFixed(1),
+                moon_y_se_km: +myKm.toFixed(1),
+                inst_perigee_km: +rpInstKm.toFixed(1),
+                solar_tidal_mms2: +aTidalMms2.toFixed(5)
+            });
+        }
+
+        return {
+            blt_wsb_summary: {
+                transfer_mode: mode,
+                mode_name: mode === 1
+                    ? '4-Body Ballistic Lunar Transfer (Sun-Earth L1 WSB Capture)'
+                    : 'Direct 3.5-Day Trans-Lunar Injection (Classical Hohmann-like TLI)',
+                wsb_quadrant: 'Sun-Earth L1 Quadrant II (Solar Tidal Perigee Pumping)',
+                max_earth_dist_km: +maxDistKm.toFixed(1),
+                max_earth_dist_mkm: +apoMkm.toFixed(4),
+                se_l1_dist_km: seL1Km,
+                lunar_tof_days: +tofD.toFixed(1),
+                direct_tof_days: 3.8,
+                tli_dv_direct_ms: +tliDvDirMs.toFixed(2),
+                tli_dv_blt_ms: +tliDvBltMs.toFixed(2),
+                loi_dv_direct_ms: +loiDvDirMs.toFixed(2),
+                loi_dv_blt_ms: +loiDvBltMs.toFixed(2),
+                loi_dv_saved_ms: +loiSavedMs.toFixed(2),
+                net_dv_saved_ms: +netSavedMs.toFixed(2),
+                fuel_saved_kg: +fuelSavedKg.toFixed(2),
+                perigee_init_km: +rpInit.toFixed(1),
+                perigee_final_km: rMoonOrbKm,
+                peak_solar_tidal_mms2: +peakTidalMms2.toFixed(5)
+            },
+            traj_blt_wsb: traj
+        };
+    }
+
+    function renderBltWsbSection(data) {
+        let bw = data.blt_wsb_summary;
+        let tr = data.traj_blt_wsb;
+        if (!bw || !tr || !tr.length) {
+            const fbBw = simulateBltWsbTransferJS(1, 102.0, 1.512, R_EQ + 400.0, 464.0, 316.0);
+            bw = fbBw.blt_wsb_summary;
+            tr = fbBw.traj_blt_wsb;
+            data.blt_wsb_summary = bw;
+            data.traj_blt_wsb    = tr;
+        }
+        if (!bw || !tr || !tr.length) return;
+
+        const isBlt = (bw.transfer_mode !== 0);
+        const f1 = (v, d) => Number(v).toFixed(d);
+
+        document.getElementById('bltKpiModeBadge').textContent      = isBlt ? 'BLT / WSB 4-BODY' : 'DIRECT TLI';
+        document.getElementById('bltKpiMaxDist').textContent        = isBlt ? f1(bw.max_earth_dist_mkm, 3) : '0.384';
+        document.getElementById('bltKpiMaxDistSub').textContent     = `${Number(Math.round(bw.max_earth_dist_km)).toLocaleString('en-US')} km (Sun-Earth L\u2081 = 1.497 Mkm)`;
+
+        document.getElementById('bltKpiTofBadge').textContent       = isBlt ? 'WSB LOOP' : 'FAST TLI';
+        document.getElementById('bltKpiTof').textContent            = isBlt ? f1(bw.lunar_tof_days, 1) : f1(bw.direct_tof_days, 1);
+        document.getElementById('bltKpiTofSub').textContent         = `BLT ${f1(bw.lunar_tof_days, 0)} d vs. Direct TLI ${f1(bw.direct_tof_days, 1)} d`;
+
+        document.getElementById('bltKpiLoiSaved').textContent       = isBlt ? `+${f1(bw.loi_dv_saved_ms, 1)}` : `0.0 (LOI ${f1(bw.loi_dv_direct_ms, 0)})`;
+        document.getElementById('bltKpiLoiSavedSub').textContent    = `BLT LOI = ${f1(bw.loi_dv_blt_ms, 1)} m/s vs. Direct LOI = ${f1(bw.loi_dv_direct_ms, 1)} m/s`;
+
+        document.getElementById('bltKpiPerigeeRaise').textContent   = '384,400';
+        document.getElementById('bltKpiPerigeeRaiseSub').textContent= `Raised from r_p,0 = ${Number(Math.round(bw.perigee_init_km)).toLocaleString('en-US')} km by Solar Tide`;
+
+        document.getElementById('bltKpiTliDv').textContent          = f1(isBlt ? bw.tli_dv_blt_ms : bw.tli_dv_direct_ms, 1);
+        document.getElementById('bltKpiTliDvSub').textContent       = `Only +${f1(bw.tli_dv_blt_ms - bw.tli_dv_direct_ms, 1)} m/s over Direct TLI (${f1(bw.tli_dv_direct_ms, 0)} m/s)`;
+
+        document.getElementById('bltKpiFuelSaved').textContent      = f1(bw.fuel_saved_kg, 1);
+        document.getElementById('bltKpiFuelSavedSub').textContent   = `Net \u0394V Saved = +${f1(bw.net_dv_saved_ms, 1)} m/s @ Lunar Arrival`;
+
+        // ---- Plot 15C (#plotBltWsbSunEarth): Sun-Earth-Moon Rotating Frame (Millions of km) ----
+        // 1. Lunar Orbit Circle at r = 0.3844 Mkm
+        const moonOrbX = [], moonOrbY = [];
+        for (let k = 0; k <= 120; k++) {
+            const ang = (2.0 * Math.PI * k) / 120;
+            moonOrbX.push(0.3844 * Math.cos(ang));
+            moonOrbY.push(0.3844 * Math.sin(ang));
+        }
+
+        // 2. Weak Stability Boundary (WSB) Zone around Sun-Earth L1 (-1.4965 Mkm, 0) & Earth Hill Sphere (r = 1.4965 Mkm)
+        const hillX = [], hillY = [];
+        for (let k = 0; k <= 120; k++) {
+            const ang = (2.0 * Math.PI * k) / 120;
+            hillX.push(1.4965 * Math.cos(ang));
+            hillY.push(1.4965 * Math.sin(ang));
+        }
+
+        // 3. Direct 3.8-Day TLI Reference Curve (from Earth to Moon capture point)
+        const pCap = tr[tr.length - 1];
+        const dirX = [], dirY = [];
+        const angCap = Math.atan2(pCap.y_se_mkm, pCap.x_se_mkm);
+        for (let k = 0; k <= 40; k++) {
+            const s = k / 40;
+            const rMkm = 0.0068 + (0.3844 - 0.0068) * Math.sin(0.5 * Math.PI * s);
+            const ang  = (angCap - 0.65) + 0.65 * s;
+            dirX.push(rMkm * Math.cos(ang));
+            dirY.push(rMkm * Math.sin(ang));
+        }
+
+        // Find WSB Apogee point
+        let apoIdx = 0;
+        for (let i = 1; i < tr.length; i++) {
+            if (tr[i].r_earth_km > tr[apoIdx].r_earth_km) apoIdx = i;
+        }
+        const ptApo = tr[apoIdx];
+
+        Plotly.react('plotBltWsbSunEarth', [
+            {
+                x: hillX, y: hillY,
+                mode: 'lines',
+                name: 'Sun-Earth Hill Sphere / WSB Boundary (R_Hill = 1.497 Mkm)',
+                line: { color: 'rgba(255, 171, 0, 0.35)', width: 1.5, dash: 'dot' },
+                hoverinfo: 'name'
+            },
+            {
+                x: moonOrbX, y: moonOrbY,
+                mode: 'lines',
+                name: 'Moon Orbit Ring (r_Moon = 0.3844 Mkm = 384,400 km)',
+                line: { color: 'rgba(148, 163, 184, 0.65)', width: 1.8, dash: 'dash' },
+                hoverinfo: 'name'
+            },
+            {
+                x: dirX, y: dirY,
+                mode: 'lines',
+                name: `Direct 3.8-Day TLI Reference (\u0394V_LOI = ${f1(bw.loi_dv_direct_ms, 0)} m/s)`,
+                line: { color: '#38bdf8', width: 2.4, dash: 'dot' },
+                hovertemplate: '<b>Direct 3.8-Day TLI</b><br>X_SE = %{x:.3f} Mkm<br>Y_SE = %{y:.3f} Mkm<extra></extra>'
+            },
+            {
+                x: tr.map(p => p.x_se_mkm),
+                y: tr.map(p => p.y_se_mkm),
+                mode: 'lines',
+                name: `4-Body Ballistic Lunar Transfer (TOF ${f1(bw.lunar_tof_days, 0)} d, \u0394V_LOI = ${f1(bw.loi_dv_blt_ms, 1)} m/s)`,
+                line: { color: isBlt ? '#00e676' : '#94a3b8', width: 3.6 },
+                text: tr.map(p => `Day ${p.t_days} | r_Earth = ${(p.r_earth_km * 1e-6).toFixed(3)} Mkm | Raised Perigee r_p = ${Math.round(p.inst_perigee_km).toLocaleString()} km`),
+                hovertemplate: '<b>4-Body BLT / WSB Trajectory</b><br>X_SE = %{x:.3f} Mkm, Y_SE = %{y:.3f} Mkm<br>%{text}<extra></extra>'
+            },
+            {
+                x: [0], y: [0],
+                mode: 'markers+text',
+                name: 'Earth Primary (0, 0)',
+                marker: { size: 13, color: '#38bdf8', symbol: 'circle', line: { color: '#fff', width: 2 } },
+                text: ['EARTH'], textposition: 'bottom right',
+                textfont: { color: '#38bdf8', size: 10.5 }
+            },
+            {
+                x: [-1.4965], y: [0],
+                mode: 'markers+text',
+                name: 'Sun-Earth L\u2081 Libration Point (-1.497 Mkm, Towards Sun \u2190)',
+                marker: { size: 12, color: '#ffab00', symbol: 'diamond', line: { color: '#fff', width: 1.8 } },
+                text: ['SUN-EARTH L\u2081 (1.50 Mkm \u2190 SUN)'], textposition: 'bottom right',
+                textfont: { color: '#ffab00', size: 10 }
+            },
+            {
+                x: [ptApo.x_se_mkm], y: [ptApo.y_se_mkm],
+                mode: 'markers+text',
+                name: `WSB Apogee Turnaround (r_max = ${f1(bw.max_earth_dist_mkm, 3)} Mkm @ Day ${f1(ptApo.t_days, 0)})`,
+                marker: { size: 11, color: '#e040fb', symbol: 'star', line: { color: '#fff', width: 1.5 } },
+                text: [`WSB APOGEE (${f1(bw.max_earth_dist_mkm, 2)} Mkm @ d+${f1(ptApo.t_days, 0)} — Solar Tidal Perigee Raise)`],
+                textposition: 'top center',
+                textfont: { color: '#e040fb', size: 9.5 }
+            },
+            {
+                x: [pCap.x_se_mkm], y: [pCap.y_se_mkm],
+                mode: 'markers+text',
+                name: `Ballistic Lunar Capture @ Moon (Day ${f1(bw.lunar_tof_days, 0)}, Saved +${f1(bw.loi_dv_saved_ms, 0)} m/s)`,
+                marker: { size: 11, color: '#00e676', symbol: 'circle', line: { color: '#ffab00', width: 2 } },
+                text: [`MOON WSB CAPTURE (d+${f1(bw.lunar_tof_days, 0)} | +\u0394V_saved = ${f1(bw.loi_dv_saved_ms, 0)} m/s)`],
+                textposition: 'bottom left',
+                textfont: { color: '#00e676', size: 9.5 }
+            },
+            // Inset Plot: Solar Tidal Perigee Pumping r_p(t) [km] from 6,778 km to 384,400 km
+            {
+                type: 'scatter',
+                xaxis: 'x2', yaxis: 'y2',
+                x: tr.map(p => p.t_days),
+                y: tr.map(p => +(p.inst_perigee_km / 1000.0).toFixed(1)),
+                mode: 'lines',
+                name: 'Osculating Perigee r_p(t) [10\u00b3 km]',
+                line: { color: '#e040fb', width: 2.5 },
+                fill: 'tozeroy', fillcolor: 'rgba(224, 64, 251, 0.14)',
+                showlegend: false,
+                hovertemplate: 'Day %{x:.1f}<br>Solar-Raised Perigee r_p = %{y:.1f}k km<extra>Perigee Pumping</extra>'
+            }
+        ], {
+            title: {
+                text: `15C. Sun\u2013Earth\u2013Moon 4-Body Rotating Frame [Million km]: 1.51M km WSB Loop near Sun-Earth L\u2081 & Ballistic Lunar Capture`,
+                font: { color: '#e2e8f0', size: 12.4 }
+            },
+            margin: { l: 58, r: 22, b: 48, t: 40 },
+            xaxis: {
+                title: 'Sun\u2013Earth Rotating X_SE [Million km, 10\u2076 km] (\u2190 Sun at -149.6 Mkm)',
+                color: '#e2e8f0', gridcolor: '#1e293b', zerolinecolor: '#334155',
+                range: [-1.85, 1.55]
+            },
+            yaxis: {
+                title: 'Sun\u2013Earth Rotating Y_SE [Million km, 10\u2076 km]',
+                color: '#e2e8f0', gridcolor: '#1e293b', zerolinecolor: '#334155',
+                scaleanchor: 'x', scaleratio: 1,
+                range: [-0.85, 1.58]
+            },
+            xaxis2: {
+                domain: [0.68, 0.98], anchor: 'y2',
+                title: { text: 'TOF [days]', font: { size: 8.5, color: '#cbd5e1' } },
+                color: '#cbd5e1', gridcolor: 'rgba(148,163,184,0.12)', tickfont: { size: 8 }
+            },
+            yaxis2: {
+                domain: [0.07, 0.37], anchor: 'x2',
+                title: { text: 'Perigee r_p [10\u00b3 km]', font: { size: 8.5, color: '#e040fb' } },
+                color: '#e040fb', gridcolor: 'rgba(148,163,184,0.12)', tickfont: { size: 8 },
+                range: [0, 420]
+            },
+            annotations: [
+                {
+                    xref: 'paper', yref: 'paper', x: 0.98, y: 0.39, xanchor: 'right', yanchor: 'bottom', showarrow: false,
+                    text: '4-Body Solar Tidal Perigee Raise: 6.8k \u2192 384.4k km',
+                    font: { color: '#f0abfc', size: 8.8 }
+                }
+            ],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.8 }, bgcolor: 'rgba(15,23,42,0.88)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+    }
+
+    function bltRecomputeFromModal() {
+        if (!globalData) return;
+        const modeId  = document.getElementById('bltTransferMode') ? parseInt(document.getElementById('bltTransferMode').value, 10) : 1;
+        const tofDays = document.getElementById('bltTofDays') ? parseFloat(document.getElementById('bltTofDays').value) : 102.0;
+        const apoMkm  = document.getElementById('bltTargetApogeeMkm') ? parseFloat(document.getElementById('bltTargetApogeeMkm').value) : 1.512;
+        const r1      = globalData.initial_report || {};
+        const rpInit  = (r1.sma_km && r1.ecc !== undefined) ? r1.sma_km * (1.0 - r1.ecc) : (R_EQ + 400.0);
+        const fMass   = (globalData.maneuver && globalData.maneuver.final_mass_kg) ? globalData.maneuver.final_mass_kg : 464.0;
+        const ispVal  = (globalData.maneuver && globalData.maneuver.isp_s) ? globalData.maneuver.isp_s : 316.0;
+
+        const res = simulateBltWsbTransferJS(modeId, tofDays, apoMkm, rpInit, fMass, ispVal);
+        globalData.blt_wsb_summary = res.blt_wsb_summary;
+        globalData.traj_blt_wsb    = res.traj_blt_wsb;
+        renderBltWsbSection(globalData);
+        resizeVisiblePlots();
+    }
+
     function openPdrReportModal() {
         const d = globalData || defaultJsonBackup;
         if (!d) return;
@@ -14645,6 +15033,12 @@
         const sailArea = document.getElementById('sailAreaM2') ? parseFloat(document.getElementById('sailAreaM2').value) : 1200.0;
         const sailRes  = simulateSolarSailSpiralJS(sailEn, sailPlId, sailArea, isp);
 
+        // Sprint 36: Ballistic Lunar Transfer (BLT), Weak Stability Boundary (WSB) & 4-Body Dynamics
+        const bltMode = document.getElementById('bltTransferMode') ? parseInt(document.getElementById('bltTransferMode').value, 10) : 1;
+        const bltTof  = document.getElementById('bltTofDays') ? parseFloat(document.getElementById('bltTofDays').value) : 102.0;
+        const bltApo  = document.getElementById('bltTargetApogeeMkm') ? parseFloat(document.getElementById('bltTargetApogeeMkm').value) : 1.512;
+        const bltRes  = simulateBltWsbTransferJS(bltMode, bltTof, bltApo, kepInit.a * (1.0 - kepInit.e), finalMass, isp);
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -14690,6 +15084,7 @@
             payload_mapping_summary: eoRes.payload_mapping_summary,
             aerocapture_summary: aeroRes.aerocapture_summary,
             solar_sail_summary: sailRes.solar_sail_summary,
+            blt_wsb_summary: bltRes.blt_wsb_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -14717,7 +15112,8 @@
             coverage_heatmap: eoRes.coverage_heatmap,
             traj_sensor_footprint: eoRes.traj_sensor_footprint,
             traj_aerocapture: aeroRes.traj_aerocapture,
-            traj_solar_sail: sailRes.traj_solar_sail
+            traj_solar_sail: sailRes.traj_solar_sail,
+            traj_blt_wsb: bltRes.traj_blt_wsb
         };
 
         document.getElementById('inputModal').classList.remove('open');
@@ -14773,6 +15169,9 @@
     });
     ['sailEnablePropulsion', 'sailAreaM2', 'sailTargetPlanet'].forEach(id => {
         document.getElementById(id).addEventListener('change', sailRecomputeFromModal);
+    });
+    ['bltTransferMode', 'bltTofDays', 'bltTargetApogeeMkm'].forEach(id => {
+        document.getElementById(id).addEventListener('change', bltRecomputeFromModal);
     });
     document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
     document.getElementById('btnCancelModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));

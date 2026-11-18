@@ -259,4 +259,11 @@ SolarSailReport simulate_solar_sail_spiral(ADCSReport adcs,
                                            OptimalTransferPlan plan,
                                            SolarSailSpec spec);
 
+// Sprint 36: Ballistic Lunar Transfer (BLT), Weak Stability Boundary (WSB) & 4-Body Dynamics
+// (Bicircular Sun-Earth-Moon-Spacecraft BCR4BP, 1.5M km Solar L1 Loop & Perigee Pumping)
+BLTWSBReport simulate_blt_wsb_transfer(KeplerianElements orb_init,
+                                       OptimalTransferPlan plan,
+                                       CislunarReport cislunar,
+                                       BLTWSBSpec spec);
+
 #endif // MISSION_ANALYSIS_H
