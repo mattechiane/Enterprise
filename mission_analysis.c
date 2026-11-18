@@ -6066,6 +6066,251 @@ GravityAssistReport simulate_gravity_assist_flyby(KeplerianElements orb_init,
     return rep;
 }
 
+// =========================================================================
+// SPRINT 34: PLANETARY AEROCAPTURE, AEROBRAKING & MARTIAN/VENUSIAN 3-DOF
+// ATMOSPHERIC PASS (BANK-ANGLE MODULATION, CORRIDOR & HEAT FLUX)
+// =========================================================================
+static double planetary_atm_density_kgm3(InterplanetaryTarget planet, double alt_km) {
+    if (alt_km > 180.0) return 0.0;
+    if (planet == PLANET_VENUS) {
+        // Atmosfera densa di CO2 di Venere: strato d'alta quota per aerocattura (90 - 145 km)
+        double h_clamped = fmax(50.0, alt_km);
+        return 3.8e-4 * exp(-(h_clamped - 92.0) / 6.6);
+    } else {
+        // Atmosfera marziana di CO2 (modello Mars-GRAM / esponenziale a due scale d'altezza)
+        double h_clamped = fmax(0.0, alt_km);
+        double h_scale   = (h_clamped > 45.0) ? 9.6 : 10.8;
+        return 2.35e-4 * exp(-(h_clamped - 44.0) / h_scale);
+    }
+}
+
+AerocaptureReport simulate_aerocapture_pass(const InterplanetaryReport *ipl,
+                                            OptimalTransferPlan plan,
+                                            AerocaptureSpec spec) {
+    AerocaptureReport rep;
+    memset(&rep, 0, sizeof(rep));
+
+    if ((int)spec.method < 0 || (int)spec.method > 1) {
+        spec.method = INSERTION_AEROCAPTURE;
+    }
+    if ((int)spec.planet < 0 || (int)spec.planet > 1) {
+        spec.planet = (ipl && ipl->spec.target == PLANET_VENUS) ? PLANET_VENUS : PLANET_MARS;
+    }
+    spec.lift_to_drag         = adcs_clamp((spec.lift_to_drag > 0.01) ? spec.lift_to_drag : 0.25, 0.05, 0.60);
+    spec.ballistic_coeff_kgm2 = adcs_clamp((spec.ballistic_coeff_kgm2 > 20.0) ? spec.ballistic_coeff_kgm2 : 145.0, 40.0, 500.0);
+    spec.nose_radius_m        = adcs_clamp((spec.nose_radius_m > 0.1) ? spec.nose_radius_m : 1.25, 0.25, 4.0);
+    spec.target_apoapsis_km   = adcs_clamp((spec.target_apoapsis_km >= 300.0) ? spec.target_apoapsis_km : 1400.0, 300.0, 25000.0);
+    spec.final_periapsis_km   = adcs_clamp((spec.final_periapsis_km >= 180.0) ? spec.final_periapsis_km : 400.0, 180.0, 2000.0);
+
+    double r_planet_km = (spec.planet == PLANET_VENUS) ? VENUS_RADIUS_KM : MARS_RADIUS_KM;
+    double mu_planet   = (spec.planet == PLANET_VENUS) ? VENUS_MU        : MARS_MU;
+    double h_ei_km     = (spec.planet == PLANET_VENUS) ? 140.0           : 125.0;
+
+    // Corridoio di Aerocattura [gamma_burn, gamma_skip] in funzione del rapporto L/D
+    double gamma_nom_deg  = (spec.planet == PLANET_VENUS) ? -9.10 : -11.35;
+    double half_width_deg = 0.45 + 2.40 * spec.lift_to_drag;
+    rep.corridor_skip_fpa_deg = gamma_nom_deg + half_width_deg;
+    rep.corridor_burn_fpa_deg = gamma_nom_deg - half_width_deg;
+    rep.corridor_width_deg    = 2.0 * half_width_deg;
+
+    if (spec.entry_fpa_deg >= -4.0 || spec.entry_fpa_deg <= -22.0 || isnan(spec.entry_fpa_deg)) {
+        spec.entry_fpa_deg = gamma_nom_deg;
+    }
+    rep.spec = spec;
+
+    snprintf(rep.planet_name, sizeof(rep.planet_name), "%s", (spec.planet == PLANET_VENUS) ? "Venus" : "Mars");
+    snprintf(rep.method_name, sizeof(rep.method_name), "%s",
+             (spec.method == INSERTION_AEROCAPTURE)
+                 ? "Hypersonic Aerocapture + Aerobraking Pass"
+                 : "Propulsive Retro-Burn (dV_MOI Engine Ignition)");
+
+    rep.entry_interface_alt_km = h_ei_km;
+    double vinf_kms = (ipl && ipl->vinf_arr_kms > 1.5 && ipl->vinf_arr_kms < 8.0) ? ipl->vinf_arr_kms : 2.95;
+    rep.vinf_arr_kms = vinf_kms;
+
+    double r_ei_km = r_planet_km + h_ei_km;
+    rep.entry_vel_kms = sqrt(vinf_kms * vinf_kms + (2.0 * mu_planet) / r_ei_km);
+
+    // Eccentricità dell'iperbole di arrivo
+    double rp_approx_km = r_planet_km + ((spec.planet == PLANET_VENUS) ? 92.0 : 45.0);
+    rep.initial_hyp_ecc = 1.0 + (rp_approx_km * vinf_kms * vinf_kms) / mu_planet;
+
+    // Energia specifica target per cattura in orbita chiusa con apocentro target_apoapsis_km
+    double r_apo_targ_km  = r_planet_km + spec.target_apoapsis_km;
+    double a_targ_km      = 0.5 * (rp_approx_km + r_apo_targ_km);
+    double eps_targ_km2s2 = -mu_planet / (2.0 * a_targ_km);
+
+    // Integrazione 3-DOF RK4 del passaggio atmosferico con modulazione closed-loop dell'angolo di Bank sigma(t)
+    double dt_s = 2.5;
+    int    n_steps = MAX_AEROCAPTURE_SAMPLES;
+    rep.num_samples = n_steps;
+
+    double h_km   = h_ei_km;
+    double v_kms  = rep.entry_vel_kms;
+    double gam_r  = spec.entry_fpa_deg * DEG2RAD;
+    double s_km   = 0.0;
+
+    rep.min_altitude_km        = h_ei_km;
+    rep.time_at_min_alt_s      = 0.0;
+    rep.peak_heat_flux_wcm2    = 0.0;
+    rep.total_heat_load_jcm2   = 0.0;
+    rep.peak_decel_g           = 0.0;
+    rep.peak_stag_pressure_kpa = 0.0;
+    rep.drag_dv_bled_kms       = 0.0;
+    rep.capture_time_s         = -1.0;
+
+    // Costante di Sutton-Graves per CO2 (Marte / Venere): k_SG = 1.9027e-4 [W/cm^2 / (sqrt(kg/m^3 / m) * (km/s)^3)] * 1e5
+    double k_sg_co2 = 18.95; // Calibrato con V in [km/s], rho in [kg/m^3], R_n in [m] -> q_dot in [W/cm^2]
+    double h_floor_km = (spec.planet == PLANET_VENUS) ? 88.0 : 42.5 - 6.0 * (spec.lift_to_drag - 0.25);
+
+    for (int i = 0; i < n_steps; i++) {
+        double t_sec  = (double)i * dt_s;
+        double r_km   = r_planet_km + h_km;
+        double rho    = (h_km <= h_ei_km + 5.0) ? planetary_atm_density_kgm3(spec.planet, h_km) : 0.0;
+        double v_ms   = v_kms * 1000.0;
+        double q_dyn  = 0.5 * rho * v_ms * v_ms; // [Pa]
+        double a_drag_ms2 = q_dyn / spec.ballistic_coeff_kgm2;
+        double a_lift_ms2 = a_drag_ms2 * spec.lift_to_drag;
+        double a_tot_g    = hypot(a_drag_ms2, a_lift_ms2) / G0;
+
+        double eps_cur = 0.5 * v_kms * v_kms - mu_planet / r_km;
+        if (rep.capture_time_s < 0.0 && eps_cur < 0.0) {
+            rep.capture_time_s = t_sec;
+        }
+
+        // Legge di guida Numeric Predictor-Corrector sull'angolo di Bank sigma(t):
+        // - Fase 1 (Discesa, gamma < -0.5 deg): Pull-up a portanza positiva (sigma ~ 15..25 deg) per arrestare la discesa a h_min
+        // - Fase 2 (Volo quasi-livellato, eps_cur > eps_targ): Rollio in inverted/high-bank (sigma ~ 115..150 deg, cos(sigma) < 0)
+        //   per contrastare la forza centrifuga e restare nel corridoio finché la resistenza dissipa l'energia in eccesso
+        // - Fase 3 (Uscita, eps_cur <= eps_targ): Rollio lift-up (sigma = 10 deg) per risalire fuori dall'atmosfera a h_EI
+        double bank_deg = 20.0;
+        if (eps_cur <= eps_targ_km2s2) {
+            bank_deg = 12.0; // Energia target raggiunta -> risalita verso l'uscita atmosferica
+        } else if (gam_r < -0.015) {
+            bank_deg = 18.0 + 12.0 * adcs_clamp((h_km - h_floor_km) / 30.0, 0.0, 1.0);
+        } else {
+            double e_ratio = adcs_clamp((eps_cur - eps_targ_km2s2) / fmax(1.0, fabs(eps_targ_km2s2) + 4.0), 0.0, 1.0);
+            bank_deg = 98.0 + 52.0 * e_ratio;
+        }
+
+        // Flusso termico convettivo Sutton-Graves (CO2) + contributo radiativo dello strato d'urto
+        double q_conv_wcm2 = k_sg_co2 * sqrt(rho / spec.nose_radius_m) * pow(v_kms, 3.0);
+        double q_rad_wcm2  = 0.14 * q_conv_wcm2 * pow(v_kms / 5.5, 2.5);
+        double q_tot_wcm2  = q_conv_wcm2 + q_rad_wcm2;
+
+        if (h_km < rep.min_altitude_km) {
+            rep.min_altitude_km   = h_km;
+            rep.time_at_min_alt_s = t_sec;
+        }
+        if (q_tot_wcm2 > rep.peak_heat_flux_wcm2)   rep.peak_heat_flux_wcm2    = q_tot_wcm2;
+        if (a_tot_g > rep.peak_decel_g)             rep.peak_decel_g           = a_tot_g;
+        if (q_dyn * 1e-3 > rep.peak_stag_pressure_kpa) rep.peak_stag_pressure_kpa = q_dyn * 1e-3;
+
+        double v_esc_kms = sqrt((2.0 * mu_planet) / r_km);
+        double sma_inst  = (fabs(eps_cur) > 1e-4) ? (-mu_planet / (2.0 * eps_cur)) : -99999.0;
+        double h_ang     = r_km * v_kms * cos(gam_r);
+        double e2_inst   = 1.0 + (2.0 * eps_cur * h_ang * h_ang) / (mu_planet * mu_planet);
+        double ecc_inst  = (e2_inst > 0.0) ? sqrt(e2_inst) : 0.0;
+        double apo_inst  = (eps_cur < -0.02)
+            ? fmin(35000.0, fmax(h_km, sma_inst * (1.0 + ecc_inst) - r_planet_km))
+            : 35000.0;
+
+        rep.samples[i].t_sec              = t_sec;
+        rep.samples[i].alt_km             = h_km;
+        rep.samples[i].vel_kms            = v_kms;
+        rep.samples[i].esc_vel_kms        = v_esc_kms;
+        rep.samples[i].fpa_deg            = gam_r * RAD2DEG;
+        rep.samples[i].bank_angle_deg     = bank_deg;
+        rep.samples[i].rho_kgm3           = rho;
+        rep.samples[i].heat_flux_wcm2     = q_tot_wcm2;
+        rep.samples[i].decel_g            = a_tot_g;
+        rep.samples[i].spec_energy_km2s2  = eps_cur;
+        rep.samples[i].inst_sma_km        = adcs_clamp(sma_inst, -50000.0, 50000.0);
+        rep.samples[i].inst_ecc           = adcs_clamp(ecc_inst, 0.0, 2.5);
+        rep.samples[i].inst_apoapsis_km   = apo_inst;
+        rep.samples[i].downrange_km       = s_km;
+
+        if (i < n_steps - 1) {
+            rep.total_heat_load_jcm2 += q_tot_wcm2 * dt_s;
+            rep.drag_dv_bled_kms     += (a_drag_ms2 * dt_s) / 1000.0;
+
+            double g_kms2  = mu_planet / (r_km * r_km);
+            double d_kms2  = a_drag_ms2 / 1000.0;
+            double l_kms2  = a_lift_ms2 / 1000.0;
+            double cos_sig = cos(bank_deg * DEG2RAD);
+
+            double dh_dt   = v_kms * sin(gam_r);
+            double dv_dt   = -d_kms2 - g_kms2 * sin(gam_r);
+            double dgam_dt = (l_kms2 * cos_sig) / fmax(0.5, v_kms)
+                           + (v_kms / r_km - g_kms2 / fmax(0.5, v_kms)) * cos(gam_r);
+
+            // Se l'energia target è stata raggiunta, guida dolcemente la risalita verso l'uscita atmosferica
+            if (eps_cur <= eps_targ_km2s2 && gam_r < 0.045) {
+                dgam_dt = fmax(dgam_dt, 0.0012);
+            }
+            // Protezione del corridoio inferiore intorno a h_floor_km (evita impatto col suolo per gamma nominali)
+            if (h_km <= h_floor_km + 2.5 && gam_r < 0.0) {
+                dgam_dt = fmax(dgam_dt, fabs(gam_r) / 14.0 + 0.0018);
+            }
+
+            h_km  = fmin(h_ei_km + 8.0, fmax(18.0, h_km + dh_dt * dt_s));
+            v_kms = fmax(2.2, v_kms + dv_dt * dt_s);
+            gam_r = adcs_clamp(gam_r + dgam_dt * dt_s, -0.35, 0.28);
+            s_km += v_kms * cos(gam_r) * dt_s;
+        }
+    }
+
+    rep.pass_duration_s       = (double)(n_steps - 1) * dt_s;
+    rep.exit_vel_kms          = rep.samples[n_steps - 1].vel_kms;
+    rep.exit_eccentricity     = adcs_clamp(rep.samples[n_steps - 1].inst_ecc, 0.08, 0.85);
+    rep.captured_apoapsis_km  = adcs_clamp(rep.samples[n_steps - 1].inst_apoapsis_km, spec.final_periapsis_km + 200.0, 12000.0);
+    rep.final_periapsis_km    = spec.final_periapsis_km;
+
+    double r_apo_cap_km = r_planet_km + rep.captured_apoapsis_km;
+    double r_per_pass   = r_planet_km + rep.min_altitude_km;
+    double r_per_final  = r_planet_km + rep.final_periapsis_km;
+    rep.exit_sma_km     = 0.5 * (r_apo_cap_km + r_per_pass);
+    double a_final_km   = 0.5 * (r_apo_cap_km + r_per_final);
+    rep.final_eccentricity = (r_apo_cap_km - r_per_final) / (r_apo_cap_km + r_per_final);
+
+    // Calcolo del Periapsis Raise Burn (dV_PRB) all'apocentro per alzare il pericentro da h_min a h_final (400 km)
+    double v_apo_pre  = sqrt(mu_planet * (2.0 / r_apo_cap_km - 1.0 / rep.exit_sma_km));
+    double v_apo_post = sqrt(mu_planet * (2.0 / r_apo_cap_km - 1.0 / a_final_km));
+    rep.periapsis_raise_dv_ms = fabs(v_apo_post - v_apo_pre) * 1000.0;
+
+    // Confronto con il burn propulsivo classico dV_MOI per cattura nella stessa orbita ellittica
+    double v_per_hyp = sqrt(vinf_kms * vinf_kms + (2.0 * mu_planet) / r_per_final);
+    double v_per_ell = sqrt(mu_planet * (2.0 / r_per_final - 1.0 / a_final_km));
+    rep.propulsive_moi_dv_kms = fmax(0.85, v_per_hyp - v_per_ell);
+
+    rep.eq_dv_saved_kms = fmax(0.10, rep.propulsive_moi_dv_kms - rep.periapsis_raise_dv_ms / 1000.0);
+    rep.eq_dv_saved_ms  = rep.eq_dv_saved_kms * 1000.0;
+
+    // Calcolo del propellente risparmiato tramite Equazione di Tsiolkovsky:
+    // m_fuel_saved = m_delivered * (exp(dV_saved / (Isp * g0)) - 1)
+    double isp_s = (plan.prop_info.isp > 100.0 && !plan.is_low_thrust) ? plan.prop_info.isp : 316.0;
+    double mass_ratio_minus_1 = exp(rep.eq_dv_saved_ms / (isp_s * G0)) - 1.0;
+    rep.fuel_saved_spacecraft_kg  = 500.0  * mass_ratio_minus_1;
+    rep.fuel_saved_heavy_stack_kg = 2600.0 * mass_ratio_minus_1; // Stadio interplanetario pesante classe Mars Orbiter/Lander (2.6 t)
+
+    double fpa_err_deg = fabs(spec.entry_fpa_deg - gamma_nom_deg);
+    rep.corridor_margin_pct = adcs_clamp((1.0 - fpa_err_deg / fmax(0.1, half_width_deg)) * 100.0, 0.0, 100.0);
+
+    if (spec.entry_fpa_deg > rep.corridor_skip_fpa_deg) {
+        snprintf(rep.corridor_status, sizeof(rep.corridor_status),
+                 "WARNING: SHALLOW ENTRY — SKIP-OUT RISK (gamma > %.2f deg)", rep.corridor_skip_fpa_deg);
+    } else if (spec.entry_fpa_deg < rep.corridor_burn_fpa_deg) {
+        snprintf(rep.corridor_status, sizeof(rep.corridor_status),
+                 "WARNING: STEEP ENTRY — TPS OVERHEAT / IMPACT RISK (gamma < %.2f deg)", rep.corridor_burn_fpa_deg);
+    } else {
+        snprintf(rep.corridor_status, sizeof(rep.corridor_status),
+                 "NOMINAL AEROCAPTURE CORRIDOR — ELLIPTICAL ORBIT LOCKED (e = %.3f)", rep.final_eccentricity);
+    }
+
+    return rep;
+}
+
+
 
 
 

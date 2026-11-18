@@ -49,6 +49,7 @@ bool export_web_mission_json(const char *filename,
                              EPSHiFiReport eps,
                              const EORaycastReport *eo,
                              GravityAssistReport flyby,
+                             AerocaptureReport aero,
                              const GroundStation *station,
                              const SpacecraftConfig *sc);
 

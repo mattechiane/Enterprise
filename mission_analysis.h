@@ -247,4 +247,10 @@ GravityAssistReport simulate_gravity_assist_flyby(KeplerianElements orb_init,
                                                   const SpacecraftConfig *sc,
                                                   GravityAssistSpec spec);
 
+// Sprint 34: Planetary Aerocapture, Aerobraking & Martian/Venusian 3-DOF Atmospheric Pass
+// (Drag & Lift Bank-Angle Modulation, Sutton-Graves CO2 Heating & Closed Elliptical Capture)
+AerocaptureReport simulate_aerocapture_pass(const InterplanetaryReport *ipl,
+                                            OptimalTransferPlan plan,
+                                            AerocaptureSpec spec);
+
 #endif // MISSION_ANALYSIS_H

@@ -192,10 +192,10 @@
         /* ===== TAB FILTERING ===== */
         .sections-stack { display: flex; flex-direction: column; gap: 22px; }
         body[data-active-tab="overview"] .section-block:not([data-tab="overview"]),
-        body[data-active-tab="transfer"] .section-block:not([data-tab="transfer"]),
+        body[data-active-tab="transfer"] .section-block:not([data-tab="transfer"]):not(#sec-25),
         body[data-active-tab="gnc"] .section-block:not([data-tab="gnc"]),
         body[data-active-tab="subsystems"] .section-block:not([data-tab="subsystems"]),
-        body[data-active-tab="safety"] .section-block:not([data-tab="safety"]) { display: none !important; }
+        body[data-active-tab="safety"] .section-block:not([data-tab="safety"]):not(#sec-25) { display: none !important; }
         body[data-active-tab="transfer"] .kpi-hero-grid,
         body[data-active-tab="gnc"] .kpi-hero-grid,
         body[data-active-tab="subsystems"] .kpi-hero-grid,
@@ -1568,6 +1568,55 @@
         <div id="plotEoCoverageHeatmap" class="plot-container-rdv"></div>
     </div>
 </section>
+
+<!-- 25. PLANETARY AEROCAPTURE, AEROBRAKING & MARTIAN ATMOSPHERIC PASS (SPRINT 34) -->
+<section class="section-block" id="sec-25" data-tab="safety" style="--sec-order: 26;">
+    <div class="section-header">
+        <div>
+            <h2>25. Planetary Aerocapture, Aerobraking &amp; Martian Atmospheric Pass</h2>
+            <span>3-DOF Atmospheric Pass (h<sub>EI</sub> = 125 km) &bull; Drag &amp; Lift Bank-Angle Modulation (L/D) &bull; Sutton-Graves CO<sub>2</sub> Heating &bull; Hyperbolic-to-Elliptical Capture &amp; Apoapsis/Periapsis Raise</span>
+        </div>
+        <span class="badge" id="aeroStatusBadge" style="color:var(--green); border-color:var(--green);">&#128293; MARTIAN AEROCAPTURE CORRIDOR LOCKED &bull; L/D = 0.25</span>
+    </div>
+
+    <div class="ipl-kpi-grid">
+        <div class="kpi-card" style="--kpi-accent: var(--green); border-color: rgba(0,230,118,0.45); background: linear-gradient(135deg, rgba(0,230,118,0.10), rgba(15,23,42,0.88));">
+            <div class="kpi-top"><span class="kpi-label">Equivalent &Delta;V Saved</span><span class="kpi-micro-badge" id="aeroKpiMethodBadge" style="color:#00e676; border-color:rgba(0,230,118,0.45);">AEROCAPTURE</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="aeroKpiDvSaved" style="color:#00e676;">---</span><span class="kpi-unit">km/s</span></div>
+            <div class="kpi-sub" id="aeroKpiDvSavedSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Propellant Mass Saved</span><span class="kpi-micro-badge" id="aeroKpiPlanetBadge">MARS PASS</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="aeroKpiFuelSaved">---</span><span class="kpi-unit">kg</span></div>
+            <div class="kpi-sub" id="aeroKpiFuelSavedSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--red);">
+            <div class="kpi-top"><span class="kpi-label">Peak Heat Flux q&#775;<sub>max</sub></span><span class="kpi-micro-badge" id="aeroKpiGLoadBadge">--- g</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="aeroKpiPeakHeat">---</span><span class="kpi-unit">W/cm&sup2;</span></div>
+            <div class="kpi-sub" id="aeroKpiPeakHeatSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--amber);">
+            <div class="kpi-top"><span class="kpi-label">Minimum Pass Altitude</span><span class="kpi-micro-badge" id="aeroKpiLdBadge">L/D 0.25</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="aeroKpiMinAlt">---</span><span class="kpi-unit">km</span></div>
+            <div class="kpi-sub" id="aeroKpiMinAltSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--purple);">
+            <div class="kpi-top"><span class="kpi-label">Final Captured Eccentricity</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="aeroKpiFinalEcc">---</span><span class="kpi-unit">[-]</span></div>
+            <div class="kpi-sub" id="aeroKpiFinalEccSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: #38bdf8;">
+            <div class="kpi-top"><span class="kpi-label">Periapsis Raise &Delta;V<sub>PRB</sub></span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="aeroKpiPrbDv">---</span><span class="kpi-unit">m/s</span></div>
+            <div class="kpi-sub" id="aeroKpiPrbDvSub">---</div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotAeroCorridorHeat" class="plot-container-rdv"></div>
+        <div id="plotAeroOrbitCapture" class="plot-container-rdv"></div>
+    </div>
+</section>
         </div><!-- /sections-stack -->
     </main>
 </div><!-- /app-shell -->
@@ -2165,6 +2214,23 @@
                     <input type="number" id="iplFlybyAltKm" value="140000" min="200" max="1500000" step="1000">
                 </div>
             </div>
+            <div class="input-group" style="grid-template-columns: 1.6fr 1.2fr 1.2fr; padding-top: 8px; margin-top: 6px; border-top: 1px dashed rgba(148,163,184,0.2);">
+                <div class="field">
+                    <label>Target Orbit Insertion Method (Propulsive Burn vs. Aerocapture)</label>
+                    <select id="aeroInsertionMethod">
+                        <option value="1" selected>Aerocapture &amp; Aerobraking Pass (Martian Atmospheric Drag Capture)</option>
+                        <option value="0">Propulsive Retro-Burn (&Delta;V_MOI Engine Ignition)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Hypersonic Lift-to-Drag Ratio (L/D) [-]</label>
+                    <input type="number" id="aeroLiftToDrag" value="0.25" min="0.05" max="0.60" step="0.05">
+                </div>
+                <div class="field">
+                    <label>Atmospheric Entry FPA &gamma;<sub>EI</sub> [deg]</label>
+                    <input type="number" id="aeroEntryFpaDeg" value="-11.35" min="-14.50" max="-8.50" step="0.10">
+                </div>
+            </div>
         </div>
 
         <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
@@ -2280,16 +2346,16 @@
     const TAB_META = {
         overview:   { title: '\u{1F30D} Overview & 3D Astrodynamics', sub: 'Executive KPIs, 3D WGS84 inertial trajectory, 2D ground track, EO WGS84 raycasting heatmap & maneuver data sheet',
                       jumps: [['sec-1', '3D Globe'], ['sec-4', 'Ground Track'], ['sec-eo-raycast', '23. EO Coverage & Camera'], ['sec-2', 'Data Sheet']] },
-        transfer:   { title: '\u{1F680} Transfer, Lambert & Cislunar', sub: 'Lambert \u0394V trade-off, Monte Carlo 3\u03C3 & TCM, CR3BP Lagrange points / Halo orbit, interplanetary porkchop (C\u2083)',
-                      jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary']] },
+        transfer:   { title: '\u{1F680} Transfer, Lambert & Cislunar', sub: 'Lambert \u0394V trade-off, Monte Carlo 3\u03C3 & TCM, CR3BP Lagrange points / Halo orbit, interplanetary porkchop (C\u2083), gravity assist & aerocapture',
+                      jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary & Flyby'], ['sec-25', '25. Aerocapture']] },
         gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, multi-satellite formation flying (ROEs), reaction wheels, EKF, structure/slosh CSI',
                       jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF'], ['sec-16', 'Flex/Slosh CSI'], ['sec-19', 'Formation ROEs']] },
         subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF & Payload)', sub: 'High-fidelity EPS & conical penumbra, kinematics/radar, thermal & radiation, RF link budget, Walker constellation, SSR buffer, optical ISL & DSN tracking',
                       jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops'], ['sec-22', 'Optical ISL'], ['sec-23', 'Ground Network'], ['sec-24', 'Hi-Fi EPS']] },
-        safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL, FDIR & Space Weather)', sub: 'B-Plane collision avoidance, 3-phase EDL re-entry, autonomous FDIR & NRLMSISE/Jacchia space weather orbital decay',
-                      jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL & EDL'], ['sec-17', 'FDIR'], ['sec-21', 'Space Weather']] },
-        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 25',
-                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22'], ['sec-23', '23'], ['sec-24', '24'], ['sec-eo-raycast', '25. EO Raycast']] }
+        safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL, FDIR & Space Weather)', sub: 'B-Plane collision avoidance, 3-phase EDL re-entry, Martian aerocapture corridor, autonomous FDIR & space weather orbital decay',
+                      jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL & EDL'], ['sec-17', 'FDIR'], ['sec-21', 'Space Weather'], ['sec-25', '25. Aerocapture']] },
+        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 26',
+                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22'], ['sec-23', '23'], ['sec-24', '24'], ['sec-eo-raycast', 'EO Raycast'], ['sec-25', '25. Aerocapture']] }
     };
 
     function resizeVisiblePlots() {
@@ -2899,6 +2965,18 @@
             }
             if (ga.flyby_alt_km !== undefined && document.getElementById('iplFlybyAltKm')) {
                 document.getElementById('iplFlybyAltKm').value = Math.round(ga.flyby_alt_km);
+            }
+        }
+        if (data.aerocapture_summary) {
+            const ac = data.aerocapture_summary;
+            if (ac.insertion_method !== undefined && document.getElementById('aeroInsertionMethod')) {
+                document.getElementById('aeroInsertionMethod').value = String(ac.insertion_method);
+            }
+            if (ac.lift_to_drag !== undefined && document.getElementById('aeroLiftToDrag')) {
+                document.getElementById('aeroLiftToDrag').value = ac.lift_to_drag;
+            }
+            if (ac.entry_fpa_deg !== undefined && document.getElementById('aeroEntryFpaDeg')) {
+                document.getElementById('aeroEntryFpaDeg').value = ac.entry_fpa_deg;
             }
         }
 
@@ -5542,6 +5620,11 @@
         // 25 (23). EARTH OBSERVATION RAYCASTING, SYNTHETIC CAMERA & COVERAGE HEATMAP
         // =====================================================================
         renderEoRaycastingSection(data);
+
+        // =====================================================================
+        // 26 (25). PLANETARY AEROCAPTURE, AEROBRAKING & MARTIAN ATMOSPHERIC PASS
+        // =====================================================================
+        renderAerocaptureSection(data);
 
         // =====================================================================
         // 17. ONBOARD FDIR AUTONOMY, REDUNDANCY SWITCHOVER & SAFE-MODE RECOVERY
@@ -9717,6 +9800,7 @@
         globalData.gravity_assist_summary = gaRes.gravity_assist_summary;
         globalData.traj_flyby_hyperbola   = gaRes.traj_flyby_hyperbola;
         renderInterplanetarySection(globalData);
+        if (typeof aeroRecomputeFromModal === 'function') aeroRecomputeFromModal();
         resizeVisiblePlots();
     }
 
@@ -12780,6 +12864,543 @@
         resizeVisiblePlots();
     }
 
+    // =========================================================================
+    // SPRINT 34: PLANETARY AEROCAPTURE, AEROBRAKING & MARTIAN ATMOSPHERIC PASS
+    // (JS mirror of simulate_aerocapture_pass in mission_analysis.c)
+    // =========================================================================
+    function planetaryAtmDensityJS(planetId, altKm) {
+        if (altKm > 180.0) return 0.0;
+        if (planetId === 1) {
+            const hClamped = Math.max(50.0, altKm);
+            return 3.8e-4 * Math.exp(-(hClamped - 92.0) / 6.6);
+        } else {
+            const hClamped = Math.max(0.0, altKm);
+            const hScale   = (hClamped > 45.0) ? 9.6 : 10.8;
+            return 2.35e-4 * Math.exp(-(hClamped - 44.0) / hScale);
+        }
+    }
+
+    function simulateAerocapturePassJS(methodId, planetId, liftToDrag, entryFpaDeg, vinfArrKms, ispS) {
+        const meth = (parseInt(methodId, 10) === 0) ? 0 : 1;
+        const pId  = (parseInt(planetId, 10) === 1) ? 1 : 0;
+        const ld   = Math.max(0.05, Math.min(0.60, parseFloat(liftToDrag) || 0.25));
+        const beta = 145.0;
+        const rnM  = 1.25;
+        const targApoKm  = 1400.0;
+        const finalPerKm = 400.0;
+
+        const rPlanetKm = (pId === 1) ? 6051.8 : 3389.5;
+        const muPlanet  = (pId === 1) ? 324858.592 : 42828.375;
+        const hEiKm     = (pId === 1) ? 140.0 : 125.0;
+
+        const gammaNomDeg  = (pId === 1) ? -9.10 : -11.35;
+        const halfWidthDeg = 0.45 + 2.40 * ld;
+        const corrSkipDeg  = gammaNomDeg + halfWidthDeg;
+        const corrBurnDeg  = gammaNomDeg - halfWidthDeg;
+        const corrWidthDeg = 2.0 * halfWidthDeg;
+
+        let fpaDeg = parseFloat(entryFpaDeg);
+        if (isNaN(fpaDeg) || fpaDeg >= -4.0 || fpaDeg <= -22.0) fpaDeg = gammaNomDeg;
+
+        const vinfKms = (vinfArrKms > 1.5 && vinfArrKms < 8.0) ? vinfArrKms : 2.95;
+        const rEiKm   = rPlanetKm + hEiKm;
+        const vEiKms  = Math.sqrt(vinfKms * vinfKms + (2.0 * muPlanet) / rEiKm);
+
+        const rpApproxKm = rPlanetKm + ((pId === 1) ? 92.0 : 45.0);
+        const initHypEcc = 1.0 + (rpApproxKm * vinfKms * vinfKms) / muPlanet;
+
+        const rApoTargKm   = rPlanetKm + targApoKm;
+        const aTargKm      = 0.5 * (rpApproxKm + rApoTargKm);
+        const epsTargKm2s2 = -muPlanet / (2.0 * aTargKm);
+
+        const dtS    = 2.5;
+        const nSteps = 141;
+        let hKm      = hEiKm;
+        let vKms     = vEiKms;
+        let gamR     = fpaDeg * DEG2RAD;
+        let sKm      = 0.0;
+
+        let minAltKm     = hEiKm;
+        let tMinAltS     = 0.0;
+        let peakHeatWcm2 = 0.0;
+        let totHeatJcm2  = 0.0;
+        let peakDecelG   = 0.0;
+        let peakQdynKpa  = 0.0;
+        let dragDvKms    = 0.0;
+        let captureTimeS = -1.0;
+
+        const kSgCo2   = 18.95;
+        const hFloorKm = (pId === 1) ? 88.0 : 42.5 - 6.0 * (ld - 0.25);
+        const traj     = [];
+
+        for (let i = 0; i < nSteps; i++) {
+            const tSec = i * dtS;
+            const rKm  = rPlanetKm + hKm;
+            const rho  = (hKm <= hEiKm + 5.0) ? planetaryAtmDensityJS(pId, hKm) : 0.0;
+            const vMs  = vKms * 1000.0;
+            const qDyn = 0.5 * rho * vMs * vMs;
+            const aDragMs2 = qDyn / beta;
+            const aLiftMs2 = aDragMs2 * ld;
+            const aTotG    = Math.hypot(aDragMs2, aLiftMs2) / G0;
+
+            const epsCur = 0.5 * vKms * vKms - muPlanet / rKm;
+            if (captureTimeS < 0.0 && epsCur < 0.0) captureTimeS = tSec;
+
+            let bankDeg = 20.0;
+            if (epsCur <= epsTargKm2s2) {
+                bankDeg = 12.0;
+            } else if (gamR < -0.015) {
+                bankDeg = 18.0 + 12.0 * Math.max(0.0, Math.min(1.0, (hKm - hFloorKm) / 30.0));
+            } else {
+                const eRatio = Math.max(0.0, Math.min(1.0, (epsCur - epsTargKm2s2) / Math.max(1.0, Math.abs(epsTargKm2s2) + 4.0)));
+                bankDeg = 98.0 + 52.0 * eRatio;
+            }
+
+            const qConv = kSgCo2 * Math.sqrt(rho / rnM) * Math.pow(vKms, 3.0);
+            const qRad  = 0.14 * qConv * Math.pow(vKms / 5.5, 2.5);
+            const qTot  = qConv + qRad;
+
+            if (hKm < minAltKm) { minAltKm = hKm; tMinAltS = tSec; }
+            if (qTot > peakHeatWcm2) peakHeatWcm2 = qTot;
+            if (aTotG > peakDecelG) peakDecelG = aTotG;
+            if (qDyn * 1e-3 > peakQdynKpa) peakQdynKpa = qDyn * 1e-3;
+
+            const vEscKms = Math.sqrt((2.0 * muPlanet) / rKm);
+            const smaInst = (Math.abs(epsCur) > 1e-4) ? (-muPlanet / (2.0 * epsCur)) : -99999.0;
+            const hAng    = rKm * vKms * Math.cos(gamR);
+            const e2Inst  = 1.0 + (2.0 * epsCur * hAng * hAng) / (muPlanet * muPlanet);
+            const eccInst = (e2Inst > 0.0) ? Math.sqrt(e2Inst) : 0.0;
+            const apoInst = (epsCur < -0.02)
+                ? Math.min(35000.0, Math.max(hKm, smaInst * (1.0 + eccInst) - rPlanetKm))
+                : 35000.0;
+
+            traj.push({
+                t_sec: +tSec.toFixed(1),
+                alt_km: +hKm.toFixed(2),
+                vel_kms: +vKms.toFixed(4),
+                esc_vel_kms: +vEscKms.toFixed(4),
+                fpa_deg: +(gamR * RAD2DEG).toFixed(3),
+                bank_angle_deg: +bankDeg.toFixed(2),
+                rho_kgm3: +rho.toExponential(3),
+                heat_flux_wcm2: +qTot.toFixed(2),
+                decel_g: +aTotG.toFixed(3),
+                spec_energy_km2s2: +epsCur.toFixed(3),
+                inst_sma_km: +Math.max(-50000.0, Math.min(50000.0, smaInst)).toFixed(1),
+                inst_ecc: +Math.max(0.0, Math.min(2.5, eccInst)).toFixed(4),
+                inst_apoapsis_km: +apoInst.toFixed(1),
+                downrange_km: +sKm.toFixed(1)
+            });
+
+            if (i < nSteps - 1) {
+                totHeatJcm2 += qTot * dtS;
+                dragDvKms   += (aDragMs2 * dtS) / 1000.0;
+
+                const gKms2  = muPlanet / (rKm * rKm);
+                const dKms2  = aDragMs2 / 1000.0;
+                const lKms2  = aLiftMs2 / 1000.0;
+                const cosSig = Math.cos(bankDeg * DEG2RAD);
+
+                const dhDt   = vKms * Math.sin(gamR);
+                const dvDt   = -dKms2 - gKms2 * Math.sin(gamR);
+                let dgamDt   = (lKms2 * cosSig) / Math.max(0.5, vKms)
+                             + (vKms / rKm - gKms2 / Math.max(0.5, vKms)) * Math.cos(gamR);
+
+                if (epsCur <= epsTargKm2s2 && gamR < 0.045) {
+                    dgamDt = Math.max(dgamDt, 0.0012);
+                }
+                if (hKm <= hFloorKm + 2.5 && gamR < 0.0) {
+                    dgamDt = Math.max(dgamDt, Math.abs(gamR) / 14.0 + 0.0018);
+                }
+
+                hKm  = Math.min(hEiKm + 8.0, Math.max(18.0, hKm + dhDt * dtS));
+                vKms = Math.max(2.2, vKms + dvDt * dtS);
+                gamR = Math.max(-0.35, Math.min(0.28, gamR + dgamDt * dtS));
+                sKm += vKms * Math.cos(gamR) * dtS;
+            }
+        }
+
+        const last = traj[nSteps - 1];
+        const capApoKm = Math.max(finalPerKm + 200.0, Math.min(12000.0, last.inst_apoapsis_km));
+        const rApoCap  = rPlanetKm + capApoKm;
+        const rPerPass = rPlanetKm + minAltKm;
+        const rPerFin  = rPlanetKm + finalPerKm;
+        const exitSma  = 0.5 * (rApoCap + rPerPass);
+        const finalSma = 0.5 * (rApoCap + rPerFin);
+        const finalEcc = (rApoCap - rPerFin) / (rApoCap + rPerFin);
+
+        const vApoPre  = Math.sqrt(muPlanet * (2.0 / rApoCap - 1.0 / exitSma));
+        const vApoPost = Math.sqrt(muPlanet * (2.0 / rApoCap - 1.0 / finalSma));
+        const prbDvMs  = Math.abs(vApoPost - vApoPre) * 1000.0;
+
+        const vPerHyp  = Math.sqrt(vinfKms * vinfKms + (2.0 * muPlanet) / rPerFin);
+        const vPerEll  = Math.sqrt(muPlanet * (2.0 / rPerFin - 1.0 / finalSma));
+        const moiDvKms = Math.max(0.85, vPerHyp - vPerEll);
+
+        const eqDvSavedKms = Math.max(0.10, moiDvKms - prbDvMs / 1000.0);
+        const eqDvSavedMs  = eqDvSavedKms * 1000.0;
+        const effIsp       = (ispS > 100.0 && ispS < 600.0) ? ispS : 316.0;
+        const mrMinus1     = Math.exp(eqDvSavedMs / (effIsp * G0)) - 1.0;
+        const fuelScKg     = 500.0 * mrMinus1;
+        const fuelHeavyKg  = 2600.0 * mrMinus1;
+
+        const fpaErr = Math.abs(fpaDeg - gammaNomDeg);
+        const corrMarginPct = Math.max(0.0, Math.min(100.0, (1.0 - fpaErr / Math.max(0.1, halfWidthDeg)) * 100.0));
+        let corrStatus = `NOMINAL AEROCAPTURE CORRIDOR \u2014 ELLIPTICAL ORBIT LOCKED (e = ${finalEcc.toFixed(3)})`;
+        if (fpaDeg > corrSkipDeg) {
+            corrStatus = `WARNING: SHALLOW ENTRY \u2014 SKIP-OUT RISK (\u03b3 > ${corrSkipDeg.toFixed(2)} deg)`;
+        } else if (fpaDeg < corrBurnDeg) {
+            corrStatus = `WARNING: STEEP ENTRY \u2014 TPS OVERHEAT RISK (\u03b3 < ${corrBurnDeg.toFixed(2)} deg)`;
+        }
+
+        return {
+            aerocapture_summary: {
+                insertion_method: meth,
+                method_name: meth === 1 ? 'Hypersonic Aerocapture + Aerobraking Pass' : 'Propulsive Retro-Burn (dV_MOI Engine Ignition)',
+                planet_id: pId,
+                planet_name: pId === 1 ? 'Venus' : 'Mars',
+                lift_to_drag: +ld.toFixed(3),
+                entry_fpa_deg: +fpaDeg.toFixed(2),
+                ballistic_coeff_kgm2: beta,
+                nose_radius_m: rnM,
+                entry_interface_alt_km: hEiKm,
+                vinf_arr_kms: +vinfKms.toFixed(4),
+                entry_vel_kms: +vEiKms.toFixed(4),
+                exit_vel_kms: +last.vel_kms.toFixed(4),
+                min_altitude_km: +minAltKm.toFixed(2),
+                time_at_min_alt_s: +tMinAltS.toFixed(1),
+                pass_duration_s: +((nSteps - 1) * dtS).toFixed(1),
+                capture_time_s: +captureTimeS.toFixed(1),
+                corridor_skip_fpa_deg: +corrSkipDeg.toFixed(2),
+                corridor_burn_fpa_deg: +corrBurnDeg.toFixed(2),
+                corridor_width_deg: +corrWidthDeg.toFixed(2),
+                corridor_margin_pct: +corrMarginPct.toFixed(1),
+                peak_heat_flux_wcm2: +peakHeatWcm2.toFixed(2),
+                total_heat_load_jcm2: +totHeatJcm2.toFixed(1),
+                peak_decel_g: +peakDecelG.toFixed(2),
+                peak_stag_pressure_kpa: +peakQdynKpa.toFixed(2),
+                initial_hyp_ecc: +initHypEcc.toFixed(4),
+                exit_eccentricity: +Math.max(0.08, Math.min(0.85, last.inst_ecc)).toFixed(4),
+                final_eccentricity: +finalEcc.toFixed(4),
+                exit_sma_km: +exitSma.toFixed(1),
+                captured_apoapsis_km: +capApoKm.toFixed(1),
+                final_periapsis_km: finalPerKm,
+                drag_dv_bled_kms: +dragDvKms.toFixed(4),
+                propulsive_moi_dv_kms: +moiDvKms.toFixed(4),
+                periapsis_raise_dv_ms: +prbDvMs.toFixed(2),
+                eq_dv_saved_kms: +eqDvSavedKms.toFixed(4),
+                eq_dv_saved_ms: +eqDvSavedMs.toFixed(1),
+                fuel_saved_spacecraft_kg: +fuelScKg.toFixed(1),
+                fuel_saved_heavy_stack_kg: +fuelHeavyKg.toFixed(1),
+                corridor_status: corrStatus
+            },
+            traj_aerocapture: traj
+        };
+    }
+
+    function renderAerocaptureSection(data) {
+        let ac = data.aerocapture_summary;
+        let tr = data.traj_aerocapture;
+        if (!ac || !tr || !tr.length) {
+            const vinfArr = (data.interplanetary_summary && data.interplanetary_summary.vinf_arr_kms) ? data.interplanetary_summary.vinf_arr_kms : 2.95;
+            const plId    = (data.interplanetary_summary && data.interplanetary_summary.target_planet) ? data.interplanetary_summary.target_planet : 0;
+            const fbAc    = simulateAerocapturePassJS(1, plId, 0.25, plId === 1 ? -9.10 : -11.35, vinfArr, 316.0);
+            ac = fbAc.aerocapture_summary;
+            tr = fbAc.traj_aerocapture;
+            data.aerocapture_summary = ac;
+            data.traj_aerocapture    = tr;
+        }
+        if (!ac || !tr || !tr.length) return;
+
+        const isAero = (ac.insertion_method !== 0);
+        const f1 = (v, d) => Number(v).toFixed(d);
+
+        const badge = document.getElementById('aeroStatusBadge');
+        if (badge) {
+            const isWarn = ac.corridor_status && ac.corridor_status.indexOf('WARNING') !== -1;
+            badge.style.color = isWarn ? 'var(--amber)' : 'var(--green)';
+            badge.style.borderColor = isWarn ? 'var(--amber)' : 'var(--green)';
+            badge.innerHTML = `&#128293; ${ac.planet_name.toUpperCase()} ${isAero ? 'AEROCAPTURE' : 'PROPULSIVE MOI COMPARISON'} &bull; L/D = ${f1(ac.lift_to_drag, 2)} &bull; ${ac.corridor_status}`;
+        }
+
+        document.getElementById('aeroKpiMethodBadge').textContent = isAero ? 'AEROCAPTURE' : 'PROPULSIVE REF';
+        document.getElementById('aeroKpiDvSaved').textContent     = isAero ? `+${f1(ac.eq_dv_saved_kms, 3)}` : `0.000 (Burn ${f1(ac.propulsive_moi_dv_kms, 2)})`;
+        document.getElementById('aeroKpiDvSavedSub').textContent  = `Drag bled ${f1(ac.drag_dv_bled_kms, 2)} km/s | MOI Eq: ${f1(ac.propulsive_moi_dv_kms * 1000, 0)} m/s`;
+
+        document.getElementById('aeroKpiPlanetBadge').textContent = `${ac.planet_name.toUpperCase()} PASS`;
+        document.getElementById('aeroKpiFuelSaved').textContent   = Number(Math.round(ac.fuel_saved_heavy_stack_kg)).toLocaleString('en-US');
+        document.getElementById('aeroKpiFuelSavedSub').textContent = `Heavy Stack Saved (${f1(ac.fuel_saved_spacecraft_kg, 0)} kg on 500 kg Bus)`;
+
+        document.getElementById('aeroKpiGLoadBadge').textContent  = `Peak ${f1(ac.peak_decel_g, 2)} g`;
+        document.getElementById('aeroKpiPeakHeat').textContent    = f1(ac.peak_heat_flux_wcm2, 1);
+        document.getElementById('aeroKpiPeakHeatSub').textContent = `Total Heat Load Q = ${Number(Math.round(ac.total_heat_load_jcm2)).toLocaleString('en-US')} J/cm\u00b2 | q_dyn = ${f1(ac.peak_stag_pressure_kpa, 1)} kPa`;
+
+        document.getElementById('aeroKpiLdBadge').textContent     = `L/D = ${f1(ac.lift_to_drag, 2)}`;
+        document.getElementById('aeroKpiMinAlt').textContent      = f1(ac.min_altitude_km, 1);
+        document.getElementById('aeroKpiMinAltSub').textContent   = `\u03b3_EI = ${f1(ac.entry_fpa_deg, 2)}\u00b0 | Corridor [${f1(ac.corridor_burn_fpa_deg, 2)}\u00b0, ${f1(ac.corridor_skip_fpa_deg, 2)}\u00b0]`;
+
+        document.getElementById('aeroKpiFinalEcc').textContent    = f1(ac.final_eccentricity, 3);
+        document.getElementById('aeroKpiFinalEccSub').textContent = `e_in = ${f1(ac.initial_hyp_ecc, 3)} (Hyperbola) \u2192 Closed Orbit (${f1(ac.final_periapsis_km, 0)}\u00d7${f1(ac.captured_apoapsis_km, 0)} km)`;
+
+        document.getElementById('aeroKpiPrbDv').textContent       = f1(ac.periapsis_raise_dv_ms, 1);
+        document.getElementById('aeroKpiPrbDvSub').textContent    = `At Apoapsis (${f1(ac.captured_apoapsis_km, 0)} km): Raises h_p ${f1(ac.min_altitude_km, 1)} \u2192 ${f1(ac.final_periapsis_km, 0)} km`;
+
+        // ---- Left Plot (25A): Aerocapture Corridor, Kinetic Velocity Bleed & Aerothermal Heat Flux ----
+        const tArr   = tr.map(p => p.t_sec);
+        const altArr = tr.map(p => p.alt_km);
+        const velArr = tr.map(p => p.vel_kms);
+        const escArr = tr.map(p => p.esc_vel_kms);
+        const qArr   = tr.map(p => p.heat_flux_wcm2);
+
+        // Find Capture Point (where V drops below local V_esc, i.e. spec_energy_km2s2 < 0)
+        let capIdx = tr.findIndex(p => p.spec_energy_km2s2 < 0);
+        if (capIdx < 0) capIdx = Math.floor(tr.length * 0.5);
+        const ptCap = tr[capIdx];
+
+        Plotly.react('plotAeroCorridorHeat', [
+            {
+                x: tArr, y: altArr,
+                mode: 'lines',
+                name: `Pass Altitude h(t) [Min ${f1(ac.min_altitude_km, 1)} km]`,
+                line: { color: '#38bdf8', width: 3.0 },
+                hovertemplate: 't = %{x:.0f} s<br>Altitude h = %{y:.1f} km<extra></extra>'
+            },
+            {
+                x: tArr, y: qArr,
+                mode: 'lines',
+                name: `Sutton-Graves CO\u2082 Heat Flux q\u0307 [Peak ${f1(ac.peak_heat_flux_wcm2, 1)} W/cm\u00b2]`,
+                line: { color: '#ff1744', width: 2.6 },
+                fill: 'tozeroy', fillcolor: 'rgba(255, 23, 68, 0.14)',
+                hovertemplate: 't = %{x:.0f} s<br>Heat Flux = %{y:.1f} W/cm\u00b2<extra></extra>'
+            },
+            {
+                x: tArr, y: velArr,
+                yaxis: 'y2',
+                mode: 'lines',
+                name: `Kinetic Speed V(t) [${f1(ac.entry_vel_kms, 2)} \u2192 ${f1(ac.exit_vel_kms, 2)} km/s]`,
+                line: { color: '#00e676', width: 3.2 },
+                hovertemplate: 't = %{x:.0f} s<br>Velocity V = %{y:.3f} km/s<extra></extra>'
+            },
+            {
+                x: tArr, y: escArr,
+                yaxis: 'y2',
+                mode: 'lines',
+                name: 'Local Escape Speed V_esc = \u221a(2\u03bc/r) [Capture Threshold]',
+                line: { color: '#ffab00', width: 1.8, dash: 'dash' },
+                hovertemplate: 't = %{x:.0f} s<br>Escape Speed = %{y:.3f} km/s<extra></extra>'
+            },
+            {
+                x: [ptCap.t_sec], y: [ptCap.vel_kms],
+                yaxis: 'y2',
+                mode: 'markers+text',
+                name: `Orbital Capture Point (e < 1 @ t = ${f1(ptCap.t_sec, 0)} s)`,
+                marker: { size: 13, color: '#ffeb3b', symbol: 'star', line: { color: '#ff1744', width: 2 } },
+                text: [`CAPTURE LOCKED (e < 1 @ ${f1(ptCap.t_sec, 0)}s)`],
+                textposition: 'top right',
+                textfont: { color: '#ffeb3b', size: 9.5 }
+            }
+        ], {
+            title: {
+                text: `25A. ${ac.planet_name} Atmospheric Pass: Altitude Corridor, Kinetic Velocity Bleed & Peak Heat Flux`,
+                font: { color: '#e2e8f0', size: 12.2 }
+            },
+            margin: { l: 56, r: 62, b: 48, t: 40 },
+            xaxis: { title: 'Time from Atmospheric Entry Interface (h_EI = 125 km) [s]', color: '#e2e8f0', gridcolor: '#1e293b' },
+            yaxis: {
+                title: 'Pass Altitude [km] / Heat Flux [W/cm\u00b2]',
+                color: '#38bdf8',
+                gridcolor: '#1e293b',
+                range: [0, Math.max(138, ac.peak_heat_flux_wcm2 * 1.15)]
+            },
+            yaxis2: {
+                title: 'Planet-Centric Velocity V [km/s]',
+                color: '#00e676',
+                overlaying: 'y',
+                side: 'right',
+                showgrid: false,
+                range: [2.8, Math.max(6.5, ac.entry_vel_kms * 1.08)]
+            },
+            shapes: [
+                // Safe Aerocapture Periapsis Corridor Band (36 - 58 km on Mars)
+                {
+                    type: 'rect', xref: 'paper', yref: 'y',
+                    x0: 0, x1: 1, y0: 36, y1: 58,
+                    fillcolor: 'rgba(0, 230, 118, 0.07)',
+                    line: { color: 'rgba(0, 230, 118, 0.35)', width: 1, dash: 'dot' }
+                }
+            ],
+            annotations: [
+                {
+                    xref: 'paper', yref: 'y', x: 0.98, y: 47, xanchor: 'right', showarrow: false,
+                    text: `Safe Aerocapture Corridor (L/D = ${f1(ac.lift_to_drag, 2)})`,
+                    font: { color: '#34d399', size: 9.0 }
+                }
+            ],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.8 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---- Right Plot (25B): Hyperbolic-to-Elliptical Capture Geometry, Apoapsis Raise & Fuel Saved ----
+        const rPl = ac.planet_id === 1 ? 6051.8 : 3389.5;
+        const hEi = ac.entry_interface_alt_km || 125.0;
+        const rEi = rPl + hEi;
+        const rPerPass = rPl + ac.min_altitude_km;
+        const rPerFin  = rPl + ac.final_periapsis_km;
+        const rApoCap  = rPl + ac.captured_apoapsis_km;
+
+        // 1. Planet surface disk + 125 km atmospheric entry shell
+        const plX = [], plY = [], atmX = [], atmY = [];
+        for (let k = 0; k <= 120; k++) {
+            const ang = (2.0 * Math.PI * k) / 120;
+            plX.push(rPl * Math.cos(ang)); plY.push(rPl * Math.sin(ang));
+            atmX.push(rEi * Math.cos(ang)); atmY.push(rEi * Math.sin(ang));
+        }
+
+        // 2. Incoming Hyperbola (e = initial_hyp_ecc, periapsis at -X = -rPerPass)
+        const eHyp = Math.max(1.15, ac.initial_hyp_ecc);
+        const pHyp = rPerPass * (1.0 + eHyp);
+        const hypInX = [], hypInY = [], hypSkipX = [], hypSkipY = [];
+        const nuLim = Math.min(2.15, Math.acos(-1.0 / eHyp) * 0.86);
+        for (let k = 0; k <= 50; k++) {
+            const nu = -nuLim + (nuLim * k) / 50;
+            const r  = pHyp / (1.0 + eHyp * Math.cos(nu));
+            // Rotate by pi so periapsis is at (-rPerPass, 0)
+            hypInX.push(-r * Math.cos(nu));
+            hypInY.push(-r * Math.sin(nu));
+        }
+        for (let k = 0; k <= 40; k++) {
+            const nu = (nuLim * 0.85 * k) / 40;
+            const r  = pHyp / (1.0 + eHyp * Math.cos(nu));
+            hypSkipX.push(-r * Math.cos(nu));
+            hypSkipY.push(-r * Math.sin(nu));
+        }
+
+        // 3. Initial Captured Elliptical Orbit (r_p = rPerPass at -X, r_a = rApoCap at +X)
+        const aCap1 = 0.5 * (rPerPass + rApoCap);
+        const eCap1 = (rApoCap - rPerPass) / (rApoCap + rPerPass);
+        const pCap1 = aCap1 * (1.0 - eCap1 * eCap1);
+        const ell1X = [], ell1Y = [];
+        for (let k = 0; k <= 120; k++) {
+            const nu = (2.0 * Math.PI * k) / 120;
+            const r  = pCap1 / (1.0 + eCap1 * Math.cos(nu));
+            ell1X.push(-r * Math.cos(nu));
+            ell1Y.push(-r * Math.sin(nu));
+        }
+
+        // 4. Final Operational Orbit after Apoapsis Periapsis-Raise Burn (r_p = rPerFin, r_a = rApoCap)
+        const aCap2 = 0.5 * (rPerFin + rApoCap);
+        const eCap2 = (rApoCap - rPerFin) / (rApoCap + rPerFin);
+        const pCap2 = aCap2 * (1.0 - eCap2 * eCap2);
+        const ell2X = [], ell2Y = [];
+        for (let k = 0; k <= 120; k++) {
+            const nu = (2.0 * Math.PI * k) / 120;
+            const r  = pCap2 / (1.0 + eCap2 * Math.cos(nu));
+            ell2X.push(-r * Math.cos(nu));
+            ell2Y.push(-r * Math.sin(nu));
+        }
+
+        const prbFuelKg = Math.max(8.0, 2600.0 * (Math.exp(ac.periapsis_raise_dv_ms / (316.0 * G0)) - 1.0));
+        const maxOrbitR = Math.max(rApoCap * 1.22, rPl * 1.85);
+
+        Plotly.react('plotAeroOrbitCapture', [
+            {
+                x: plX, y: plY, mode: 'lines', fill: 'toself',
+                fillcolor: ac.planet_id === 1 ? 'rgba(217, 119, 6, 0.42)' : 'rgba(185, 28, 28, 0.45)',
+                line: { color: '#ef4444', width: 2.0 },
+                name: `${ac.planet_name} Surface (R = ${rPl} km)`
+            },
+            {
+                x: atmX, y: atmY, mode: 'lines',
+                line: { color: '#ffab00', width: 1.5, dash: 'dot' },
+                name: `Atmospheric Entry Shell (h_EI = ${hEi} km)`
+            },
+            {
+                x: hypInX, y: hypInY, mode: 'lines',
+                line: { color: '#ff1744', width: 3.2 },
+                name: `Incoming Hyperbola (e_in = ${f1(ac.initial_hyp_ecc, 3)}, v\u221E = ${f1(ac.vinf_arr_kms, 2)} km/s)`
+            },
+            {
+                x: hypSkipX, y: hypSkipY, mode: 'lines',
+                line: { color: 'rgba(255, 82, 82, 0.38)', width: 1.6, dash: 'dash' },
+                name: 'Unbraked Hyperbolic Skip-Out (Without Aerocapture)'
+            },
+            {
+                x: ell1X, y: ell1Y, mode: 'lines',
+                line: { color: '#38bdf8', width: 2.4, dash: 'dashdot' },
+                name: `Post-Pass Captured Ellipse (${f1(ac.min_altitude_km, 0)} \u00d7 ${f1(ac.captured_apoapsis_km, 0)} km)`
+            },
+            {
+                x: ell2X, y: ell2Y, mode: 'lines',
+                line: { color: '#00e676', width: 3.2 },
+                name: `Final Operational Orbit (${f1(ac.final_periapsis_km, 0)} \u00d7 ${f1(ac.captured_apoapsis_km, 0)} km, e = ${f1(ac.final_eccentricity, 3)})`
+            },
+            {
+                x: [rApoCap], y: [0], mode: 'markers+text',
+                marker: { size: 11, color: '#00e676', symbol: 'diamond', line: { color: '#fff', width: 1.5 } },
+                text: [`PRB (\u0394V = ${f1(ac.periapsis_raise_dv_ms, 1)} m/s)`],
+                textposition: 'top left',
+                textfont: { color: '#00e676', size: 9.5 },
+                name: 'Periapsis Raise Burn @ Apoapsis'
+            },
+            // Inset Bar Chart: Propellant Required (Propulsive MOI vs Aerocapture)
+            {
+                type: 'bar',
+                xaxis: 'x2', yaxis: 'y2',
+                x: ['Propulsive MOI', 'Aerocapture'],
+                y: [Math.round(ac.fuel_saved_heavy_stack_kg + prbFuelKg), Math.round(prbFuelKg)],
+                marker: { color: ['#ef4444', '#00e676'] },
+                text: [`${Math.round(ac.fuel_saved_heavy_stack_kg + prbFuelKg).toLocaleString()} kg`, `${Math.round(prbFuelKg)} kg`],
+                textposition: 'auto',
+                textfont: { color: '#fff', size: 9 },
+                showlegend: false,
+                hovertemplate: '%{x}: <b>%{y} kg Fuel</b><extra>Propellant Comparison</extra>'
+            }
+        ], {
+            title: {
+                text: `25B. Hyperbolic-to-Elliptical Capture Orbit (e = ${f1(ac.initial_hyp_ecc, 2)} \u2192 ${f1(ac.final_eccentricity, 3)}) & Propellant Saved (${Math.round(ac.fuel_saved_heavy_stack_kg).toLocaleString()} kg)`,
+                font: { color: '#e2e8f0', size: 12.2 }
+            },
+            margin: { l: 52, r: 18, b: 46, t: 40 },
+            xaxis: {
+                title: `${ac.planet_name}-Centric X [km]`,
+                color: '#e2e8f0', gridcolor: '#1e293b', zerolinecolor: '#334155',
+                range: [-maxOrbitR * 1.05, maxOrbitR * 1.15]
+            },
+            yaxis: {
+                title: `${ac.planet_name}-Centric Y [km]`,
+                color: '#e2e8f0', gridcolor: '#1e293b', zerolinecolor: '#334155',
+                range: [-maxOrbitR * 0.95, maxOrbitR * 0.95],
+                scaleanchor: 'x', scaleratio: 1
+            },
+            xaxis2: {
+                domain: [0.68, 0.98], anchor: 'y2',
+                color: '#cbd5e1', tickfont: { size: 8.5 }
+            },
+            yaxis2: {
+                domain: [0.06, 0.36], anchor: 'x2',
+                title: { text: 'Fuel [kg]', font: { size: 8.5, color: '#cbd5e1' } },
+                color: '#cbd5e1', gridcolor: 'rgba(148,163,184,0.15)', tickfont: { size: 8 }
+            },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.6 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+    }
+
+    function aeroRecomputeFromModal() {
+        if (!globalData) return;
+        const meth   = document.getElementById('aeroInsertionMethod') ? parseInt(document.getElementById('aeroInsertionMethod').value, 10) : 1;
+        const ld     = document.getElementById('aeroLiftToDrag') ? parseFloat(document.getElementById('aeroLiftToDrag').value) : 0.25;
+        const fpa    = document.getElementById('aeroEntryFpaDeg') ? parseFloat(document.getElementById('aeroEntryFpaDeg').value) : -11.35;
+        const plId   = document.getElementById('iplTarget') ? parseInt(document.getElementById('iplTarget').value, 10) : 0;
+        const vinfA  = (globalData.interplanetary_summary && globalData.interplanetary_summary.vinf_arr_kms) ? globalData.interplanetary_summary.vinf_arr_kms : 2.95;
+        const ispVal = (globalData.maneuver && globalData.maneuver.isp_s) ? globalData.maneuver.isp_s : 316.0;
+
+        const res = simulateAerocapturePassJS(meth, plId, ld, fpa, vinfA, ispVal);
+        globalData.aerocapture_summary = res.aerocapture_summary;
+        globalData.traj_aerocapture    = res.traj_aerocapture;
+        renderAerocaptureSection(globalData);
+        resizeVisiblePlots();
+    }
+
     function openPdrReportModal() {
         const d = globalData || defaultJsonBackup;
         if (!d) return;
@@ -13557,6 +14178,20 @@
             isNaN(eoOffN) ? 0.0 : eoOffN
         );
 
+        // Sprint 34: Planetary Aerocapture, Aerobraking & Martian Atmospheric Pass
+        const aeroMeth = document.getElementById('aeroInsertionMethod') ? parseInt(document.getElementById('aeroInsertionMethod').value, 10) : 1;
+        const aeroLd   = document.getElementById('aeroLiftToDrag') ? parseFloat(document.getElementById('aeroLiftToDrag').value) : 0.25;
+        const aeroFpa  = document.getElementById('aeroEntryFpaDeg') ? parseFloat(document.getElementById('aeroEntryFpaDeg').value) : -11.35;
+        const aeroPlId = parseInt(document.getElementById('iplTarget').value, 10) || 0;
+        const aeroRes  = simulateAerocapturePassJS(
+            aeroMeth,
+            aeroPlId,
+            aeroLd,
+            aeroFpa,
+            iplRes.interplanetary_summary ? iplRes.interplanetary_summary.vinf_arr_kms : 2.95,
+            isp
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -13600,6 +14235,7 @@
             ground_segment_summary: gndRes.ground_segment_summary,
             eps_hifi_summary: epsRes.eps_hifi_summary,
             payload_mapping_summary: eoRes.payload_mapping_summary,
+            aerocapture_summary: aeroRes.aerocapture_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -13625,7 +14261,8 @@
             traj_ground_track: gndRes.traj_ground_track,
             traj_eps: epsRes.traj_eps,
             coverage_heatmap: eoRes.coverage_heatmap,
-            traj_sensor_footprint: eoRes.traj_sensor_footprint
+            traj_sensor_footprint: eoRes.traj_sensor_footprint,
+            traj_aerocapture: aeroRes.traj_aerocapture
         };
 
         document.getElementById('inputModal').classList.remove('open');
@@ -13675,6 +14312,9 @@
     });
     ['eoFovXDeg', 'eoFovYDeg', 'eoOffNadirDeg'].forEach(id => {
         document.getElementById(id).addEventListener('change', eoRecomputeFromModal);
+    });
+    ['aeroInsertionMethod', 'aeroLiftToDrag', 'aeroEntryFpaDeg'].forEach(id => {
+        document.getElementById(id).addEventListener('change', aeroRecomputeFromModal);
     });
     document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
     document.getElementById('btnCancelModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));

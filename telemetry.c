@@ -604,6 +604,19 @@ static void write_flyby_hyperbola_json_array(FILE *fp, GravityAssistReport flyby
     fprintf(fp, "  ]");
 }
 
+static void write_aerocapture_trajectory_json_array(FILE *fp, AerocaptureReport aero) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < aero.num_samples; i++) {
+        AerocaptureSample s = aero.samples[i];
+        fprintf(fp, "    {\"t_sec\":%.1f,\"alt_km\":%.2f,\"vel_kms\":%.4f,\"esc_vel_kms\":%.4f,\"fpa_deg\":%.3f,\"bank_angle_deg\":%.2f,\"rho_kgm3\":%.3e,\"heat_flux_wcm2\":%.2f,\"decel_g\":%.3f,\"spec_energy_km2s2\":%.3f,\"inst_sma_km\":%.1f,\"inst_ecc\":%.4f,\"inst_apoapsis_km\":%.1f,\"downrange_km\":%.1f}%s\n",
+                s.t_sec, s.alt_km, s.vel_kms, s.esc_vel_kms, s.fpa_deg, s.bank_angle_deg,
+                s.rho_kgm3, s.heat_flux_wcm2, s.decel_g, s.spec_energy_km2s2,
+                s.inst_sma_km, s.inst_ecc, s.inst_apoapsis_km, s.downrange_km,
+                (i < aero.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 static void format_oem_utc_timestamp(double elapsed_sec, char *buf, size_t buf_size) {
     // Base Epoch: 2026-11-12T00:00:00.000 UTC
     int total_ms = (int)llround(fmax(0.0, elapsed_sec) * 1000.0);
@@ -774,6 +787,7 @@ bool export_web_mission_json(const char *filename,
                              EPSHiFiReport eps,
                              const EORaycastReport *eo,
                              GravityAssistReport flyby,
+                             AerocaptureReport aero,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -1271,6 +1285,30 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"post_flyby_sma_au\": %.4f, \"post_flyby_ecc\": %.4f, \"prop_fuel_saved_kg\": %.1f\n  },\n",
             flyby.post_flyby_sma_au, flyby.post_flyby_ecc, flyby.prop_fuel_saved_kg);
 
+    fprintf(fp, "  \"aerocapture_summary\": {\n");
+    fprintf(fp, "    \"insertion_method\": %d, \"method_name\": \"%s\", \"planet_id\": %d, \"planet_name\": \"%s\",\n",
+            (int)aero.spec.method, aero.method_name, (int)aero.spec.planet, aero.planet_name);
+    fprintf(fp, "    \"lift_to_drag\": %.3f, \"entry_fpa_deg\": %.2f, \"ballistic_coeff_kgm2\": %.1f, \"nose_radius_m\": %.2f,\n",
+            aero.spec.lift_to_drag, aero.spec.entry_fpa_deg, aero.spec.ballistic_coeff_kgm2, aero.spec.nose_radius_m);
+    fprintf(fp, "    \"entry_interface_alt_km\": %.1f, \"vinf_arr_kms\": %.4f, \"entry_vel_kms\": %.4f, \"exit_vel_kms\": %.4f,\n",
+            aero.entry_interface_alt_km, aero.vinf_arr_kms, aero.entry_vel_kms, aero.exit_vel_kms);
+    fprintf(fp, "    \"min_altitude_km\": %.2f, \"time_at_min_alt_s\": %.1f, \"pass_duration_s\": %.1f, \"capture_time_s\": %.1f,\n",
+            aero.min_altitude_km, aero.time_at_min_alt_s, aero.pass_duration_s, aero.capture_time_s);
+    fprintf(fp, "    \"corridor_skip_fpa_deg\": %.2f, \"corridor_burn_fpa_deg\": %.2f, \"corridor_width_deg\": %.2f, \"corridor_margin_pct\": %.1f,\n",
+            aero.corridor_skip_fpa_deg, aero.corridor_burn_fpa_deg, aero.corridor_width_deg, aero.corridor_margin_pct);
+    fprintf(fp, "    \"peak_heat_flux_wcm2\": %.2f, \"total_heat_load_jcm2\": %.1f, \"peak_decel_g\": %.2f, \"peak_stag_pressure_kpa\": %.2f,\n",
+            aero.peak_heat_flux_wcm2, aero.total_heat_load_jcm2, aero.peak_decel_g, aero.peak_stag_pressure_kpa);
+    fprintf(fp, "    \"initial_hyp_ecc\": %.4f, \"exit_eccentricity\": %.4f, \"final_eccentricity\": %.4f,\n",
+            aero.initial_hyp_ecc, aero.exit_eccentricity, aero.final_eccentricity);
+    fprintf(fp, "    \"exit_sma_km\": %.1f, \"captured_apoapsis_km\": %.1f, \"final_periapsis_km\": %.1f,\n",
+            aero.exit_sma_km, aero.captured_apoapsis_km, aero.final_periapsis_km);
+    fprintf(fp, "    \"drag_dv_bled_kms\": %.4f, \"propulsive_moi_dv_kms\": %.4f, \"periapsis_raise_dv_ms\": %.2f,\n",
+            aero.drag_dv_bled_kms, aero.propulsive_moi_dv_kms, aero.periapsis_raise_dv_ms);
+    fprintf(fp, "    \"eq_dv_saved_kms\": %.4f, \"eq_dv_saved_ms\": %.1f,\n",
+            aero.eq_dv_saved_kms, aero.eq_dv_saved_ms);
+    fprintf(fp, "    \"fuel_saved_spacecraft_kg\": %.1f, \"fuel_saved_heavy_stack_kg\": %.1f, \"corridor_status\": \"%s\"\n  },\n",
+            aero.fuel_saved_spacecraft_kg, aero.fuel_saved_heavy_stack_kg, aero.corridor_status);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -1419,6 +1457,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_flyby_hyperbola\": ");
     write_flyby_hyperbola_json_array(fp, flyby);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_aerocapture\": ");
+    write_aerocapture_trajectory_json_array(fp, aero);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

@@ -1493,4 +1493,85 @@ typedef struct {
     FlybyHyperbolaSample hyperbola[MAX_FLYBY_SAMPLES];
 } GravityAssistReport;
 
+// ==========================================
+// 5V. SPRINT 34: AEROCAPTURE, AEROBRAKING & MARTIAN ATMOSPHERIC PASS
+// ==========================================
+#define MAX_AEROCAPTURE_SAMPLES 141 // Campioni temporali del passaggio atmosferico 3-DOF di aerocattura
+
+typedef enum {
+    INSERTION_PROPULSIVE_BURN = 0, // Cattura orbitale propulsiva classica (Retro-Burn impulsivo dV_MOI)
+    INSERTION_AEROCAPTURE     = 1  // Cattura atmosferica (Aerocapture + Periapsis Raise Burn + Aerobraking)
+} OrbitInsertionMethod;
+
+typedef struct {
+    OrbitInsertionMethod method;          // Metodo di inserzione in orbita target (0=Propulsive, 1=Aerocapture)
+    InterplanetaryTarget planet;          // Pianeta dotato di atmosfera per l'aerocattura (0=Mars, 1=Venus)
+    double lift_to_drag;                  // Efficienza aerodinamica ipersonica L/D = C_L / C_D (es. 0.25)
+    double entry_fpa_deg;                 // Flight-Path Angle all'interfaccia di ingresso h_EI = 125 km [deg] (es. -11.4 deg)
+    double ballistic_coeff_kgm2;          // Coefficiente balistico beta = m / (C_D * A) [kg/m^2] (es. 145 kg/m^2)
+    double nose_radius_m;                 // Raggio di curvatura dello scudo termico TPS R_n [m] (es. 1.25 m)
+    double target_apoapsis_km;            // Quota di apocentro target dell'orbita ellittica post-cattura [km] (es. 1200.0 km)
+    double final_periapsis_km;            // Quota di pericentro finale dopo il Periapsis Raise Burn [km] (es. 400.0 km)
+} AerocaptureSpec;
+
+typedef struct {
+    double t_sec;                  // Tempo trascorso dall'Entry Interface (h_EI = 125 km) [s]
+    double alt_km;                 // Quota sopra la superficie planetaria h(t) [km]
+    double vel_kms;                // Velocità planetocentrica relativa V(t) [km/s]
+    double esc_vel_kms;            // Velocità di fuga locale sqrt(2*mu/r) [km/s]
+    double fpa_deg;                // Angolo di rampa (Flight-Path Angle) gamma(t) [deg]
+    double bank_angle_deg;         // Angolo di Bank (Rollio) comandato dal guida GNC sigma(t) [deg]
+    double rho_kgm3;               // Densità atmosferica locale rho(h) [kg/m^3]
+    double heat_flux_wcm2;         // Flusso termico aerotermodinamico totale (Sutton-Graves CO2 + rad) [W/cm^2]
+    double decel_g;                // Decelerazione aerodinamica totale in multipli di g0 [g]
+    double spec_energy_km2s2;      // Energia orbitale specifica kepleriana E = V^2/2 - mu/r [km^2/s^2]
+    double inst_sma_km;            // Semiasse maggiore istantaneo a(t) = -mu / (2*E) [km]
+    double inst_ecc;               // Eccentricità orbitale istantanea e(t) [-]
+    double inst_apoapsis_km;       // Quota di apocentro istantanea post-cattura (se E < 0) [km]
+    double downrange_km;           // Distanza curvilinea percorsa lungo l'arco atmosferico [km]
+} AerocaptureSample;
+
+typedef struct {
+    AerocaptureSpec spec;
+    char   method_name[48];               // "Hypersonic Aerocapture + Periapsis Raise" / "Propulsive MOI Retro-Burn"
+    char   planet_name[24];               // "Mars" o "Venus"
+    double entry_interface_alt_km;        // Quota dell'Entry Interface atmosferica [km] (125.0 km su Marte)
+    double vinf_arr_kms;                  // Eccesso iperbolico di arrivo v_inf,arr [km/s]
+    double entry_vel_kms;                 // Velocità all'ingresso atmosferico V_EI [km/s]
+    double exit_vel_kms;                  // Velocità all'uscita dall'atmosfera V_exit [km/s]
+    double min_altitude_km;               // Altitudine minima raggiunta durante il passaggio atmosferico [km]
+    double time_at_min_alt_s;             // Istante del passaggio al pericentro atmosferico [s]
+    double pass_duration_s;               // Durata totale dell'attraversamento atmosferico [s]
+    double capture_time_s;                // Istante in cui l'energia diventa negativa (E < 0, e < 1) [s]
+
+    double corridor_skip_fpa_deg;         // Limite superiore del corridoio (Skip-Out boundary) [deg]
+    double corridor_burn_fpa_deg;         // Limite inferiore del corridoio (Thermal/Impact undershoot) [deg]
+    double corridor_width_deg;            // Ampiezza del Corridoio di Aerocattura [deg]
+    double corridor_margin_pct;           // Margine di sicurezza dentro il corridoio di volo [%]
+
+    double peak_heat_flux_wcm2;           // Picco di flusso termico sullo scudo TPS [W/cm^2]
+    double total_heat_load_jcm2;          // Carico termico integrato sul pass [J/cm^2]
+    double peak_decel_g;                  // Massima decelerazione aerodinamica avvertita [g]
+    double peak_stag_pressure_kpa;        // Pressione dinamica massima di ristagno q_bar [kPa]
+
+    double initial_hyp_ecc;               // Eccentricità iperbolica di arrivo e_in (> 1)
+    double exit_eccentricity;             // Eccentricità dell'orbita ellittica subito all'uscita atmosferica
+    double final_eccentricity;            // Eccentricità finale raggiunta dopo innalzamento pericentro e aerobraking
+    double exit_sma_km;                   // Semiasse maggiore dell'orbita catturata [km]
+    double captured_apoapsis_km;          // Quota di apocentro raggiunta post-passaggio [km]
+    double final_periapsis_km;            // Quota di pericentro finale sicura fuori dall'atmosfera [km]
+
+    double drag_dv_bled_kms;              // Velocità cinetica dissipata per attrito atmosferico int(D/m dt) [km/s]
+    double propulsive_moi_dv_kms;         // Costo equivalente del burn propulsivo classico dV_MOI [km/s]
+    double periapsis_raise_dv_ms;         // Piccolo burn all'apocentro per alzare il pericentro fuori dall'atmosfera [m/s]
+    double eq_dv_saved_kms;               // Delta-V propulsivo equivalente risparmiato grazie all'aerocattura [km/s]
+    double eq_dv_saved_ms;                // Delta-V propulsivo equivalente risparmiato [m/s]
+    double fuel_saved_spacecraft_kg;      // Carburante risparmiato sul veicolo (500 kg dry/wet class) [kg]
+    double fuel_saved_heavy_stack_kg;     // Carburante risparmiato su uno stadio pesante marziano (3500 kg class) [kg]
+    char   corridor_status[64];           // Verdetto ("NOMINAL AEROCAPTURE — CLOSED ELLIPTICAL ORBIT LOCKED")
+
+    int    num_samples;
+    AerocaptureSample samples[MAX_AEROCAPTURE_SAMPLES];
+} AerocaptureReport;
+
 #endif // ORBIT_TYPES_H

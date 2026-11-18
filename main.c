@@ -241,6 +241,19 @@ int main(void) {
         .flyby_alt_km = 140000.0       // Altitudine di pericentro h_p = 140,000 km (~1.96 R_J sopra le nubi)
     };
     GravityAssistReport flyby = simulate_gravity_assist_flyby(orb_initial, &ipl, &sc, flyby_spec);
+
+    // 25. SPRINT 34: AEROCAPTURE, AEROBRAKING & MARTIAN ATMOSPHERIC PASS
+    AerocaptureSpec aero_spec = {
+        .method               = INSERTION_AEROCAPTURE, // Cattura atmosferica su Marte invece del burn propulsivo dV_MOI
+        .planet               = PLANET_MARS,           // Atmosfera di CO2 di Marte (Entry Interface h_EI = 125 km)
+        .lift_to_drag         = 0.25,                  // Rapporto Portanza/Resistenza ipersonico L/D = 0.25
+        .entry_fpa_deg        = -11.35,                // Flight-Path Angle nominale nel centro del corridoio [deg]
+        .ballistic_coeff_kgm2 = 145.0,                 // Coefficiente balistico beta = m / (C_D * A) [kg/m^2]
+        .nose_radius_m        = 1.25,                  // Raggio dello scudo termico TPS R_n = 1.25 m
+        .target_apoapsis_km   = 1400.0,                // Quota di apocentro target post-passaggio [km]
+        .final_periapsis_km   = 400.0                  // Quota di pericentro finale dopo Periapsis Raise Burn [km]
+    };
+    AerocaptureReport aero = simulate_aerocapture_pass(&ipl, plan, aero_spec);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -505,15 +518,25 @@ int main(void) {
     printf("  * Propellantless Gain   : Free Gravity-Assist dV = %.3f km/s (%.0f m/s) | Helio Boost = %+.3f km/s (0 kg Fuel!)\n\n",
            flyby.free_dv_kms, flyby.free_dv_ms, flyby.helio_speed_gain_kms);
 
+    printf("[PLANETARY AEROCAPTURE, AEROBRAKING & MARTIAN ATMOSPHERIC PASS]\n");
+    printf("  * Insertion Method & L/D: %s on %s | L/D = %.2f | beta = %.0f kg/m^2\n",
+           aero.method_name, aero.planet_name, aero.spec.lift_to_drag, aero.spec.ballistic_coeff_kgm2);
+    printf("  * Corridor & Min Alt    : gamma_EI = %.2f deg [Corridor: %.2f .. %.2f deg] | Min Pass Alt = %.2f km\n",
+           aero.spec.entry_fpa_deg, aero.corridor_burn_fpa_deg, aero.corridor_skip_fpa_deg, aero.min_altitude_km);
+    printf("  * Aerothermal Heating   : Peak Heat Flux = %.2f W/cm^2 | Total Load = %.0f J/cm^2 | Peak Decel = %.2f g\n",
+           aero.peak_heat_flux_wcm2, aero.total_heat_load_jcm2, aero.peak_decel_g);
+    printf("  * Orbit Capture & Fuel  : e_in = %.3f -> e_final = %.3f (h_a = %.0f km) | Eq. dV Saved = %.3f km/s (%.0f kg Heavy Stack Fuel Saved!)\n\n",
+           aero.initial_hyp_ecc, aero.final_eccentricity, aero.captured_apoapsis_km, aero.eq_dv_saved_kms, aero.fuel_saved_heavy_stack_kg);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Gravity Assist Flyby, EO Raycasting, Hi-Fi EPS & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Martian Aerocapture, Gravity Assist, EO Raycasting & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;
