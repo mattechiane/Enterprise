@@ -233,6 +233,14 @@ int main(void) {
         .wavelength_nm  = 550.0 // Lunghezza d'onda visibile lambda = 550 nm
     };
     eo = simulate_eo_raycasting_and_coverage(orb_target, plan, adcs, eo_spec, EARTH_MU);
+
+    // 24. SPRINT 33: INTERPLANETARY GRAVITY ASSIST (PLANETARY FLYBY), V-INFINITY ROTATION & B-PLANE TARGETING
+    GravityAssistSpec flyby_spec = {
+        .enable_flyby = true,          // Abilita Gravity Assist (Slingshot) di default
+        .flyby_planet = FLYBY_JUPITER, // Flyby su Giove (Voyager / Cassini / New Horizons class)
+        .flyby_alt_km = 140000.0       // Altitudine di pericentro h_p = 140,000 km (~1.96 R_J sopra le nubi)
+    };
+    GravityAssistReport flyby = simulate_gravity_assist_flyby(orb_initial, &ipl, &sc, flyby_spec);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -487,15 +495,25 @@ int main(void) {
     printf("  * Global Heatmap Grid   : Cumulative Coverage = %.2f%% (%d / %d cells hit, Peak Revisit = %dx)\n\n",
            eo.global_coverage_pct, eo.unique_cells_hit, eo.total_grid_cells, eo.max_revisit_hits);
 
+    printf("[INTERPLANETARY GRAVITY ASSIST (PLANETARY FLYBY), V-INFINITY ROTATION & B-PLANE]\n");
+    printf("  * Flyby Target & Periap.: %s (a = %.2f AU, R_p = %.1f km) | h_flyby = %.0f km (r_p = %.0f km)\n",
+           flyby.flyby_planet_name, flyby.planet_sma_au, flyby.r_planet_km, flyby.spec.flyby_alt_km, flyby.periapsis_radius_km);
+    printf("  * Hyperbolic Excess v_inf: ||v_inf|| = %.3f km/s | B-Plane Impact B = %.0f km | e_hyp = %.4f\n",
+           flyby.vinf_kms, flyby.b_plane_km, flyby.hyp_ecc);
+    printf("  * Deflection & Velocities: Turn Angle delta = %.2f deg | V_helio,in = %.2f km/s -> V_helio,out = %.2f km/s\n",
+           flyby.deflection_angle_deg, flyby.v_sc_in_kms, flyby.v_sc_out_kms);
+    printf("  * Propellantless Gain   : Free Gravity-Assist dV = %.3f km/s (%.0f m/s) | Helio Boost = %+.3f km/s (0 kg Fuel!)\n\n",
+           flyby.free_dv_kms, flyby.free_dv_ms, flyby.helio_speed_gain_kms);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with EO WGS84 Raycasting, Heatmap, Hi-Fi EPS & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Gravity Assist Flyby, EO Raycasting, Hi-Fi EPS & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

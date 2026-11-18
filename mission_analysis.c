@@ -5881,6 +5881,192 @@ EORaycastReport simulate_eo_raycasting_and_coverage(KeplerianElements orb_target
     return rep;
 }
 
+// =========================================================================
+// SPRINT 33: INTERPLANETARY GRAVITY ASSIST (PLANETARY FLYBY), V-INFINITY
+// ROTATION, B-PLANE TARGETING & PLANET-CENTRIC 3D HYPERBOLA
+// =========================================================================
+GravityAssistReport simulate_gravity_assist_flyby(KeplerianElements orb_init,
+                                                  const InterplanetaryReport *ipl,
+                                                  const SpacecraftConfig *sc,
+                                                  GravityAssistSpec spec) {
+    (void)orb_init;
+    (void)ipl;
+    GravityAssistReport rep;
+    memset(&rep, 0, sizeof(rep));
+
+    if ((int)spec.flyby_planet < 0 || (int)spec.flyby_planet > 2) {
+        spec.flyby_planet = FLYBY_JUPITER;
+    }
+    if (spec.flyby_alt_km < 150.0 || spec.flyby_alt_km > 2000000.0 || isnan(spec.flyby_alt_km)) {
+        spec.flyby_alt_km = (spec.flyby_planet == FLYBY_JUPITER) ? 140000.0 : 1200.0;
+    }
+    rep.spec = spec;
+
+    double lon_fb_deg = 128.0;
+    if (spec.flyby_planet == FLYBY_JUPITER) {
+        snprintf(rep.flyby_planet_name, sizeof(rep.flyby_planet_name), "Jupiter");
+        rep.mu_planet     = JUPITER_MU;
+        rep.r_planet_km   = JUPITER_RADIUS_KM;
+        rep.planet_sma_au = JUPITER_SMA_AU;
+        lon_fb_deg        = 128.0;
+    } else if (spec.flyby_planet == FLYBY_VENUS) {
+        snprintf(rep.flyby_planet_name, sizeof(rep.flyby_planet_name), "Venus");
+        rep.mu_planet     = VENUS_MU;
+        rep.r_planet_km   = VENUS_RADIUS_KM;
+        rep.planet_sma_au = VENUS_SMA_AU;
+        lon_fb_deg        = -48.0;
+    } else {
+        snprintf(rep.flyby_planet_name, sizeof(rep.flyby_planet_name), "Mars");
+        rep.mu_planet     = MARS_MU;
+        rep.r_planet_km   = MARS_RADIUS_KM;
+        rep.planet_sma_au = MARS_SMA_AU;
+        lon_fb_deg        = 112.0;
+    }
+
+    rep.periapsis_radius_km = rep.r_planet_km + spec.flyby_alt_km;
+    double r_fb_km = rep.planet_sma_au * AU_KM;
+    rep.soi_planet_km = r_fb_km * pow(rep.mu_planet / SUN_MU, 0.4);
+
+    // 1. Stato eliocentrico del pianeta all'incontro (orbita circolare eclittica)
+    double lon_rad = lon_fb_deg * DEG2RAD;
+    Vector3D e_r   = { cos(lon_rad), sin(lon_rad), 0.0 };
+    Vector3D e_t   = { -sin(lon_rad), cos(lon_rad), 0.0 };
+    Vector3D e_z   = { 0.0, 0.0, 1.0 };
+
+    rep.v_planet_kms = sqrt(SUN_MU / r_fb_km);
+    rep.v_planet_vec = vec_scale(e_t, rep.v_planet_kms);
+
+    // 2. Velocità eliocentrica in ingresso della sonda V_sc,in su traiettoria di trasferimento da 1.0 AU
+    double r1_km    = 1.0 * AU_KM;
+    double r_min_km = fmin(r1_km, r_fb_km) * 0.96;
+    double a_in_km  = 0.55 * (r1_km + r_fb_km);
+    rep.v_sc_in_kms = sqrt(SUN_MU * (2.0 / r_fb_km - 1.0 / a_in_km));
+
+    double h_in     = sqrt(SUN_MU * r_min_km * (2.0 - r_min_km / a_in_km));
+    double vt_in    = h_in / r_fb_km;
+    double vr_mag   = sqrt(fmax(0.0, rep.v_sc_in_kms * rep.v_sc_in_kms - vt_in * vt_in));
+    double vr_in    = (r_fb_km >= r1_km) ? vr_mag : -vr_mag;
+    double inc_app  = 3.5 * DEG2RAD; // Leggera inclinazione d'approccio 3D fuori dall'eclittica
+
+    rep.v_sc_in_vec = vec_add(
+        vec_scale(e_r, vr_in),
+        vec_add(vec_scale(e_t, vt_in * cos(inc_app)), vec_scale(e_z, vt_in * sin(inc_app)))
+    );
+
+    // 3. Eccesso iperbolico in ingresso: v_inf,in = V_sc,in - V_planet
+    rep.vinf_in_vec = vec_sub(rep.v_sc_in_vec, rep.v_planet_vec);
+    rep.vinf_kms    = fmax(0.1, vec_norm(rep.vinf_in_vec));
+
+    // 4. Dinamica dell'iperbole di Flyby e Angolo di Deflessione delta
+    //    e_hyp = 1 + (r_p * v_inf^2 / mu_planet),  delta = 2 * arcsin(1 / e_hyp)
+    double rp = rep.periapsis_radius_km;
+    double vinf2 = rep.vinf_kms * rep.vinf_kms;
+    rep.hyp_ecc = 1.0 + (rp * vinf2) / rep.mu_planet;
+    rep.hyp_sma_km = -rep.mu_planet / vinf2;
+    double sin_half_delta = adcs_clamp(1.0 / rep.hyp_ecc, 0.0, 1.0);
+    double delta_rad = 2.0 * asin(sin_half_delta);
+    rep.deflection_angle_deg = delta_rad * RAD2DEG;
+
+    // Parametro d'impatto nel B-Plane: B = r_p * sqrt(1 + 2*mu_p / (r_p * v_inf^2))
+    rep.b_plane_km      = rp * sqrt(1.0 + (2.0 * rep.mu_planet) / (rp * vinf2));
+    rep.v_periapsis_kms = sqrt(vinf2 + (2.0 * rep.mu_planet) / rp);
+
+    // 5. Rotazione del vettore velocità v_inf,in di delta nel piano dell'iperbole (Trailing-Side Slingshot)
+    Vector3D s_hat = vec_scale(rep.vinf_in_vec, 1.0 / rep.vinf_kms);
+    double proj_vp = vec_dot(rep.v_planet_vec, s_hat);
+    Vector3D u_perp = vec_sub(rep.v_planet_vec, vec_scale(s_hat, proj_vp));
+    if (vec_norm(u_perp) < 1e-6) {
+        u_perp = e_r;
+    }
+    Vector3D n_turn = vec_normalize(u_perp);
+
+    // v_inf,out ruotato di delta verso n_turn: ||v_inf,out|| = ||v_inf,in|| = v_inf
+    rep.vinf_out_vec = vec_scale(
+        vec_add(vec_scale(s_hat, cos(delta_rad)), vec_scale(n_turn, sin(delta_rad))),
+        rep.vinf_kms
+    );
+
+    // 6. Velocità eliocentrica in uscita: V_sc,out = V_planet + v_inf,out e Delta-V "Gratuito"
+    rep.v_sc_out_vec = vec_add(rep.v_planet_vec, rep.vinf_out_vec);
+    rep.v_sc_out_kms = vec_norm(rep.v_sc_out_vec);
+
+    Vector3D dv_free_vec = vec_sub(rep.v_sc_out_vec, rep.v_sc_in_vec);
+    rep.free_dv_kms = vec_norm(dv_free_vec); // Identico a 2 * v_inf * sin(delta / 2)
+    rep.free_dv_ms  = rep.free_dv_kms * 1000.0;
+    rep.helio_speed_gain_kms = rep.v_sc_out_kms - rep.v_sc_in_kms;
+
+    // Elementi orbitali eliocentrici post-flyby
+    Vector3D r_helio_fb = vec_scale(e_r, r_fb_km);
+    double eps_out = 0.5 * (rep.v_sc_out_kms * rep.v_sc_out_kms) - SUN_MU / r_fb_km;
+    rep.post_flyby_sma_au = (-SUN_MU / (2.0 * eps_out)) / AU_KM;
+    Vector3D h_out = vec_cross(r_helio_fb, rep.v_sc_out_vec);
+    double h_out2  = vec_dot(h_out, h_out);
+    double e_out2  = 1.0 + (2.0 * eps_out * h_out2) / (SUN_MU * SUN_MU);
+    rep.post_flyby_ecc = (e_out2 > 0.0) ? sqrt(e_out2) : 0.0;
+
+    // Risparmio equivalente di propellente (Equazione di Tsiolkovsky se si dovesse fornire free_dv_ms coi motori)
+    (void)sc;
+    double m0_kg = 500.0;
+    double isp_s = 316.0;
+    rep.prop_fuel_saved_kg = m0_kg * (exp(rep.free_dv_ms / (isp_s * G0)) - 1.0);
+    if (rep.prop_fuel_saved_kg > 99999.0) rep.prop_fuel_saved_kg = 99999.0;
+
+    // 7. Costruzione della base ortonormale 3D del piano iperbolico (p_hat, q_hat) e del B-Plane
+    //    p_hat punta dal centro del pianeta al pericentro r_p; q_hat punta lungo la velocità al pericentro
+    Vector3D s_out_hat = vec_scale(rep.vinf_out_vec, 1.0 / rep.vinf_kms);
+    Vector3D p_hat = vec_normalize(vec_sub(s_out_hat, s_hat));
+    // NOTA: Poiché la gravità è attrattiva, il pianeta tira la sonda verso di sé, quindi il pericentro
+    // si trova dal lato opposto alla deflessione: r_p punta lungo -n_turn (ovvero s_hat - s_out_hat)!
+    p_hat = vec_normalize(vec_sub(s_hat, s_out_hat));
+    Vector3D q_hat = vec_normalize(vec_add(s_hat, s_out_hat));
+
+    rep.periapsis_vec_km = vec_scale(p_hat, rp);
+    // Vettore parametro d'impatto B (ortogonale a s_hat, dal centro pianeta all'asintoto d'ingresso)
+    Vector3D b_dir = vec_normalize(vec_sub(p_hat, vec_scale(s_hat, vec_dot(p_hat, s_hat))));
+    rep.b_vec_km    = vec_scale(b_dir, rep.b_plane_km);
+    rep.b_theta_deg = atan2(rep.b_vec_km.z, hypot(rep.b_vec_km.x, rep.b_vec_km.y)) * RAD2DEG;
+
+    // 8. Campionamento 3D dell'iperbole planetocentrica: r(nu) = p_hyp / (1 + e_hyp * cos(nu))
+    double p_hyp  = rp * (1.0 + rep.hyp_ecc);
+    double r_cut  = fmin(rep.soi_planet_km * 0.25, fmax(6.5 * rp, 8.0 * rep.r_planet_km));
+    double cos_nu_max = adcs_clamp((p_hyp / r_cut - 1.0) / rep.hyp_ecc, -0.96, 0.96);
+    double nu_max = acos(cos_nu_max);
+
+    int n_pts = MAX_FLYBY_SAMPLES;
+    rep.num_hyperbola_samples = n_pts;
+    double mean_motion_hyp = sqrt(rep.mu_planet / pow(fabs(rep.hyp_sma_km), 3.0));
+
+    for (int i = 0; i < n_pts; i++) {
+        double frac = (double)i / (double)(n_pts - 1);
+        double nu   = -nu_max + 2.0 * nu_max * frac;
+        double r_km = p_hyp / (1.0 + rep.hyp_ecc * cos(nu));
+        Vector3D pos_3d = vec_add(
+            vec_scale(p_hat, r_km * cos(nu)),
+            vec_scale(q_hat, r_km * sin(nu))
+        );
+        double v_inst = sqrt(vinf2 + (2.0 * rep.mu_planet) / r_km);
+
+        // Anomalia iperbolica F e tempo di volo relativo al pericentro tramite equazione di Keplero iperbolica
+        double tan_half_nu = tan(0.5 * nu);
+        double tanh_half_F = sqrt((rep.hyp_ecc - 1.0) / (rep.hyp_ecc + 1.0)) * tan_half_nu;
+        tanh_half_F = adcs_clamp(tanh_half_F, -0.9999, 0.9999);
+        double F_hyp = 2.0 * atanh(tanh_half_F);
+        double M_hyp = rep.hyp_ecc * sinh(F_hyp) - F_hyp;
+        double t_sec = M_hyp / fmax(1e-12, mean_motion_hyp);
+
+        rep.hyperbola[i].t_hr   = t_sec / 3600.0;
+        rep.hyperbola[i].nu_deg = nu * RAD2DEG;
+        rep.hyperbola[i].x_km   = pos_3d.x;
+        rep.hyperbola[i].y_km   = pos_3d.y;
+        rep.hyperbola[i].z_km   = pos_3d.z;
+        rep.hyperbola[i].r_km   = r_km;
+        rep.hyperbola[i].v_kms  = v_inst;
+    }
+
+    return rep;
+}
+
+
 
 
 

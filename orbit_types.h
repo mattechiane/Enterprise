@@ -1424,4 +1424,73 @@ typedef struct {
     EOSensorFootprintSample samples[MAX_EO_FOOTPRINT_SAMPLES];
 } EORaycastReport;
 
+// ==========================================
+// 5U. SPRINT 33: INTERPLANETARY GRAVITY ASSIST (PLANETARY FLYBY), V-INFINITY ROTATION & B-PLANE TARGETING
+// ==========================================
+#define JUPITER_MU          126686534.0 // Parametro gravitazionale di Giove [km^3/s^2]
+#define JUPITER_RADIUS_KM   71492.0     // Raggio equatoriale di Giove [km]
+#define JUPITER_SMA_AU      5.2044      // Semiasse maggiore eliocentrico di Giove [AU]
+#define MAX_FLYBY_SAMPLES   101         // Campioni 3D dell'iperbole planetocentrica di flyby
+
+typedef enum {
+    FLYBY_JUPITER = 0, // Slingshot gravitazionale su Giove (Voyager / Cassini / New Horizons class)
+    FLYBY_VENUS   = 1, // Gravity assist su Venere (Inner Solar System / Juice / BepiColombo class)
+    FLYBY_MARS    = 2  // Gravity assist su Marte (Rosetta / Dawn Deep-Space class)
+} FlybyPlanetType;
+
+typedef struct {
+    bool            enable_flyby;   // Abilita/disabilita la manovra di Gravity Assist (Flyby)
+    FlybyPlanetType flyby_planet;   // Pianeta intermedio per l'effetto fionda (0=Jupiter, 1=Venus, 2=Mars)
+    double          flyby_alt_km;   // Altitudine di pericentro del flyby sopra la superficie/nubi h_p [km]
+} GravityAssistSpec;
+
+typedef struct {
+    double t_hr;     // Tempo relativo al passaggio al pericentro t - t_p [ore]
+    double nu_deg;   // Anomalia vera lungo l'iperbole di flyby [deg]
+    double x_km;     // Coordinata X planetocentrica 3D [km]
+    double y_km;     // Coordinata Y planetocentrica 3D [km]
+    double z_km;     // Coordinata Z planetocentrica 3D [km]
+    double r_km;     // Distanza radiale dal centro del pianeta [km]
+    double v_kms;    // Velocità iperbolica planetocentrica istantanea [km/s]
+} FlybyHyperbolaSample;
+
+typedef struct {
+    GravityAssistSpec spec;
+    char     flyby_planet_name[32];    // Nome del pianeta di flyby ("Jupiter", "Venus", "Mars")
+    double   mu_planet;                // Parametro gravitazionale del pianeta mu_p [km^3/s^2]
+    double   r_planet_km;              // Raggio medio/equatoriale del pianeta R_p [km]
+    double   planet_sma_au;            // Distanza eliocentrica media del pianeta [AU]
+    double   soi_planet_km;            // Raggio della Sphere of Influence (SOI) di Laplace [km]
+    double   periapsis_radius_km;      // Raggio di pericentro del flyby r_p = R_p + h_flyby [km]
+
+    Vector3D v_planet_vec;             // Velocità orbitale eliocentrica del pianeta V_planet [km/s]
+    double   v_planet_kms;             // Modulo velocità eliocentrica del pianeta ||V_planet|| [km/s]
+    Vector3D v_sc_in_vec;              // Velocità eliocentrica in ingresso della sonda V_sc,in [km/s]
+    double   v_sc_in_kms;              // Modulo velocità eliocentrica in ingresso ||V_sc,in|| [km/s]
+    Vector3D vinf_in_vec;              // Eccesso iperbolico in ingresso v_inf,in = V_sc,in - V_planet [km/s]
+    double   vinf_kms;                 // Modulo dell'eccesso iperbolico ||v_inf|| [km/s]
+
+    double   deflection_angle_deg;     // Angolo di deflessione (Turning Angle) delta = 2*arcsin(1/e_hyp) [deg]
+    double   hyp_ecc;                  // Eccentricità dell'iperbole di flyby e_hyp = 1 + r_p*v_inf^2/mu_p [-]
+    double   hyp_sma_km;               // Semiasse maggiore iperbolico a_hyp = -mu_p/v_inf^2 [km]
+    double   b_plane_km;               // Parametro d'impatto nel B-Plane B = r_p*sqrt(1 + 2*mu_p/(r_p*v_inf^2)) [km]
+    double   b_theta_deg;              // Angolo di clock nel B-Plane theta_B [deg]
+    Vector3D b_vec_km;                 // Vettore 3D del parametro d'impatto B nel piano fondamentale [km]
+    Vector3D periapsis_vec_km;         // Vettore 3D di pericentro r_p nel riferimento planetocentrico [km]
+    double   v_periapsis_kms;          // Velocità massima al pericentro del flyby v_p [km/s]
+
+    Vector3D vinf_out_vec;             // Eccesso iperbolico in uscita ruotato di delta v_inf,out [km/s]
+    Vector3D v_sc_out_vec;             // Velocità eliocentrica in uscita V_sc,out = V_planet + v_inf,out [km/s]
+    double   v_sc_out_kms;             // Modulo velocità eliocentrica in uscita ||V_sc,out|| [km/s]
+    double   free_dv_kms;              // Delta-V vettoriale "gratuito" fornito dal pianeta ||V_sc,out - V_sc,in|| [km/s]
+    double   free_dv_ms;               // Delta-V vettoriale "gratuito" fornito dal pianeta [m/s]
+    double   helio_speed_gain_kms;     // Guadagno netto di velocità scalare eliocentrica ||V_sc,out|| - ||V_sc,in|| [km/s]
+    double   post_flyby_sma_au;        // Semiasse maggiore eliocentrico post-flyby [AU] (<0 se fuga dal Sistema Solare)
+    double   post_flyby_ecc;           // Eccentricità eliocentrica post-flyby [-]
+    double   prop_fuel_saved_kg;       // Massa equivalente di propellente risparmiata a costo zero [kg]
+
+    int      num_hyperbola_samples;
+    FlybyHyperbolaSample hyperbola[MAX_FLYBY_SAMPLES];
+} GravityAssistReport;
+
 #endif // ORBIT_TYPES_H

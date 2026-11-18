@@ -240,4 +240,11 @@ EORaycastReport simulate_eo_raycasting_and_coverage(KeplerianElements orb_target
                                                     EOSensorSpec spec,
                                                     double mu);
 
+// Sprint 33: Interplanetary Gravity Assist (Planetary Flyby), V-Infinity Rotation,
+// B-Plane Targeting & Planet-Centric 3D Hyperbolic Trajectory
+GravityAssistReport simulate_gravity_assist_flyby(KeplerianElements orb_init,
+                                                  const InterplanetaryReport *ipl,
+                                                  const SpacecraftConfig *sc,
+                                                  GravityAssistSpec spec);
+
 #endif // MISSION_ANALYSIS_H

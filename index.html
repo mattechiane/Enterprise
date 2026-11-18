@@ -185,8 +185,8 @@
         .kpi-value { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.4px; line-height: 1.15; }
         .kpi-unit { font-size: 11.5px; font-weight: 600; color: var(--text-muted); }
         .kpi-sub { font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ipl-kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
-        @media (max-width: 1360px) { .ipl-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        .ipl-kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+        @media (max-width: 1440px) { .ipl-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
         @media (max-width: 900px)  { .ipl-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
         /* ===== TAB FILTERING ===== */
@@ -1205,14 +1205,14 @@
     </div>
 </section>
 
-<!-- 18. INTERPLANETARY PATCHED-CONICS, PORKCHOP CONTOUR PLOT (C3) & HYPERBOLIC ESCAPE -->
+<!-- 18. INTERPLANETARY PATCHED-CONICS, PORKCHOP CONTOUR PLOT (C3), GRAVITY ASSIST FLYBY & B-PLANE -->
 <section class="section-block" id="sec-18" data-tab="transfer" style="--sec-order: 18;">
     <div class="section-header">
         <div>
-            <h2>18. Interplanetary Patched-Conics, Porkchop Contour Plot (C<sub>3</sub>) &amp; Hyperbolic Escape</h2>
-            <span>Heliocentric Lambert (&mu;<sub>&#9737;</sub> = 1.3271244&times;10<sup>11</sup> km&sup3;/s&sup2;) &bull; Launch Window vs. TOF Grid &bull; Departure Hyperbola (C<sub>3</sub>, DLA/RLA, &Delta;V<sub>TMI</sub>) &bull; Arrival Hyperbola &amp; B-Plane (&Delta;V<sub>MOI</sub>)</span>
+            <h2>18. Interplanetary Patched-Conics, Porkchop Contour (C<sub>3</sub>) &amp; Planetary Gravity Assist (Flyby)</h2>
+            <span>Heliocentric Lambert (&mu;<sub>&#9737;</sub> = 1.3271244&times;10<sup>11</sup> km&sup3;/s&sup2;) &bull; Porkchop C<sub>3</sub> Grid &bull; Planetary Slingshot V<sub>&infin;</sub> Rotation (&delta; = 2 arcsin(1/e<sub>hyp</sub>)) &bull; 3D B-Plane Targeting &amp; Zero-Propellant &Delta;V Gain</span>
         </div>
-        <span class="badge" id="iplStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#9737; PATCHED CONICS</span>
+        <span class="badge" id="iplStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#9737; PATCHED CONICS &amp; FLYBY</span>
     </div>
 
     <div class="ipl-kpi-grid">
@@ -1232,20 +1232,29 @@
             <div class="kpi-sub" id="iplKpiMoiSub">---</div>
         </div>
         <div class="kpi-card" style="--kpi-accent: var(--purple);">
-            <div class="kpi-top"><span class="kpi-label">Asymptote DLA</span></div>
+            <div class="kpi-top"><span class="kpi-label">Asymptote DLA / TOF</span><span class="kpi-micro-badge" id="iplKpiTof">---</span></div>
             <div class="kpi-main-row"><span class="kpi-value" id="iplKpiDla">---</span><span class="kpi-unit">deg</span></div>
             <div class="kpi-sub" id="iplKpiDlaSub">---</div>
+            <div class="kpi-sub" id="iplKpiTofSub" style="display:none;">---</div>
         </div>
-        <div class="kpi-card" style="--kpi-accent: var(--red);">
-            <div class="kpi-top"><span class="kpi-label">Heliocentric TOF</span></div>
-            <div class="kpi-main-row"><span class="kpi-value" id="iplKpiTof">---</span><span class="kpi-unit">days</span></div>
-            <div class="kpi-sub" id="iplKpiTofSub">---</div>
+        <div class="kpi-card" style="--kpi-accent: #00e676; border-color: rgba(0,230,118,0.45); background: linear-gradient(135deg, rgba(0,230,118,0.10), rgba(15,23,42,0.88));">
+            <div class="kpi-top"><span class="kpi-label">Free Gravity-Assist &Delta;V</span><span class="kpi-micro-badge" id="iplKpiFlybyFuelBadge" style="color:#00e676; border-color:rgba(0,230,118,0.45);">0 kg Fuel!</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="iplKpiFlybyDv" style="color:#00e676;">---</span><span class="kpi-unit">km/s</span></div>
+            <div class="kpi-sub" id="iplKpiFlybyDvSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: #ffab00;">
+            <div class="kpi-top"><span class="kpi-label">Flyby Deflection &delta;</span><span class="kpi-micro-badge" id="iplKpiFlybyPlanetBadge">Jupiter</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="iplKpiFlybyDelta">---</span><span class="kpi-unit">deg</span></div>
+            <div class="kpi-sub" id="iplKpiFlybyDeltaSub">---</div>
         </div>
     </div>
 
     <div class="rdv-grid-2">
         <div id="plotIplPorkchop" class="plot-container-rdv"></div>
         <div id="plotIplHelio" class="plot-container-rdv"></div>
+    </div>
+    <div style="margin-top: 16px; position: relative;">
+        <div id="plotIplFlyby3D" class="plot-container-rdv" style="height: 470px; min-height: 470px;"></div>
     </div>
 </section>
 
@@ -2116,12 +2125,12 @@
 
         <div class="form-section modal-cat-item" data-cat="orbit" style="margin-bottom: 10px;">
             <div class="form-section-header">
-                <h3 style="color:var(--amber)">16. Interplanetary Patched-Conics (Earth &rarr; Mars / Venus)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Heliocentric Lambert &bull; Porkchop C<sub>3</sub> / V<sub>&infin;</sub> grid &bull; Departure &amp; Arrival Hyperbolae &bull; B-Plane</span>
+                <h3 style="color:var(--amber)">16. Interplanetary Patched-Conics &amp; Planetary Gravity Assist (Flyby)</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Heliocentric Lambert &bull; Porkchop C<sub>3</sub> / V<sub>&infin;</sub> Grid &bull; Planetary Slingshot V<sub>&infin;</sub> Rotation &amp; B-Plane Targeting</span>
             </div>
-            <div class="input-group" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="input-group" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 10px;">
                 <div class="field">
-                    <label>Target Planet</label>
+                    <label>Target Planet (Direct Lambert)</label>
                     <select id="iplTarget">
                         <option value="0" selected>Mars</option>
                         <option value="1">Venus</option>
@@ -2134,6 +2143,26 @@
                 <div class="field">
                     <label>Interplanetary Transfer TOF [days]</label>
                     <input type="number" id="iplTofDays" value="210" min="150" max="320" step="5">
+                </div>
+            </div>
+            <div class="input-group" style="grid-template-columns: 1.2fr 1.5fr 1.3fr; padding-top: 8px; border-top: 1px dashed rgba(148,163,184,0.2);">
+                <div class="field" style="justify-content: center;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#00e676; font-weight:700; font-size:12px; margin-top:14px;">
+                        <input type="checkbox" id="iplEnableFlyby" checked style="width:16px; height:16px; accent-color:#00e676; cursor:pointer;">
+                        Enable Gravity Assist (Flyby)
+                    </label>
+                </div>
+                <div class="field">
+                    <label>Intermediate Flyby Planet (Slingshot Body)</label>
+                    <select id="iplFlybyPlanet">
+                        <option value="0" selected>Jupiter (5.20 AU &mdash; Giant Deep-Space Slingshot)</option>
+                        <option value="1">Venus (0.72 AU &mdash; Inner Solar System Assist)</option>
+                        <option value="2">Mars (1.52 AU &mdash; Terrestrial Gravity Assist)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Flyby Periapsis Altitude h<sub>p</sub> [km]</label>
+                    <input type="number" id="iplFlybyAltKm" value="140000" min="200" max="1500000" step="1000">
                 </div>
             </div>
         </div>
@@ -2858,6 +2887,18 @@
             }
             if (pm.off_nadir_deg !== undefined && document.getElementById('eoOffNadirDeg')) {
                 document.getElementById('eoOffNadirDeg').value = pm.off_nadir_deg;
+            }
+        }
+        if (data.gravity_assist_summary) {
+            const ga = data.gravity_assist_summary;
+            if (ga.enable_flyby !== undefined && document.getElementById('iplEnableFlyby')) {
+                document.getElementById('iplEnableFlyby').checked = (ga.enable_flyby !== 0);
+            }
+            if (ga.flyby_planet_id !== undefined && document.getElementById('iplFlybyPlanet')) {
+                document.getElementById('iplFlybyPlanet').value = String(ga.flyby_planet_id);
+            }
+            if (ga.flyby_alt_km !== undefined && document.getElementById('iplFlybyAltKm')) {
+                document.getElementById('iplFlybyAltKm').value = Math.round(ga.flyby_alt_km);
             }
         }
 
@@ -9199,6 +9240,170 @@
         };
     }
 
+    // =====================================================================
+    // SPRINT 33: INTERPLANETARY GRAVITY ASSIST (PLANETARY FLYBY), V_inf ROTATION & B-PLANE (JS mirror of mission_analysis.c)
+    // =====================================================================
+    const FLYBY_PLANETS = [
+        { id: 0, name: 'Jupiter', mu: 126686534.0, R: 71492.0, a_au: 5.2044,   lon_deg: 128.0, def_alt_km: 140000.0 },
+        { id: 1, name: 'Venus',   mu: 324858.592,  R: 6051.8,  a_au: 0.723332, lon_deg: -48.0, def_alt_km: 1200.0 },
+        { id: 2, name: 'Mars',    mu: 42828.375,   R: 3389.5,  a_au: 1.523679, lon_deg: 112.0, def_alt_km: 800.0 }
+    ];
+
+    function simulateGravityAssistFlybyJS(enableFlyby, flybyPlanetId, flybyAltKm, scMassKg) {
+        let pIdx = parseInt(flybyPlanetId, 10);
+        if (isNaN(pIdx) || pIdx < 0 || pIdx > 2) pIdx = 0;
+        const fp = FLYBY_PLANETS[pIdx];
+        let altKm = parseFloat(flybyAltKm);
+        if (!(altKm >= 150.0 && altKm <= 2000000.0)) altKm = fp.def_alt_km;
+
+        const rp = fp.R + altKm;
+        const rFbKm = fp.a_au * IPL.AU;
+        const soiKm = rFbKm * Math.pow(fp.mu / IPL.SUN_MU, 0.4);
+
+        const lonRad = fp.lon_deg * DEG2RAD;
+        const eR = { x: Math.cos(lonRad), y: Math.sin(lonRad), z: 0.0 };
+        const eT = { x: -Math.sin(lonRad), y: Math.cos(lonRad), z: 0.0 };
+        const eZ = { x: 0.0, y: 0.0, z: 1.0 };
+
+        const vPlanetKms = Math.sqrt(IPL.SUN_MU / rFbKm);
+        const vPlanetVec = vecScale(eT, vPlanetKms);
+
+        const r1Km   = 1.0 * IPL.AU;
+        const rMinKm = Math.min(r1Km, rFbKm) * 0.96;
+        const aInKm  = 0.55 * (r1Km + rFbKm);
+        const vScInKms = Math.sqrt(IPL.SUN_MU * (2.0 / rFbKm - 1.0 / aInKm));
+
+        const hIn   = Math.sqrt(IPL.SUN_MU * rMinKm * (2.0 - rMinKm / aInKm));
+        const vtIn  = hIn / rFbKm;
+        const vrMag = Math.sqrt(Math.max(0.0, vScInKms * vScInKms - vtIn * vtIn));
+        const vrIn  = (rFbKm >= r1Km) ? vrMag : -vrMag;
+        const incApp = 3.5 * DEG2RAD;
+
+        const vScInVec = vecAdd(
+            vecScale(eR, vrIn),
+            vecAdd(vecScale(eT, vtIn * Math.cos(incApp)), vecScale(eZ, vtIn * Math.sin(incApp)))
+        );
+
+        const vinfInVec = vecSub(vScInVec, vPlanetVec);
+        const vinfKms   = Math.max(0.1, vecNorm(vinfInVec));
+        const vinf2     = vinfKms * vinfKms;
+
+        const hypEcc   = 1.0 + (rp * vinf2) / fp.mu;
+        const hypSmaKm = -fp.mu / vinf2;
+        const sinHalf  = Math.max(0.0, Math.min(1.0, 1.0 / hypEcc));
+        const deltaRad = 2.0 * Math.asin(sinHalf);
+        const deltaDeg = deltaRad * RAD2DEG;
+
+        const bPlaneKm = rp * Math.sqrt(1.0 + (2.0 * fp.mu) / (rp * vinf2));
+        const vPeriKms = Math.sqrt(vinf2 + (2.0 * fp.mu) / rp);
+
+        const sHat = vecScale(vinfInVec, 1.0 / vinfKms);
+        const projVp = vecDot(vPlanetVec, sHat);
+        let uPerp = vecSub(vPlanetVec, vecScale(sHat, projVp));
+        if (vecNorm(uPerp) < 1e-6) uPerp = eR;
+        const nTurn = vecNormalize(uPerp);
+
+        const vinfOutVec = vecScale(
+            vecAdd(vecScale(sHat, Math.cos(deltaRad)), vecScale(nTurn, Math.sin(deltaRad))),
+            vinfKms
+        );
+        const vScOutVec = vecAdd(vPlanetVec, vinfOutVec);
+        const vScOutKms = vecNorm(vScOutVec);
+
+        const dvFreeVec = vecSub(vScOutVec, vScInVec);
+        const freeDvKms = vecNorm(dvFreeVec);
+        const freeDvMs  = freeDvKms * 1000.0;
+        const helioGainKms = vScOutKms - vScInKms;
+
+        const rHelioFb = vecScale(eR, rFbKm);
+        const epsOut = 0.5 * (vScOutKms * vScOutKms) - IPL.SUN_MU / rFbKm;
+        const postSmaAu = (-IPL.SUN_MU / (2.0 * epsOut)) / IPL.AU;
+        const hOut = vecCross(rHelioFb, vScOutVec);
+        const hOut2 = vecDot(hOut, hOut);
+        const eOut2 = 1.0 + (2.0 * epsOut * hOut2) / (IPL.SUN_MU * IPL.SUN_MU);
+        const postEcc = eOut2 > 0.0 ? Math.sqrt(eOut2) : 0.0;
+
+        const m0 = Math.max(50.0, scMassKg || 500.0);
+        const propSavedKg = Math.min(99999.0, m0 * (Math.exp(freeDvMs / (316.0 * G0)) - 1.0));
+
+        const sOutHat = vecScale(vinfOutVec, 1.0 / vinfKms);
+        const pHat = vecNormalize(vecSub(sHat, sOutHat));
+        const qHat = vecNormalize(vecAdd(sHat, sOutHat));
+        const periVecKm = vecScale(pHat, rp);
+        const bDir = vecNormalize(vecSub(pHat, vecScale(sHat, vecDot(pHat, sHat))));
+        const bVecKm = vecScale(bDir, bPlaneKm);
+        const bThetaDeg = Math.atan2(bVecKm.z, Math.hypot(bVecKm.x, bVecKm.y)) * RAD2DEG;
+
+        const pHyp = rp * (1.0 + hypEcc);
+        const rCut = Math.min(soiKm * 0.25, Math.max(6.5 * rp, 8.0 * fp.R));
+        const cosNuMax = Math.max(-0.96, Math.min(0.96, (pHyp / rCut - 1.0) / hypEcc));
+        const nuMax = Math.acos(cosNuMax);
+        const nPts = 101;
+        const meanMotionHyp = Math.sqrt(fp.mu / Math.pow(Math.abs(hypSmaKm), 3.0));
+        const trajHyp = [];
+
+        for (let i = 0; i < nPts; i++) {
+            const frac = i / (nPts - 1);
+            const nu = -nuMax + 2.0 * nuMax * frac;
+            const rKm = pHyp / (1.0 + hypEcc * Math.cos(nu));
+            const pos3d = vecAdd(vecScale(pHat, rKm * Math.cos(nu)), vecScale(qHat, rKm * Math.sin(nu)));
+            const vInst = Math.sqrt(vinf2 + (2.0 * fp.mu) / rKm);
+            let tanhHalfF = Math.sqrt((hypEcc - 1.0) / (hypEcc + 1.0)) * Math.tan(0.5 * nu);
+            tanhHalfF = Math.max(-0.9999, Math.min(0.9999, tanhHalfF));
+            const fHyp = 2.0 * Math.atanh(tanhHalfF);
+            const mHyp = hypEcc * Math.sinh(fHyp) - fHyp;
+            const tHr = (mHyp / Math.max(1e-12, meanMotionHyp)) / 3600.0;
+
+            trajHyp.push({
+                t_hr: +tHr.toFixed(3),
+                nu_deg: +(nu * RAD2DEG).toFixed(2),
+                x_km: +pos3d.x.toFixed(2),
+                y_km: +pos3d.y.toFixed(2),
+                z_km: +pos3d.z.toFixed(2),
+                r_km: +rKm.toFixed(2),
+                v_kms: +vInst.toFixed(4)
+            });
+        }
+
+        return {
+            gravity_assist_summary: {
+                enable_flyby: enableFlyby ? 1 : 0,
+                flyby_planet_id: pIdx,
+                flyby_planet_name: fp.name,
+                flyby_alt_km: +altKm.toFixed(1),
+                periapsis_radius_km: +rp.toFixed(1),
+                r_planet_km: fp.R,
+                mu_planet: fp.mu,
+                planet_sma_au: fp.a_au,
+                soi_planet_km: Math.round(soiKm),
+                v_planet_kms: +vPlanetKms.toFixed(4),
+                v_planet_vec: [+vPlanetVec.x.toFixed(4), +vPlanetVec.y.toFixed(4), +vPlanetVec.z.toFixed(4)],
+                v_sc_in_kms: +vScInKms.toFixed(4),
+                v_sc_in_vec: [+vScInVec.x.toFixed(4), +vScInVec.y.toFixed(4), +vScInVec.z.toFixed(4)],
+                vinf_kms: +vinfKms.toFixed(4),
+                vinf_in_vec: [+vinfInVec.x.toFixed(4), +vinfInVec.y.toFixed(4), +vinfInVec.z.toFixed(4)],
+                deflection_angle_deg: +deltaDeg.toFixed(3),
+                hyp_ecc: +hypEcc.toFixed(5),
+                hyp_sma_km: +hypSmaKm.toFixed(1),
+                b_plane_km: +bPlaneKm.toFixed(1),
+                b_theta_deg: +bThetaDeg.toFixed(2),
+                b_vec_km: [+bVecKm.x.toFixed(1), +bVecKm.y.toFixed(1), +bVecKm.z.toFixed(1)],
+                periapsis_vec_km: [+periVecKm.x.toFixed(1), +periVecKm.y.toFixed(1), +periVecKm.z.toFixed(1)],
+                v_periapsis_kms: +vPeriKms.toFixed(4),
+                vinf_out_vec: [+vinfOutVec.x.toFixed(4), +vinfOutVec.y.toFixed(4), +vinfOutVec.z.toFixed(4)],
+                v_sc_out_kms: +vScOutKms.toFixed(4),
+                v_sc_out_vec: [+vScOutVec.x.toFixed(4), +vScOutVec.y.toFixed(4), +vScOutVec.z.toFixed(4)],
+                free_dv_kms: +freeDvKms.toFixed(4),
+                free_dv_ms: +freeDvMs.toFixed(1),
+                helio_speed_gain_kms: +helioGainKms.toFixed(4),
+                post_flyby_sma_au: +postSmaAu.toFixed(4),
+                post_flyby_ecc: +postEcc.toFixed(4),
+                prop_fuel_saved_kg: +propSavedKg.toFixed(1)
+            },
+            traj_flyby_hyperbola: trajHyp
+        };
+    }
+
     function renderInterplanetarySection(data) {
         let ip = data.interplanetary_summary, pg = data.porkchop_grid, tr = data.traj_interplanetary;
         if (!ip || !pg || !tr || !tr.length) {
@@ -9208,12 +9413,21 @@
             ip = fb.interplanetary_summary; pg = fb.porkchop_grid; tr = fb.traj_interplanetary;
             data.interplanetary_summary = ip; data.porkchop_grid = pg; data.traj_interplanetary = tr;
         }
+        let ga = data.gravity_assist_summary, trGa = data.traj_flyby_hyperbola;
+        if (!ga || !trGa || !trGa.length) {
+            const gaFb = simulateGravityAssistFlybyJS(true, 0, 140000.0, 500.0);
+            ga = gaFb.gravity_assist_summary; trGa = gaFb.traj_flyby_hyperbola;
+            data.gravity_assist_summary = ga; data.traj_flyby_hyperbola = trGa;
+        }
         if (!ip) return;
         const pn = ip.target_name;
         const f1 = (v, d) => Number(v).toFixed(d);
+        const flybyActive = (ga && ga.enable_flyby !== 0);
 
         const badge = document.getElementById('iplStatusBadge');
-        badge.innerHTML = `&#9737; PATCHED CONICS &bull; EARTH &rarr; ${pn.toUpperCase()} &bull; LAUNCH DAY +${f1(ip.opt_dep_day, 0)}`;
+        badge.innerHTML = flybyActive
+            ? `&#9737; PATCHED CONICS &bull; EARTH &rarr; ${pn.toUpperCase()} + ${ga.flyby_planet_name.toUpperCase()} SLINGSHOT (&Delta;V<sub>free</sub> = +${f1(ga.free_dv_kms, 2)} km/s)`
+            : `&#9737; PATCHED CONICS &bull; EARTH &rarr; ${pn.toUpperCase()} &bull; LAUNCH DAY +${f1(ip.opt_dep_day, 0)}`;
 
         document.getElementById('iplKpiTmiLabel').innerHTML = `Trans-${pn} Injection &Delta;V<sub>TMI</sub>`;
         document.getElementById('iplKpiMoiLabel').innerHTML = `${pn} Orbit Insertion &Delta;V<sub>${pn === 'Venus' ? 'VOI' : 'MOI'}</sub>`;
@@ -9225,9 +9439,21 @@
         document.getElementById('iplKpiMoi').textContent = f1(ip.dv_moi_ms, 0);
         document.getElementById('iplKpiMoiSub').textContent = `v\u221E,arr ${f1(ip.vinf_arr_kms, 2)} km/s | B = ${Number(ip.b_plane_km).toLocaleString('en-US', {maximumFractionDigits: 0})} km`;
         document.getElementById('iplKpiDla').textContent = f1(ip.dla_deg, 2);
-        document.getElementById('iplKpiDlaSub').textContent = `RLA = ${f1(ip.rla_deg, 2)}\u00B0 | total \u0394V = ${f1(ip.dv_total_ms, 0)} m/s`;
-        document.getElementById('iplKpiTof').textContent = f1(ip.tof_days, 0);
+        document.getElementById('iplKpiDlaSub').textContent = `RLA = ${f1(ip.rla_deg, 1)}\u00B0 | \u0394V = ${f1(ip.dv_total_ms, 0)} m/s`;
+        document.getElementById('iplKpiTof').textContent = `TOF ${f1(ip.tof_days, 0)} d`;
         document.getElementById('iplKpiTofSub').textContent = `Transfer angle ${f1(ip.transfer_angle_deg, 1)}\u00B0 | a = ${f1(ip.transfer_a_au, 3)} AU, e = ${f1(ip.transfer_e, 3)}`;
+
+        // Gravity Assist KPI cards
+        if (ga) {
+            document.getElementById('iplKpiFlybyDv').textContent = flybyActive ? `+${f1(ga.free_dv_kms, 2)}` : 'OFF (0.00)';
+            document.getElementById('iplKpiFlybyFuelBadge').textContent = flybyActive ? '0 kg Propellant!' : 'Flyby Disabled';
+            document.getElementById('iplKpiFlybyDvSub').textContent = flybyActive
+                ? `${f1(ga.free_dv_ms, 0)} m/s Free | V_helio: ${f1(ga.v_sc_in_kms, 1)} \u2192 ${f1(ga.v_sc_out_kms, 1)} km/s`
+                : `Enable checkbox in Modal to activate ${ga.flyby_planet_name} slingshot`;
+            document.getElementById('iplKpiFlybyDelta').textContent = f1(ga.deflection_angle_deg, 1);
+            document.getElementById('iplKpiFlybyPlanetBadge').textContent = `${ga.flyby_planet_name} (h_p=${Number(ga.flyby_alt_km).toLocaleString('en-US', {maximumFractionDigits: 0})} km)`;
+            document.getElementById('iplKpiFlybyDeltaSub').textContent = `v\u221E = ${f1(ga.vinf_kms, 2)} km/s | B = ${Number(ga.b_plane_km).toLocaleString('en-US', {maximumFractionDigits: 0})} km | e = ${f1(ga.hyp_ecc, 3)}`;
+        }
 
         // ---- Left: Porkchop contour (C3 filled + v_inf,arr lines) ----
         const c3Min = ip.grid_min_c3;
@@ -9268,7 +9494,7 @@
                 hovertemplate: `<b>Selected design point</b><br>Launch d+${f1(ip.opt_dep_day, 0)} | TOF ${f1(ip.tof_days, 0)} d<br>C\u2083 = ${f1(ip.c3_opt, 2)} km\u00B2/s\u00B2<br>v\u221E,arr = ${f1(ip.vinf_arr_kms, 2)} km/s<extra></extra>`
             }
         ], {
-            title: { text: `Earth \u2192 ${pn} Porkchop: C\u2083 (filled) & v\u221E,arr (dotted)`, font: { color: '#e2e8f0', size: 12.5 } },
+            title: { text: `18A. Earth \u2192 ${pn} Porkchop: C\u2083 (filled) & v\u221E,arr (dotted)`, font: { color: '#e2e8f0', size: 12.5 } },
             margin: { l: 58, r: 20, t: 40, b: 50 },
             xaxis: { title: 'Launch Window Offset [days]', color: '#e2e8f0', gridcolor: '#222d42' },
             yaxis: { title: 'Time of Flight [days]', color: '#e2e8f0', gridcolor: '#222d42' },
@@ -9315,7 +9541,7 @@
               hovertemplate: 'x = %{x:.0f} km<br>y = %{y:.0f} km<extra>Escape hyperbola</extra>' },
             { x: [0, hLim * Math.cos(nuInf) * 0.9], y: [0, hLim * Math.sin(nuInf) * 0.9], xaxis: 'x2', yaxis: 'y2', mode: 'lines', name: 'Asymptote', line: { color: '#ffab00', width: 1, dash: 'dash' }, showlegend: false, hoverinfo: 'skip' }
         ], {
-            title: { text: `Heliocentric Transfer Earth \u2192 ${pn} (ecliptic, AU) & Departure Escape Hyperbola`, font: { color: '#e2e8f0', size: 12.5 } },
+            title: { text: `18B. Heliocentric Transfer Earth \u2192 ${pn} (ecliptic, AU) & Departure Escape Hyperbola`, font: { color: '#e2e8f0', size: 12.5 } },
             margin: { l: 52, r: 16, t: 40, b: 46 },
             xaxis: { title: 'Ecliptic X [AU]', color: '#e2e8f0', gridcolor: '#222d42', zerolinecolor: '#334155', range: [-1.8, 1.8], domain: [0, 1] },
             yaxis: { title: 'Ecliptic Y [AU]', color: '#e2e8f0', gridcolor: '#222d42', zerolinecolor: '#334155', range: [-1.8, 1.8], scaleanchor: 'x', scaleratio: 1 },
@@ -9328,6 +9554,146 @@
             showlegend: true,
             legend: { font: { color: '#e2e8f0', size: 9.0 }, bgcolor: 'rgba(17,22,34,0.86)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
+
+        // ---- Bottom 3D Plot (18C): Planet-Centric 3D Flyby Hyperbola, v_inf,in -> v_inf,out Rotation & B-Plane ----
+        if (ga && trGa && trGa.length > 2) {
+            const rPl = ga.r_planet_km;
+            const sphX = [], sphY = [], sphZ = [], sphC = [];
+            for (let i = 0; i <= 24; i++) {
+                const lat = -0.5 * Math.PI + (Math.PI * i) / 24;
+                const rX = [], rY = [], rZ = [], rC = [];
+                for (let j = 0; j <= 32; j++) {
+                    const lon = (2.0 * Math.PI * j) / 32;
+                    rX.push(rPl * Math.cos(lat) * Math.cos(lon));
+                    rY.push(rPl * Math.cos(lat) * Math.sin(lon));
+                    rZ.push(rPl * Math.sin(lat));
+                    rC.push(Math.sin(5.0 * lat));
+                }
+                sphX.push(rX); sphY.push(rY); sphZ.push(rZ); sphC.push(rC);
+            }
+
+            const plColorscale = ga.flyby_planet_name === 'Jupiter'
+                ? [[0.0, '#7c2d12'], [0.3, '#c2410c'], [0.55, '#f59e0b'], [0.8, '#fde68a'], [1.0, '#d97706']]
+                : (ga.flyby_planet_name === 'Venus'
+                    ? [[0.0, '#92400e'], [0.5, '#f59e0b'], [1.0, '#fef08a']]
+                    : [[0.0, '#7f1d1d'], [0.5, '#dc2626'], [1.0, '#fb923c']]);
+
+            const pStart = trGa[0];
+            const pEnd   = trGa[trGa.length - 1];
+            const pPeri  = ga.periapsis_vec_km || [ga.periapsis_radius_km, 0, 0];
+            const bVec   = ga.b_vec_km || [0, ga.b_plane_km, 0];
+            const viIn   = ga.vinf_in_vec || [1, 0, 0];
+            const viOut  = ga.vinf_out_vec || [0, 1, 0];
+            const vPlVec = ga.v_planet_vec || [0, 1, 0];
+
+            const maxCoord = Math.max(
+                ga.b_plane_km * 1.35,
+                ga.periapsis_radius_km * 4.5,
+                Math.hypot(pStart.x_km, pStart.y_km, pStart.z_km) * 0.92
+            );
+            const vecLen = maxCoord * 0.58;
+            const norm3 = (a) => {
+                const m = Math.hypot(a[0], a[1], a[2]) || 1.0;
+                return [a[0] / m, a[1] / m, a[2] / m];
+            };
+            const uIn  = norm3(viIn);
+            const uOut = norm3(viOut);
+            const uPl  = norm3(vPlVec);
+
+            // Incoming v_inf,in vector placed near the entry branch & at origin asymptote
+            const inBase = [pStart.x_km, pStart.y_km, pStart.z_km];
+            const inTip  = [inBase[0] + uIn[0] * vecLen * 0.55, inBase[1] + uIn[1] * vecLen * 0.55, inBase[2] + uIn[2] * vecLen * 0.55];
+            // Outgoing v_inf,out vector placed at the exit branch & along outgoing asymptote
+            const outBase = [pEnd.x_km * 0.65, pEnd.y_km * 0.65, pEnd.z_km * 0.65];
+            const outTip  = [outBase[0] + uOut[0] * vecLen * 0.65, outBase[1] + uOut[1] * vecLen * 0.65, outBase[2] + uOut[2] * vecLen * 0.65];
+
+            Plotly.react('plotIplFlyby3D', [
+                {
+                    type: 'surface',
+                    x: sphX, y: sphY, z: sphZ, surfacecolor: sphC,
+                    colorscale: plColorscale, showscale: false, opacity: 0.96,
+                    name: `${ga.flyby_planet_name} (R = ${Number(rPl).toLocaleString()} km)`,
+                    hoverinfo: 'name'
+                },
+                {
+                    type: 'scatter3d', mode: 'lines',
+                    name: `Hyperbolic Flyby Trajectory (e = ${f1(ga.hyp_ecc, 3)}, \u03b4 = ${f1(ga.deflection_angle_deg, 1)}\u00b0)`,
+                    x: trGa.map(p => p.x_km), y: trGa.map(p => p.y_km), z: trGa.map(p => p.z_km),
+                    line: { color: flybyActive ? '#00e676' : '#64748b', width: 6.0 },
+                    text: trGa.map(p => `t = ${p.t_hr >= 0 ? '+' : ''}${p.t_hr} h | r = ${Math.round(p.r_km).toLocaleString()} km | v = ${p.v_kms} km/s`),
+                    hovertemplate: '<b>Flyby Hyperbola</b><br>%{text}<extra></extra>'
+                },
+                {
+                    type: 'scatter3d', mode: 'lines+markers+text',
+                    name: `Incoming v\u221E,in (${f1(ga.vinf_kms, 2)} km/s, V_sc,in = ${f1(ga.v_sc_in_kms, 2)} km/s)`,
+                    x: [-uIn[0] * maxCoord * 0.95, 0, null, inBase[0], inTip[0]],
+                    y: [-uIn[1] * maxCoord * 0.95, 0, null, inBase[1], inTip[1]],
+                    z: [-uIn[2] * maxCoord * 0.95, 0, null, inBase[2], inTip[2]],
+                    line: { color: '#38bdf8', width: 4.5, dash: 'dash' },
+                    marker: { size: [1, 1, 1, 5, 9], color: '#38bdf8', symbol: ['circle', 'circle', 'circle', 'circle', 'diamond'] },
+                    text: ['', '', '', '', `v\u221E,in (${f1(ga.vinf_kms, 2)} km/s)`],
+                    textposition: 'top center', textfont: { color: '#38bdf8', size: 10.5 }
+                },
+                {
+                    type: 'scatter3d', mode: 'lines+markers+text',
+                    name: `Deflected Outgoing v\u221E,out (Rotated \u03b4 = ${f1(ga.deflection_angle_deg, 1)}\u00b0 \u2192 V_sc,out = ${f1(ga.v_sc_out_kms, 2)} km/s)`,
+                    x: [0, uOut[0] * maxCoord * 0.95, null, outBase[0], outTip[0]],
+                    y: [0, uOut[1] * maxCoord * 0.95, null, outBase[1], outTip[1]],
+                    z: [0, uOut[2] * maxCoord * 0.95, null, outBase[2], outTip[2]],
+                    line: { color: '#ff1744', width: 5.0, dash: 'dash' },
+                    marker: { size: [1, 9, 1, 5, 9], color: '#ff1744', symbol: ['circle', 'diamond', 'circle', 'circle', 'diamond'] },
+                    text: ['', `v\u221E,out (\u03b4 = ${f1(ga.deflection_angle_deg, 1)}\u00b0 | +\u0394V_free = ${f1(ga.free_dv_kms, 2)} km/s)`, '', '', ''],
+                    textposition: 'top center', textfont: { color: '#ff8a80', size: 10.5 }
+                },
+                {
+                    type: 'scatter3d', mode: 'lines+markers+text',
+                    name: `Periapsis r_p = ${Number(ga.periapsis_radius_km).toLocaleString()} km (h_p = ${Number(ga.flyby_alt_km).toLocaleString()} km, v_p = ${f1(ga.v_periapsis_kms, 2)} km/s)`,
+                    x: [0, pPeri[0]], y: [0, pPeri[1]], z: [0, pPeri[2]],
+                    line: { color: '#ffab00', width: 4.5 },
+                    marker: { size: [3, 9], color: '#ffab00', symbol: ['circle', 'diamond'] },
+                    text: ['', `PERIAPSIS r_p (${f1(ga.v_periapsis_kms, 1)} km/s)`],
+                    textposition: 'bottom center', textfont: { color: '#ffab00', size: 10 }
+                },
+                {
+                    type: 'scatter3d', mode: 'lines+markers+text',
+                    name: `B-Plane Impact Vector B = ${Number(ga.b_plane_km).toLocaleString()} km`,
+                    x: [0, bVec[0]], y: [0, bVec[1]], z: [0, bVec[2]],
+                    line: { color: '#e040fb', width: 3.5, dash: 'dot' },
+                    marker: { size: [2, 7], color: '#e040fb', symbol: 'circle' },
+                    text: ['', `B-Plane (${Number(Math.round(ga.b_plane_km)).toLocaleString()} km)`],
+                    textposition: 'top left', textfont: { color: '#e040fb', size: 9.5 }
+                },
+                {
+                    type: 'scatter3d', mode: 'lines+markers+text',
+                    name: `Planet Heliocentric Velocity V_${ga.flyby_planet_name} (${f1(ga.v_planet_kms, 2)} km/s)`,
+                    x: [0, uPl[0] * maxCoord * 0.60], y: [0, uPl[1] * maxCoord * 0.60], z: [0, uPl[2] * maxCoord * 0.60],
+                    line: { color: '#fde047', width: 4.0 },
+                    marker: { size: [2, 7], color: '#fde047', symbol: 'square' },
+                    text: ['', `V_${ga.flyby_planet_name} (${f1(ga.v_planet_kms, 2)} km/s)`],
+                    textposition: 'bottom right', textfont: { color: '#fde047', size: 9.5 }
+                }
+            ], {
+                title: {
+                    text: `18C. Planet-Centric 3D Flyby Hyperbola (${ga.flyby_planet_name}): v\u221E,in \u2192 v\u221E,out Turn (\u03b4 = ${f1(ga.deflection_angle_deg, 1)}\u00b0) & Free \u0394V = +${f1(ga.free_dv_kms, 2)} km/s (0 kg Fuel)`,
+                    font: { color: '#e2e8f0', size: 12.5 }
+                },
+                margin: { l: 8, r: 8, b: 8, t: 38 },
+                scene: {
+                    xaxis: { title: 'Planet-Centric X [km]', color: '#94a3b8', gridcolor: '#1e293b', range: [-maxCoord, maxCoord] },
+                    yaxis: { title: 'Planet-Centric Y [km]', color: '#94a3b8', gridcolor: '#1e293b', range: [-maxCoord, maxCoord] },
+                    zaxis: { title: 'Planet-Centric Z [km]', color: '#94a3b8', gridcolor: '#1e293b', range: [-maxCoord * 0.75, maxCoord * 0.75] },
+                    aspectmode: 'manual',
+                    aspectratio: { x: 1.15, y: 1.15, z: 0.82 },
+                    camera: {
+                        eye: { x: 1.25, y: -1.30, z: 0.88 },
+                        center: { x: 0.0, y: 0.0, z: 0.0 },
+                        up: { x: 0, y: 0, z: 1 }
+                    }
+                },
+                showlegend: true,
+                legend: { font: { color: '#e2e8f0', size: 9.0 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.01, y: 0.99 }
+            }, { responsive: true, displaylogo: false });
+        }
     }
 
     function iplRecomputeFromModal() {
@@ -9340,9 +9706,16 @@
             parseFloat(document.getElementById('iplCaptureAltKm').value),
             parseFloat(document.getElementById('iplTofDays').value)
         );
+        const enableFb = document.getElementById('iplEnableFlyby') ? document.getElementById('iplEnableFlyby').checked : true;
+        const fbPlanet = document.getElementById('iplFlybyPlanet') ? parseInt(document.getElementById('iplFlybyPlanet').value, 10) : 0;
+        const fbAltKm  = document.getElementById('iplFlybyAltKm') ? parseFloat(document.getElementById('iplFlybyAltKm').value) : 140000.0;
+        const gaRes    = simulateGravityAssistFlybyJS(enableFb, fbPlanet, fbAltKm, 500.0);
+
         globalData.interplanetary_summary = res.interplanetary_summary;
         globalData.porkchop_grid = res.porkchop_grid;
         globalData.traj_interplanetary = res.traj_interplanetary;
+        globalData.gravity_assist_summary = gaRes.gravity_assist_summary;
+        globalData.traj_flyby_hyperbola   = gaRes.traj_flyby_hyperbola;
         renderInterplanetarySection(globalData);
         resizeVisiblePlots();
     }
@@ -12258,15 +12631,17 @@
             }
         ], {
             title: { text: `23A. Synthetic Onboard Boresight Camera View (Curved WGS84 Disk & Trapezoidal FOV Pyramid)`, font: { color: '#e2e8f0', size: 12.0 } },
-            margin: { l: 0, r: 0, b: 0, t: 36 },
+            margin: { l: 8, r: 8, b: 8, t: 38 },
             scene: {
+                domain: { x: [0.0, 1.0], y: [0.0, 1.0] },
                 xaxis: { title: 'Along-Track X [km]', color: '#94a3b8', gridcolor: '#1e293b', range: [-diskRadiusKm, diskRadiusKm] },
                 yaxis: { title: 'Cross-Track Y [km]', color: '#94a3b8', gridcolor: '#1e293b', range: [-diskRadiusKm, diskRadiusKm] },
-                zaxis: { title: 'Nadir Altitude Z [km]', color: '#94a3b8', gridcolor: '#1e293b', range: [-320, hSat * 1.12] },
-                aspectratio: { x: 1.25, y: 1.25, z: 0.72 },
+                zaxis: { title: 'Nadir Altitude Z [km]', color: '#94a3b8', gridcolor: '#1e293b', range: [-260, hSat * 1.08] },
+                aspectmode: 'manual',
+                aspectratio: { x: 1.15, y: 1.15, z: 0.82 },
                 camera: {
-                    eye: { x: -1.15, y: -0.85 + 0.35 * Math.sin(offR), z: 1.05 },
-                    center: { x: 0.0, y: pBore.y * 0.25, z: -40.0 },
+                    eye: { x: -1.22, y: -1.10 + 0.25 * Math.sin(offR), z: 0.88 },
+                    center: { x: 0.0, y: 0.0, z: -0.04 },
                     up: { x: 0, y: 0, z: 1 }
                 }
             },
@@ -13077,13 +13452,17 @@
             adcsJyy, adcsRes.adcs_summary.steady_point_err_deg, fdirScenario, fdirInjectTime
         );
 
-        // Sprint 24: Interplanetary Patched Conics (Earth -> Mars / Venus), Porkchop Grid & B-Plane
+        // Sprint 24 & Sprint 33: Interplanetary Patched Conics, Porkchop Grid, Planetary Flyby & B-Plane
         const iplRes = simulateInterplanetaryJS(
             kepInit.a * (1.0 - kepInit.e),
             parseInt(document.getElementById('iplTarget').value, 10) || 0,
             parseFloat(document.getElementById('iplCaptureAltKm').value),
             parseFloat(document.getElementById('iplTofDays').value)
         );
+        const iplEnableFb = document.getElementById('iplEnableFlyby') ? document.getElementById('iplEnableFlyby').checked : true;
+        const iplFbPlanet = document.getElementById('iplFlybyPlanet') ? parseInt(document.getElementById('iplFlybyPlanet').value, 10) : 0;
+        const iplFbAltKm  = document.getElementById('iplFlybyAltKm') ? parseFloat(document.getElementById('iplFlybyAltKm').value) : 140000.0;
+        const gaRes       = simulateGravityAssistFlybyJS(iplEnableFb, iplFbPlanet, iplFbAltKm, mass0);
 
         // Sprint 25: Multi-Satellite Formation Flying (Chief + 3 Deputies), D'Amico ROEs & E/I Safety
         const formRes = simulateFormationFlyingClusterJS(
@@ -13212,6 +13591,8 @@
             interplanetary_summary: iplRes.interplanetary_summary,
             porkchop_grid: iplRes.porkchop_grid,
             traj_interplanetary: iplRes.traj_interplanetary,
+            gravity_assist_summary: gaRes.gravity_assist_summary,
+            traj_flyby_hyperbola: gaRes.traj_flyby_hyperbola,
             formation_summary: formRes.formation_summary,
             ops_scheduler_summary: opsRes.ops_scheduler_summary,
             space_weather_summary: swxRes.space_weather_summary,
@@ -13263,7 +13644,15 @@
         validateModalOrbits(false);
         document.getElementById('inputModal').classList.add('open');
     });
-    ['iplTarget', 'iplCaptureAltKm', 'iplTofDays'].forEach(id => {
+    document.getElementById('iplFlybyPlanet').addEventListener('change', function() {
+        const pId = parseInt(this.value, 10) || 0;
+        const altInput = document.getElementById('iplFlybyAltKm');
+        if (altInput) {
+            altInput.value = pId === 0 ? 140000 : (pId === 1 ? 1200 : 800);
+        }
+        iplRecomputeFromModal();
+    });
+    ['iplTarget', 'iplCaptureAltKm', 'iplTofDays', 'iplEnableFlyby', 'iplFlybyAltKm'].forEach(id => {
         document.getElementById(id).addEventListener('change', iplRecomputeFromModal);
     });
     ['formTopology', 'formRadiusM'].forEach(id => {

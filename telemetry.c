@@ -593,6 +593,17 @@ static void write_eo_footprint_trajectory_json_array(FILE *fp, const EORaycastRe
     fprintf(fp, "  ]");
 }
 
+static void write_flyby_hyperbola_json_array(FILE *fp, GravityAssistReport flyby) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < flyby.num_hyperbola_samples; i++) {
+        FlybyHyperbolaSample s = flyby.hyperbola[i];
+        fprintf(fp, "    {\"t_hr\":%.3f,\"nu_deg\":%.2f,\"x_km\":%.2f,\"y_km\":%.2f,\"z_km\":%.2f,\"r_km\":%.2f,\"v_kms\":%.4f}%s\n",
+                s.t_hr, s.nu_deg, s.x_km, s.y_km, s.z_km, s.r_km, s.v_kms,
+                (i < flyby.num_hyperbola_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 static void format_oem_utc_timestamp(double elapsed_sec, char *buf, size_t buf_size) {
     // Base Epoch: 2026-11-12T00:00:00.000 UTC
     int total_ms = (int)llround(fmax(0.0, elapsed_sec) * 1000.0);
@@ -762,6 +773,7 @@ bool export_web_mission_json(const char *filename,
                              GroundSegmentReport gnd,
                              EPSHiFiReport eps,
                              const EORaycastReport *eo,
+                             GravityAssistReport flyby,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -1232,6 +1244,33 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"swath_area_km2\": %.1f, \"unique_cells_hit\": %d, \"total_grid_cells\": %d, \"max_revisit_hits\": %d\n  },\n",
             eo->swath_area_km2, eo->unique_cells_hit, eo->total_grid_cells, eo->max_revisit_hits);
 
+    fprintf(fp, "  \"gravity_assist_summary\": {\n");
+    fprintf(fp, "    \"enable_flyby\": %d, \"flyby_planet_id\": %d, \"flyby_planet_name\": \"%s\",\n",
+            flyby.spec.enable_flyby ? 1 : 0, (int)flyby.spec.flyby_planet, flyby.flyby_planet_name);
+    fprintf(fp, "    \"flyby_alt_km\": %.1f, \"periapsis_radius_km\": %.1f, \"r_planet_km\": %.1f, \"mu_planet\": %.3f,\n",
+            flyby.spec.flyby_alt_km, flyby.periapsis_radius_km, flyby.r_planet_km, flyby.mu_planet);
+    fprintf(fp, "    \"planet_sma_au\": %.4f, \"soi_planet_km\": %.0f, \"v_planet_kms\": %.4f,\n",
+            flyby.planet_sma_au, flyby.soi_planet_km, flyby.v_planet_kms);
+    fprintf(fp, "    \"v_planet_vec\": [%.4f, %.4f, %.4f],\n",
+            flyby.v_planet_vec.x, flyby.v_planet_vec.y, flyby.v_planet_vec.z);
+    fprintf(fp, "    \"v_sc_in_kms\": %.4f, \"v_sc_in_vec\": [%.4f, %.4f, %.4f],\n",
+            flyby.v_sc_in_kms, flyby.v_sc_in_vec.x, flyby.v_sc_in_vec.y, flyby.v_sc_in_vec.z);
+    fprintf(fp, "    \"vinf_kms\": %.4f, \"vinf_in_vec\": [%.4f, %.4f, %.4f],\n",
+            flyby.vinf_kms, flyby.vinf_in_vec.x, flyby.vinf_in_vec.y, flyby.vinf_in_vec.z);
+    fprintf(fp, "    \"deflection_angle_deg\": %.3f, \"hyp_ecc\": %.5f, \"hyp_sma_km\": %.1f,\n",
+            flyby.deflection_angle_deg, flyby.hyp_ecc, flyby.hyp_sma_km);
+    fprintf(fp, "    \"b_plane_km\": %.1f, \"b_theta_deg\": %.2f, \"b_vec_km\": [%.1f, %.1f, %.1f],\n",
+            flyby.b_plane_km, flyby.b_theta_deg, flyby.b_vec_km.x, flyby.b_vec_km.y, flyby.b_vec_km.z);
+    fprintf(fp, "    \"periapsis_vec_km\": [%.1f, %.1f, %.1f], \"v_periapsis_kms\": %.4f,\n",
+            flyby.periapsis_vec_km.x, flyby.periapsis_vec_km.y, flyby.periapsis_vec_km.z, flyby.v_periapsis_kms);
+    fprintf(fp, "    \"vinf_out_vec\": [%.4f, %.4f, %.4f], \"v_sc_out_kms\": %.4f, \"v_sc_out_vec\": [%.4f, %.4f, %.4f],\n",
+            flyby.vinf_out_vec.x, flyby.vinf_out_vec.y, flyby.vinf_out_vec.z,
+            flyby.v_sc_out_kms, flyby.v_sc_out_vec.x, flyby.v_sc_out_vec.y, flyby.v_sc_out_vec.z);
+    fprintf(fp, "    \"free_dv_kms\": %.4f, \"free_dv_ms\": %.1f, \"helio_speed_gain_kms\": %.4f,\n",
+            flyby.free_dv_kms, flyby.free_dv_ms, flyby.helio_speed_gain_kms);
+    fprintf(fp, "    \"post_flyby_sma_au\": %.4f, \"post_flyby_ecc\": %.4f, \"prop_fuel_saved_kg\": %.1f\n  },\n",
+            flyby.post_flyby_sma_au, flyby.post_flyby_ecc, flyby.prop_fuel_saved_kg);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -1376,6 +1415,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_sensor_footprint\": ");
     write_eo_footprint_trajectory_json_array(fp, eo);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_flyby_hyperbola\": ");
+    write_flyby_hyperbola_json_array(fp, flyby);
     fprintf(fp, "\n}\n");
 
     fclose(fp);
