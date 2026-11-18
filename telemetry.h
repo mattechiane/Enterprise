@@ -47,6 +47,7 @@ bool export_web_mission_json(const char *filename,
                              ISLNetworkReport isl,
                              GroundSegmentReport gnd,
                              EPSHiFiReport eps,
+                             const EORaycastReport *eo,
                              const GroundStation *station,
                              const SpacecraftConfig *sc);
 

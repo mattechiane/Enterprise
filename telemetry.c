@@ -556,6 +556,43 @@ static void write_eps_trajectory_json_array(FILE *fp, EPSHiFiReport eps) {
     fprintf(fp, "  ]");
 }
 
+static void write_eo_coverage_heatmap_json(FILE *fp, const EORaycastReport *eo) {
+    fprintf(fp, "{\n    \"lat_deg\": [");
+    for (int r = 0; r < EO_HEATMAP_LAT_BINS; r++) {
+        fprintf(fp, "%s%.1f", r ? "," : "", -88.5 + 3.0 * (double)r);
+    }
+    fprintf(fp, "],\n    \"lon_deg\": [");
+    for (int c = 0; c < EO_HEATMAP_LON_BINS; c++) {
+        fprintf(fp, "%s%.1f", c ? "," : "", -178.5 + 3.0 * (double)c);
+    }
+    fprintf(fp, "],\n    \"counts\": [\n");
+    for (int r = 0; r < EO_HEATMAP_LAT_BINS; r++) {
+        fprintf(fp, "      [");
+        for (int c = 0; c < EO_HEATMAP_LON_BINS; c++) {
+            fprintf(fp, "%s%d", c ? "," : "", eo->heatmap_counts[r][c]);
+        }
+        fprintf(fp, "]%s\n", (r < EO_HEATMAP_LAT_BINS - 1) ? "," : "");
+    }
+    fprintf(fp, "    ]\n  }");
+}
+
+static void write_eo_footprint_trajectory_json_array(FILE *fp, const EORaycastReport *eo) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < eo->num_samples; i++) {
+        EOSensorFootprintSample s = eo->samples[i];
+        fprintf(fp, "    {\"t_min\":%.2f,\"sat_lat_deg\":%.2f,\"sat_lon_deg\":%.2f,\"sat_alt_km\":%.2f,\"bore_lat_deg\":%.2f,\"bore_lon_deg\":%.2f,\"slant_range_km\":%.2f,\"incidence_deg\":%.2f,\"gsd_m\":%.3f,\"smearing_factor\":%.3f,\"c1_lat\":%.2f,\"c1_lon\":%.2f,\"c2_lat\":%.2f,\"c2_lon\":%.2f,\"c3_lat\":%.2f,\"c3_lon\":%.2f,\"c4_lat\":%.2f,\"c4_lon\":%.2f}%s\n",
+                s.t_min, s.sat_lat_deg, s.sat_lon_deg, s.sat_alt_km,
+                s.bore_lat_deg, s.bore_lon_deg, s.slant_range_km, s.incidence_deg,
+                s.gsd_m, s.smearing_factor,
+                s.corner_lat_deg[0], s.corner_lon_deg[0],
+                s.corner_lat_deg[1], s.corner_lon_deg[1],
+                s.corner_lat_deg[2], s.corner_lon_deg[2],
+                s.corner_lat_deg[3], s.corner_lon_deg[3],
+                (i < eo->num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 static void format_oem_utc_timestamp(double elapsed_sec, char *buf, size_t buf_size) {
     // Base Epoch: 2026-11-12T00:00:00.000 UTC
     int total_ms = (int)llround(fmax(0.0, elapsed_sec) * 1000.0);
@@ -724,6 +761,7 @@ bool export_web_mission_json(const char *filename,
                              ISLNetworkReport isl,
                              GroundSegmentReport gnd,
                              EPSHiFiReport eps,
+                             const EORaycastReport *eo,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -1183,6 +1221,17 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"penumbra_time_min\": %.2f, \"umbra_time_min\": %.2f, \"eps_compliance_status\": \"%s\"\n  },\n",
             eps.penumbra_time_min, eps.umbra_time_min, eps.eps_compliance_status);
 
+    fprintf(fp, "  \"payload_mapping_summary\": {\n");
+    fprintf(fp, "    \"sensor_mode_name\": \"%s\",\n", eo->sensor_mode_name);
+    fprintf(fp, "    \"fov_x_deg\": %.1f, \"fov_y_deg\": %.1f, \"off_nadir_deg\": %.1f,\n",
+            eo->spec.fov_x_deg, eo->spec.fov_y_deg, eo->spec.off_nadir_deg);
+    fprintf(fp, "    \"global_coverage_pct\": %.2f, \"avg_slant_range_km\": %.2f, \"avg_incidence_deg\": %.2f,\n",
+            eo->global_coverage_pct, eo->avg_slant_range_km, eo->avg_incidence_deg);
+    fprintf(fp, "    \"nadir_gsd_m\": %.3f, \"mean_gsd_m\": %.3f, \"off_nadir_smearing_factor\": %.3f,\n",
+            eo->nadir_gsd_m, eo->mean_gsd_m, eo->off_nadir_smearing_factor);
+    fprintf(fp, "    \"swath_area_km2\": %.1f, \"unique_cells_hit\": %d, \"total_grid_cells\": %d, \"max_revisit_hits\": %d\n  },\n",
+            eo->swath_area_km2, eo->unique_cells_hit, eo->total_grid_cells, eo->max_revisit_hits);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -1319,6 +1368,14 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_eps\": ");
     write_eps_trajectory_json_array(fp, eps);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"coverage_heatmap\": ");
+    write_eo_coverage_heatmap_json(fp, eo);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_sensor_footprint\": ");
+    write_eo_footprint_trajectory_json_array(fp, eo);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

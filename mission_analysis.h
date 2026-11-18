@@ -226,4 +226,18 @@ EPSHiFiReport simulate_eps_hifi_profile(KeplerianElements orb_init,
                                         EPSHiFiSpec spec,
                                         double mu);
 
+// Sprint 32: Earth Observation (EO) 6-DOF Quaternion Raycasting onto WGS84 Ellipsoid,
+// Off-Nadir Trapezoidal Swath Footprint, Pixel Smearing & Global Cumulative Coverage Heatmap
+bool raycast_wgs84_ellipsoid(Vector3D origin_ecef,
+                             Vector3D dir_unit_ecef,
+                             Vector3D *hit_ecef_out,
+                             double *slant_range_km_out,
+                             double *incidence_deg_out);
+
+EORaycastReport simulate_eo_raycasting_and_coverage(KeplerianElements orb_target,
+                                                    OptimalTransferPlan plan,
+                                                    ADCSReport adcs,
+                                                    EOSensorSpec spec,
+                                                    double mu);
+
 #endif // MISSION_ANALYSIS_H

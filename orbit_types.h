@@ -1374,4 +1374,54 @@ typedef struct {
     EPSSample samples[MAX_EPS_SAMPLES];
 } EPSHiFiReport;
 
+// ==========================================
+// 5T. SPRINT 32: EARTH OBSERVATION (EO) RAYCASTING, SYNTHETIC PAYLOAD & COVERAGE HEATMAP
+// ==========================================
+#define EO_HEATMAP_LAT_BINS      60   // Griglia globale latitudine: 60 celle da 3° (-90° .. +90°)
+#define EO_HEATMAP_LON_BINS      120  // Griglia globale longitudine: 120 celle da 3° (-180° .. +180°)
+#define MAX_EO_FOOTPRINT_SAMPLES 121  // Campioni temporali del poligono trapezoidale di scansione
+
+typedef struct {
+    double fov_x_deg;          // Field of View Along-Track (asse X sensore) [deg] (default 10.0 deg)
+    double fov_y_deg;          // Field of View Cross-Track (asse Y sensore) [deg] (default 15.0 deg)
+    double off_nadir_deg;      // Angolo di puntamento laterale Boresight Off-Nadir [deg] (default 0.0 deg)
+    double opt_aperture_m;     // Diametro apertura ottica per calcolo GSD [m] (default 0.35 m)
+    double wavelength_nm;      // Lunghezza d'onda spettrale [nm] (default 550.0 nm)
+} EOSensorSpec;
+
+typedef struct {
+    double t_min;              // Tempo trascorso nella finestra di osservazione [min]
+    double sat_lat_deg;        // Latitudine geodetica sub-satellitare WGS84 [deg]
+    double sat_lon_deg;        // Longitudine geodetica sub-satellitare WGS84 [deg]
+    double sat_alt_km;         // Quota geodetica del satellite sopra l'ellissoide WGS84 [km]
+    double bore_lat_deg;       // Latitudine del punto d'intersezione Boresight sull'ellissoide WGS84 [deg]
+    double bore_lon_deg;       // Longitudine del punto d'intersezione Boresight sull'ellissoide WGS84 [deg]
+    double slant_range_km;     // Distanza obliqua (Slant Range) lungo il raggio di Boresight [km]
+    double incidence_deg;      // Angolo d'incidenza locale sul terreno (inclusa curvatura WGS84) [deg]
+    double gsd_m;              // Risoluzione spaziale effettiva a terra (Off-Nadir Smearing GSD) [m]
+    double smearing_factor;    // Fattore di allungamento geometrico del pixel (Pixel Smearing) [-]
+    double corner_lat_deg[4];  // Latitudini WGS84 dei 4 vertici del poligono del FOV (Swath Polygon) [deg]
+    double corner_lon_deg[4];  // Longitudini WGS84 dei 4 vertici del poligono del FOV (Swath Polygon) [deg]
+} EOSensorFootprintSample;
+
+typedef struct {
+    EOSensorSpec spec;
+    char   sensor_mode_name[64];         // Modalità operativa ("Nadir Pushbroom Optical" / "Off-Nadir Side-Looking SAR/EO")
+    double global_coverage_pct;          // Percentuale della superficie terrestre scansionata (pesata per cos(lat)) [%]
+    double avg_slant_range_km;           // Slant Range medio lungo l'asse ottico di Boresight [km]
+    double avg_incidence_deg;            // Angolo d'incidenza locale medio sul terreno [deg]
+    double nadir_gsd_m;                  // GSD di riferimento al nadir [m]
+    double mean_gsd_m;                   // GSD medio effettivo sull'intero swath (con Pixel Smearing) [m]
+    double off_nadir_smearing_factor;    // Fattore medio di distorsione/smearing geometrico fuori dal nadir [-]
+    double swath_area_km2;               // Area istantanea del footprint trapezoidale proiettato a terra [km^2]
+    int    unique_cells_hit;             // Numero di celle della griglia globale osservate almeno una volta
+    int    total_grid_cells;             // Numero totale di celle della griglia globale (60 x 120 = 7200)
+    int    max_revisit_hits;             // Massimo conteggio di rivisita registrato su una cella
+
+    int    heatmap_counts[EO_HEATMAP_LAT_BINS][EO_HEATMAP_LON_BINS]; // Matrice 2D conteggi di osservazione lat/lon
+
+    int    num_samples;
+    EOSensorFootprintSample samples[MAX_EO_FOOTPRINT_SAMPLES];
+} EORaycastReport;
+
 #endif // ORBIT_TYPES_H

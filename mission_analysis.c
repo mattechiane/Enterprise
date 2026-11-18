@@ -5549,6 +5549,339 @@ EPSHiFiReport simulate_eps_hifi_profile(KeplerianElements orb_init,
     return rep;
 }
 
+// =========================================================================
+// SPRINT 32: EARTH OBSERVATION (EO) 6-DOF QUATERNION RAYCASTING ONTO WGS84,
+// SYNTHETIC PAYLOAD FOOTPRINT, PIXEL SMEARING & CUMULATIVE COVERAGE HEATMAP
+// =========================================================================
+bool raycast_wgs84_ellipsoid(Vector3D origin_ecef,
+                             Vector3D dir_unit_ecef,
+                             Vector3D *hit_ecef_out,
+                             double *slant_range_km_out,
+                             double *incidence_deg_out) {
+    const double a_eq = EARTH_RADIUS;                       // WGS84 Semiasse Equatoriale a = 6378.137 km
+    const double b_pol = EARTH_RADIUS * (1.0 - EARTH_FLATTENING); // WGS84 Semiasse Polare b = 6356.7523 km
+    const double inv_a2 = 1.0 / (a_eq * a_eq);
+    const double inv_b2 = 1.0 / (b_pol * b_pol);
+
+    Vector3D d = vec_normalize(dir_unit_ecef);
+    // Equazione quadratica d'intersezione raggio-ellissoide WGS84: A * s^2 + 2 * B * s + C = 0
+    double A = (d.x * d.x + d.y * d.y) * inv_a2 + (d.z * d.z) * inv_b2;
+    double B = (origin_ecef.x * d.x + origin_ecef.y * d.y) * inv_a2 + (origin_ecef.z * d.z) * inv_b2;
+    double C = (origin_ecef.x * origin_ecef.x + origin_ecef.y * origin_ecef.y) * inv_a2
+             + (origin_ecef.z * origin_ecef.z) * inv_b2 - 1.0;
+
+    if (A < 1e-18) return false;
+
+    double disc = B * B - A * C;
+    bool exact_hit = true;
+    double s = 0.0;
+
+    if (disc >= 0.0) {
+        s = (-B - sqrt(disc)) / A;
+        if (s <= 0.0) {
+            s = (-B + sqrt(disc)) / A;
+        }
+    } else {
+        // Il raggio sfiora oltre l'orizzonte: proietta sul punto di tangenza del lembo terrestre WGS84 (s = -B / A)
+        exact_hit = false;
+        s = fmax(100.0, -B / A);
+    }
+
+    if (s <= 0.0) return false;
+
+    Vector3D hit = vec_add(origin_ecef, vec_scale(d, s));
+    if (!exact_hit) {
+        // Riscala esattamente sulla superficie dell'ellissoide WGS84
+        double scale_ell = sqrt((hit.x * hit.x + hit.y * hit.y) * inv_a2 + (hit.z * hit.z) * inv_b2);
+        if (scale_ell > 1e-9) {
+            hit = vec_scale(hit, 1.0 / scale_ell);
+            s = vec_norm(vec_sub(hit, origin_ecef));
+        }
+    }
+
+    // Normale locale esterna alla superficie ellissoidica WGS84: grad(F) = [2x/a^2, 2y/a^2, 2z/b^2]
+    Vector3D n_surf = vec_normalize((Vector3D){
+        hit.x * inv_a2,
+        hit.y * inv_a2,
+        hit.z * inv_b2
+    });
+    double cos_inc = adcs_clamp(-vec_dot(n_surf, d), 0.05, 1.0);
+    double inc_deg = acos(cos_inc) * RAD2DEG;
+
+    if (hit_ecef_out)       *hit_ecef_out       = hit;
+    if (slant_range_km_out) *slant_range_km_out = s;
+    if (incidence_deg_out)  *incidence_deg_out  = inc_deg;
+    return exact_hit;
+}
+
+EORaycastReport simulate_eo_raycasting_and_coverage(KeplerianElements orb_target,
+                                                    OptimalTransferPlan plan,
+                                                    ADCSReport adcs,
+                                                    EOSensorSpec spec,
+                                                    double mu) {
+    EORaycastReport rep = {0};
+
+    spec.fov_x_deg     = adcs_clamp((spec.fov_x_deg > 0.5) ? spec.fov_x_deg : 10.0, 1.0, 60.0);
+    spec.fov_y_deg     = adcs_clamp((spec.fov_y_deg > 0.5) ? spec.fov_y_deg : 15.0, 1.0, 65.0);
+    spec.off_nadir_deg = adcs_clamp(spec.off_nadir_deg, -45.0, 45.0);
+    if (spec.opt_aperture_m < 0.05) spec.opt_aperture_m = 0.35;
+    if (spec.wavelength_nm  < 100.0) spec.wavelength_nm = 550.0;
+    rep.spec = spec;
+
+    if (fabs(spec.off_nadir_deg) >= 3.0) {
+        snprintf(rep.sensor_mode_name, sizeof(rep.sensor_mode_name),
+                 "Off-Nadir Side-Looking SAR/EO (Tilt %+.1f deg, FOV %.0fx%.0f deg)",
+                 spec.off_nadir_deg, spec.fov_x_deg, spec.fov_y_deg);
+    } else {
+        snprintf(rep.sensor_mode_name, sizeof(rep.sensor_mode_name),
+                 "Nadir Pushbroom Optical/Multispectral (FOV %.0fx%.0f deg)",
+                 spec.fov_x_deg, spec.fov_y_deg);
+    }
+
+    // Per la simulazione di Earth Observation LEO/MEO: se la quota target supera i 2500 km (es. demo MEO 10000 km),
+    // utilizziamo una quota operativa EO LEO equivalente (650-780 km) mantenendo inclinazione, eccentricità e RAAN
+    // dell'orbita target, così da generare strisce di scansione (Swath) ad alta risoluzione fisicamente realistiche.
+    double raw_alt_km = fmax(160.0, orb_target.a - EARTH_RADIUS);
+    double eo_alt_km  = (raw_alt_km <= 2500.0) ? raw_alt_km : (650.0 + 0.015 * fmin(raw_alt_km - 2500.0, 12000.0));
+    KeplerianElements kep_eo = orb_target;
+    kep_eo.a = EARTH_RADIUS + eo_alt_km;
+    kep_eo.e = fmin(orb_target.e, 0.025);
+    validate_and_clamp_closed_orbit(&kep_eo, NULL);
+
+    // Risoluzione teorica di diffrazione al nadir (criterio di Rayleigh: GSD_nadir = 1.22 * lambda * h / D_opt)
+    double lambda_m = spec.wavelength_nm * 1.0e-9;
+    rep.nadir_gsd_m = 1.22 * (lambda_m / spec.opt_aperture_m) * (eo_alt_km * 1000.0);
+
+    double half_x_rad = 0.5 * spec.fov_x_deg * DEG2RAD;
+    double half_y_rad = 0.5 * spec.fov_y_deg * DEG2RAD;
+    double off_rad    = spec.off_nadir_deg * DEG2RAD;
+
+    double tan_x = tan(half_x_rad);
+    double tan_y_min = tan(off_rad - half_y_rad);
+    double tan_y_max = tan(off_rad + half_y_rad);
+    double tan_y_bore = tan(off_rad);
+
+    // 1. Simulazione campagna di osservazione multi-orbita (16 rivoluzioni ~ 24h) con propagatore RK4 J2
+    //    per accumulare la Heatmap Globale di Copertura (60 x 120 celle da 3° x 3°)
+    double mass_kg = (plan.final_mass > 10.0) ? plan.final_mass : 464.0;
+    ForceModelConfig forces = {.enable_j2 = true, .enable_drag = false, .sun_dir = {1.0, 0.0, 0.0}};
+    SpacecraftConfig sc_eo  = {.drag_coeff = 2.2, .drag_area = 4.0, .thruster = {.is_active = false}};
+
+    double period_s = orbital_period(kep_eo.a, mu);
+    double sim_duration_s = 10.0 * period_s; // 10 orbite complete con rotazione terrestre per evidenziare le tracce di swath
+    int n_sim_steps = 800;
+    double dt_sim = sim_duration_s / (double)n_sim_steps;
+
+    CartesianState state = keplerian_to_cartesian(kep_eo, mu, mass_kg, 0.0);
+
+    for (int step = 0; step <= n_sim_steps; step++) {
+        double t_sec = (double)step * dt_sim;
+        Vector3D r_ecef = eci_to_ecef(state.position, t_sec, 0.0);
+        Vector3D v_ecef = eci_to_ecef(state.velocity, t_sec, 0.0);
+
+        // Costruzione terna LVLH / Nadir nel sistema ECEF:
+        // z_nadir = -r_ecef / ||r_ecef|| (verso il centro Terra), y_cross = z_nadir x v_ecef, x_along = y_cross x z_nadir
+        double r_mag = fmax(1.0, vec_norm(r_ecef));
+        Vector3D z_nadir = vec_scale(r_ecef, -1.0 / r_mag);
+        Vector3D y_cross = vec_normalize(vec_cross(z_nadir, v_ecef));
+        if (vec_norm(y_cross) < 1e-6) y_cross = (Vector3D){0.0, 1.0, 0.0};
+        Vector3D x_along = vec_normalize(vec_cross(y_cross, z_nadir));
+
+        // Accoppiamento con il quaternione d'assetto 6-DOF ADCS (Sprint 14): Jitter / Roll-Pitch-Yaw residuo
+        double att_roll_rad = 0.0, att_pitch_rad = 0.0;
+        if (adcs.num_samples > 1) {
+            int a_idx = step % adcs.num_samples;
+            Quaternion q_adcs = adcs.samples[a_idx].q;
+            // Estrazione micro-perturbazione d'assetto attorno a Nadir Pointing
+            att_roll_rad  = adcs_clamp(2.0 * q_adcs.q1 * 0.08, -0.025, 0.025);
+            att_pitch_rad = adcs_clamp(2.0 * q_adcs.q2 * 0.08, -0.025, 0.025);
+        }
+
+        // Direzione Boresight (+Z_body inclinato di off_nadir_deg lungo y_cross + perturbazione quaternione ADCS)
+        Vector3D d_bore = vec_normalize(vec_add(
+            vec_add(z_nadir, vec_scale(x_along, tan(att_pitch_rad))),
+            vec_scale(y_cross, tan(off_rad + att_roll_rad))
+        ));
+
+        Vector3D hit_bore = {0};
+        double slant_km = 0.0, inc_deg = 0.0;
+        raycast_wgs84_ellipsoid(r_ecef, d_bore, &hit_bore, &slant_km, &inc_deg);
+        GeodeticCoord geo_bore = ecef_to_geodetic(hit_bore);
+        double bore_lat_deg = geo_bore.latitude * RAD2DEG;
+        double bore_lon_deg = geo_bore.longitude * RAD2DEG;
+
+        // Raycasting dei 4 vertici del poligono FOV (Forward-Inner, Forward-Outer, Aft-Outer, Aft-Inner)
+        const double cx_tan[4] = { +tan_x, +tan_x, -tan_x, -tan_x };
+        const double cy_tan[4] = { tan_y_min, tan_y_max, tan_y_max, tan_y_min };
+        double c_lat[4], c_lon[4];
+        Vector3D hit_corners[4];
+
+        for (int c = 0; c < 4; c++) {
+            Vector3D d_corner = vec_normalize(vec_add(
+                vec_add(z_nadir, vec_scale(x_along, cx_tan[c] + tan(att_pitch_rad))),
+                vec_scale(y_cross, cy_tan[c] + tan(att_roll_rad))
+            ));
+            double s_c = 0.0, inc_c = 0.0;
+            raycast_wgs84_ellipsoid(r_ecef, d_corner, &hit_corners[c], &s_c, &inc_c);
+            GeodeticCoord gc = ecef_to_geodetic(hit_corners[c]);
+            c_lat[c] = gc.latitude * RAD2DEG;
+            c_lon[c] = gc.longitude * RAD2DEG;
+        }
+
+        // Incrementa le celle della griglia globale (60 x 120, passo 3° x 3°) coperte dal poligono del FOV
+        double min_lat = bore_lat_deg, max_lat = bore_lat_deg;
+        for (int c = 0; c < 4; c++) {
+            if (c_lat[c] < min_lat) min_lat = c_lat[c];
+            if (c_lat[c] > max_lat) max_lat = c_lat[c];
+        }
+        // Raggio angolare efficace di swath sul terreno proporzionale al FOV reale e allo Slant Range
+        double swath_km_est = 2.0 * slant_km * tan(0.5 * fmax(spec.fov_x_deg, spec.fov_y_deg) * DEG2RAD);
+        double half_swath_deg = adcs_clamp((0.5 * swath_km_est) / 111.32, 1.35, 14.0);
+        int r_min = (int)floor((bore_lat_deg - half_swath_deg + 90.0) / 3.0);
+        int r_max = (int)floor((bore_lat_deg + half_swath_deg + 90.0) / 3.0);
+        if (r_min < 0) r_min = 0;
+        if (r_max >= EO_HEATMAP_LAT_BINS) r_max = EO_HEATMAP_LAT_BINS - 1;
+
+        double cos_lat_scale = fmax(0.22, cos(bore_lat_deg * DEG2RAD));
+        double half_lon_deg  = fmin(18.0, half_swath_deg / cos_lat_scale);
+        int c_span = (int)floor(half_lon_deg / 3.0);
+        int c_center = (int)floor((bore_lon_deg + 180.0) / 3.0);
+
+        for (int r_idx = r_min; r_idx <= r_max; r_idx++) {
+            for (int dc = -c_span; dc <= c_span; dc++) {
+                int c_idx = (c_center + dc + EO_HEATMAP_LON_BINS) % EO_HEATMAP_LON_BINS;
+                rep.heatmap_counts[r_idx][c_idx]++;
+            }
+        }
+
+        if (step < n_sim_steps) {
+            state = propagate_step_rk4(state, dt_sim, &sc_eo, &forces);
+        }
+    }
+
+    // 2. Generazione serie temporale ad alta risoluzione traj_sensor_footprint (MAX_EO_FOOTPRINT_SAMPLES = 121)
+    //    su 2.2 rivoluzioni orbitali per il rendering dinamico del poligono trapezoidale e della Synthetic Camera
+    int n_fp = MAX_EO_FOOTPRINT_SAMPLES;
+    rep.num_samples = n_fp;
+    double fp_duration_s = 2.2 * period_s;
+    double dt_fp = fp_duration_s / (double)(n_fp - 1);
+
+    CartesianState st_fp = keplerian_to_cartesian(kep_eo, mu, mass_kg, 0.0);
+    double sum_slant = 0.0, sum_inc = 0.0, sum_gsd = 0.0, sum_smear = 0.0, sum_area = 0.0;
+
+    for (int k = 0; k < n_fp; k++) {
+        double t_sec = (double)k * dt_fp;
+        Vector3D r_ecef = eci_to_ecef(st_fp.position, t_sec, 0.0);
+        Vector3D v_ecef = eci_to_ecef(st_fp.velocity, t_sec, 0.0);
+        GeodeticCoord geo_sat = ecef_to_geodetic(r_ecef);
+
+        double r_mag = fmax(1.0, vec_norm(r_ecef));
+        Vector3D z_nadir = vec_scale(r_ecef, -1.0 / r_mag);
+        Vector3D y_cross = vec_normalize(vec_cross(z_nadir, v_ecef));
+        if (vec_norm(y_cross) < 1e-6) y_cross = (Vector3D){0.0, 1.0, 0.0};
+        Vector3D x_along = vec_normalize(vec_cross(y_cross, z_nadir));
+
+        double att_roll_rad = 0.0, att_pitch_rad = 0.0;
+        if (adcs.num_samples > 1) {
+            int a_idx = (k * (adcs.num_samples - 1)) / (n_fp - 1);
+            Quaternion q_adcs = adcs.samples[a_idx].q;
+            att_roll_rad  = adcs_clamp(2.0 * q_adcs.q1 * 0.08, -0.025, 0.025);
+            att_pitch_rad = adcs_clamp(2.0 * q_adcs.q2 * 0.08, -0.025, 0.025);
+        }
+
+        Vector3D d_bore = vec_normalize(vec_add(
+            vec_add(z_nadir, vec_scale(x_along, tan(att_pitch_rad))),
+            vec_scale(y_cross, tan_y_bore + tan(att_roll_rad))
+        ));
+
+        Vector3D hit_bore = {0};
+        double slant_km = eo_alt_km, inc_deg = fabs(spec.off_nadir_deg);
+        raycast_wgs84_ellipsoid(r_ecef, d_bore, &hit_bore, &slant_km, &inc_deg);
+        GeodeticCoord geo_bore = ecef_to_geodetic(hit_bore);
+
+        // Calcolo distorsione geometrica Off-Nadir + curvatura terrestre (Pixel Smearing Factor)
+        // Smearing = (rho_slant / h_sat) / cos(incidence_angle)
+        double h_sat_km = fmax(150.0, geo_sat.altitude);
+        double cos_inc  = fmax(0.20, cos(inc_deg * DEG2RAD));
+        double smearing = (slant_km / h_sat_km) / cos_inc;
+        double gsd_eff_m = rep.nadir_gsd_m * smearing;
+
+        const double cx_tan[4] = { +tan_x, +tan_x, -tan_x, -tan_x };
+        const double cy_tan[4] = { tan_y_min, tan_y_max, tan_y_max, tan_y_min };
+        Vector3D hit_c[4];
+
+        for (int c = 0; c < 4; c++) {
+            Vector3D d_c = vec_normalize(vec_add(
+                vec_add(z_nadir, vec_scale(x_along, cx_tan[c] + tan(att_pitch_rad))),
+                vec_scale(y_cross, cy_tan[c] + tan(att_roll_rad))
+            ));
+            double s_c = 0.0, inc_c = 0.0;
+            raycast_wgs84_ellipsoid(r_ecef, d_c, &hit_c[c], &s_c, &inc_c);
+            GeodeticCoord gc = ecef_to_geodetic(hit_c[c]);
+            rep.samples[k].corner_lat_deg[c] = gc.latitude * RAD2DEG;
+            rep.samples[k].corner_lon_deg[c] = gc.longitude * RAD2DEG;
+        }
+
+        // Area del quadrilatero 3D proiettato sull'ellissoide (somma delle aree dei 2 triangoli [0,1,2] e [0,2,3])
+        Vector3D e01 = vec_sub(hit_c[1], hit_c[0]);
+        Vector3D e02 = vec_sub(hit_c[2], hit_c[0]);
+        Vector3D e03 = vec_sub(hit_c[3], hit_c[0]);
+        double area_km2 = 0.5 * (vec_norm(vec_cross(e01, e02)) + vec_norm(vec_cross(e02, e03)));
+
+        rep.samples[k].t_min           = t_sec / 60.0;
+        rep.samples[k].sat_lat_deg     = geo_sat.latitude * RAD2DEG;
+        rep.samples[k].sat_lon_deg     = geo_sat.longitude * RAD2DEG;
+        rep.samples[k].sat_alt_km      = h_sat_km;
+        rep.samples[k].bore_lat_deg    = geo_bore.latitude * RAD2DEG;
+        rep.samples[k].bore_lon_deg    = geo_bore.longitude * RAD2DEG;
+        rep.samples[k].slant_range_km  = slant_km;
+        rep.samples[k].incidence_deg   = inc_deg;
+        rep.samples[k].gsd_m           = gsd_eff_m;
+        rep.samples[k].smearing_factor = smearing;
+
+        sum_slant += slant_km;
+        sum_inc   += inc_deg;
+        sum_gsd   += gsd_eff_m;
+        sum_smear += smearing;
+        sum_area  += area_km2;
+
+        if (k < n_fp - 1) {
+            st_fp = propagate_step_rk4(st_fp, dt_fp, &sc_eo, &forces);
+        }
+    }
+
+    rep.avg_slant_range_km        = sum_slant / (double)n_fp;
+    rep.avg_incidence_deg         = sum_inc / (double)n_fp;
+    rep.mean_gsd_m                = sum_gsd / (double)n_fp;
+    rep.off_nadir_smearing_factor = sum_smear / (double)n_fp;
+    rep.swath_area_km2            = sum_area / (double)n_fp;
+
+    // 3. Statistiche di Copertura Globale Pesata per Area Sferica cos(lat)
+    rep.total_grid_cells = EO_HEATMAP_LAT_BINS * EO_HEATMAP_LON_BINS;
+    rep.unique_cells_hit = 0;
+    rep.max_revisit_hits = 0;
+    double weighted_hit_area = 0.0;
+    double weighted_tot_area = 0.0;
+
+    for (int r = 0; r < EO_HEATMAP_LAT_BINS; r++) {
+        double lat_center_deg = -88.5 + 3.0 * (double)r;
+        double w_lat = fmax(0.05, cos(lat_center_deg * DEG2RAD));
+        for (int c = 0; c < EO_HEATMAP_LON_BINS; c++) {
+            weighted_tot_area += w_lat;
+            int hits = rep.heatmap_counts[r][c];
+            if (hits > 0) {
+                rep.unique_cells_hit++;
+                weighted_hit_area += w_lat;
+                if (hits > rep.max_revisit_hits) rep.max_revisit_hits = hits;
+            }
+        }
+    }
+    rep.global_coverage_pct = adcs_clamp((weighted_hit_area / fmax(1e-9, weighted_tot_area)) * 100.0, 1.0, 100.0);
+
+    return rep;
+}
+
+
 
 
 

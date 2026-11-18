@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 31: HIGH-FIDELITY EPS & PENUMBRA MODEL \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 32: EO WGS84 RAYCASTING & COVERAGE HEATMAP\n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -222,6 +222,17 @@ int main(void) {
         .mission_design_life_yr = 5.0                        // Vita operativa di progetto (5 anni)
     };
     EPSHiFiReport eps = simulate_eps_hifi_profile(orb_initial, orb_target, plan, tcs, adcs, telecom, eps_spec, EARTH_MU);
+
+    // 23. SPRINT 32: EARTH OBSERVATION (EO) 6-DOF WGS84 RAYCASTING, SWATH POLYGON & COVERAGE HEATMAP
+    static EORaycastReport eo;
+    EOSensorSpec eo_spec = {
+        .fov_x_deg      = 10.0, // Field of View Along-Track = 10.0 deg
+        .fov_y_deg      = 15.0, // Field of View Cross-Track = 15.0 deg
+        .off_nadir_deg  = 0.0,  // Puntamento Boresight Off-Nadir = 0.0 deg (Nadir Pushbroom)
+        .opt_aperture_m = 0.35, // Apertura ottica D_opt = 0.35 m
+        .wavelength_nm  = 550.0 // Lunghezza d'onda visibile lambda = 550 nm
+    };
+    eo = simulate_eo_raycasting_and_coverage(orb_target, plan, adcs, eo_spec, EARTH_MU);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -466,15 +477,25 @@ int main(void) {
            eps.peak_dod_pct, eps.min_soc_pct, eps.eol_soh_pct, eps.eol_cap_wh, eps.nominal_cap_wh);
     printf("  * ECSS Power Verdict    : %s\n\n", eps.eps_compliance_status);
 
+    printf("[EARTH OBSERVATION (EO) WGS84 6-DOF RAYCASTING & CUMULATIVE COVERAGE HEATMAP]\n");
+    printf("  * Sensor Mode & FOV     : %s | Off-Nadir Tilt = %+.1f deg\n",
+           eo.sensor_mode_name, eo.spec.off_nadir_deg);
+    printf("  * Boresight Geometry    : Mean Slant Range = %.2f km | Incidence = %.2f deg | Swath Area = %.0f km^2\n",
+           eo.avg_slant_range_km, eo.avg_incidence_deg, eo.swath_area_km2);
+    printf("  * Pixel Smearing & GSD  : Nadir GSD = %.3f m -> Effective Off-Nadir GSD = %.3f m (Smearing = %.3fx)\n",
+           eo.nadir_gsd_m, eo.mean_gsd_m, eo.off_nadir_smearing_factor);
+    printf("  * Global Heatmap Grid   : Cumulative Coverage = %.2f%% (%d / %d cells hit, Peak Revisit = %dx)\n\n",
+           eo.global_coverage_pct, eo.unique_cells_hit, eo.total_grid_cells, eo.max_revisit_hits);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with High-Fidelity EPS, Multi-Station DSN & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with EO WGS84 Raycasting, Heatmap, Hi-Fi EPS & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;
