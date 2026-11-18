@@ -1311,4 +1311,67 @@ typedef struct {
     GroundTrackSample samples[MAX_GROUND_TRACK_SAMPLES];
 } GroundSegmentReport;
 
+// ==========================================
+// 5S. SPRINT 31: HIGH-FIDELITY ELECTRICAL POWER SYSTEM (EPS), PENUMBRA/UMBRA ECLIPSES & LI-ION DEGRADATION
+// ==========================================
+#define MAX_EPS_SAMPLES    181
+#define SUN_RADIUS_KM      695700.0 // Raggio fotosferico solare [km]
+
+typedef enum {
+    BATT_CONFIG_8S4P  = 0, // 8S4P Li-Ion (28V Nominal Bus, 33.6V Max / 24.0V Cutoff, 48 Ah / 1382 Wh)
+    BATT_CONFIG_8S6P  = 1, // 8S6P Li-Ion High-Capacity (28V Nominal Bus, 33.6V Max / 24.0V Cutoff, 72 Ah / 2074 Wh)
+    BATT_CONFIG_7S4P  = 2, // 7S4P Li-Ion Compact LEO (25.2V Nominal Bus, 29.4V Max / 21.0V Cutoff, 48 Ah / 1210 Wh)
+    BATT_CONFIG_14S4P = 3  // 14S4P Li-Ion High-Power (50V Nominal Bus, 58.8V Max / 42.0V Cutoff, 48 Ah / 2419 Wh)
+} EPSBatteryConfigType;
+
+typedef enum {
+    CELL_GAAS_TRIPLE_JUNCTION = 0, // GaAs Triple-Junction InGaP/GaAs/Ge (eta_0 = 30.2%, beta = -0.20%/K, radiation hard)
+    CELL_SILICON_HIGH_EFF     = 1  // High-Efficiency Space Silicon BSFR (eta_0 = 19.8%, beta = -0.45%/K)
+} EPSSolarCellType;
+
+typedef struct {
+    EPSBatteryConfigType batt_config; // Configurazione pacco batteria Li-Ion (default BATT_CONFIG_8S4P)
+    EPSSolarCellType     cell_type;   // Tecnologia celle fotovoltaiche (default CELL_GAAS_TRIPLE_JUNCTION)
+    double solar_array_area_m2;       // Area efficace pannelli solari A_sa [m^2] (default 2.85 m^2)
+    double mission_design_life_yr;    // Vita operativa di progetto per calcolo SoH EoL [anni] (default 5.0 anni)
+} EPSHiFiSpec;
+
+typedef struct {
+    double t_min;             // Tempo trascorso nella finestra di missione [min]
+    double eclipse_fraction;  // Frazione d'ombra conica terrestre: 0.0 = Luce piena, (0,1) = Penombra, 1.0 = Ombra (Umbra)
+    double solar_pwr_w;       // Potenza solare generata dopo MPPT, efficienza termica eta(T) e degradazione TID [W]
+    double load_pwr_w;        // Potenza elettrica richiesta dai sottosistemi di bordo (Bus + ADCS + TCS Heaters + RF/Payload) [W]
+    double bus_voltage_v;     // Tensione non lineare del bus batteria V_bus(SoC, I_batt) [V]
+    double soc_pct;           // State of Charge istantaneo della batteria Li-Ion [%]
+    double soh_pct;           // State of Health (capacità residua C_max / C_nom) lungo la vita operativa [%]
+} EPSSample;
+
+typedef struct {
+    EPSHiFiSpec spec;
+    char   batt_config_name[48];      // Nome configurazione batteria (es. "8S4P Li-Ion (28V Unregulated Bus)")
+    char   cell_type_name[48];        // Nome tecnologia solare (es. "GaAs Triple-Junction (InGaP/GaAs/Ge)")
+    int    series_cells;              // Numero di celle in serie N_s (es. 8 per 28V bus)
+    int    parallel_strings;          // Numero di stringhe in parallelo N_p (es. 4)
+    double nominal_bus_v;             // Tensione nominale di targa del bus [V]
+    double max_bus_voltage_v;         // Tensione massima del bus a piena carica (N_s * 4.2V) [V]
+    double min_bus_voltage_v;         // Tensione minima del bus registrata durante la scarica in ombra [V]
+    double nominal_cap_wh;            // Capacità energetica nominale a inizio vita (BoL) [Wh]
+    double eol_cap_wh;                // Capacità energetica residua a fine vita (EoL) [Wh]
+    double mppt_eff_pct;              // Efficienza media del convertitore MPPT (Maximum Power Point Tracking) [%]
+    double solar_eff_mean_pct;        // Efficienza fotovoltaica media corretta per temperatura eta_T [%]
+    double tid_deg_pct;               // Perdita di potenza dei pannelli solari per dose radiativa TID [%]
+    double peak_solar_pwr_w;          // Picco di potenza solare generata (Cold-Array Post-Eclipse) [W]
+    double mean_solar_pwr_w;          // Potenza solare media orbitale [W]
+    double mean_load_pwr_w;           // Carico elettrico medio richiesto dai sottosistemi [W]
+    double peak_dod_pct;              // Massima Depth of Discharge (DoD) registrata per ciclo [%]
+    double min_soc_pct;               // Minimo State of Charge (SoC = 100 - Peak DoD) registrato [%]
+    double eol_soh_pct;               // State of Health (SoH) della batteria a fine vita (EoL) [%]
+    double penumbra_time_min;         // Durata complessiva dei transiti in Penombra nella finestra [min]
+    double umbra_time_min;            // Durata complessiva dei transiti in Ombra totale (Umbra) nella finestra [min]
+    char   eps_compliance_status[64]; // Verdetto conformità ECSS-E-ST-20C (DoD < 35%, SoH_EoL > 75%, V_bus > V_cut)
+
+    int    num_samples;
+    EPSSample samples[MAX_EPS_SAMPLES];
+} EPSHiFiReport;
+
 #endif // ORBIT_TYPES_H

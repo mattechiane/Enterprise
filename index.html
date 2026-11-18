@@ -483,8 +483,8 @@
                 </button>
                 <button type="button" class="nav-tab-btn" data-tab-target="subsystems" onclick="switchWorkspaceTab('subsystems')">
                     <div class="nav-tab-icon">&#9889;</div>
-                    <div class="nav-tab-text"><div class="nav-tab-title"><span>Subsystems (EPS, Thermal, RF)</span></div>
-                    <div class="nav-tab-desc">Kinematics/EPS, TCS &amp; TID, RF Link, Walker, SSR &amp; Ops</div></div>
+                    <div class="nav-tab-text"><div class="nav-tab-title"><span>Subsystems (EPS, Thermal, RF &amp; Payload)</span></div>
+                    <div class="nav-tab-desc">Hi-Fi EPS &amp; Penumbra, TCS/TID, RF Link, Walker, SSR, ISL &amp; DSN</div></div>
                 </button>
                 <button type="button" class="nav-tab-btn" data-tab-target="safety" onclick="switchWorkspaceTab('safety')">
                     <div class="nav-tab-icon">&#128737;</div>
@@ -494,8 +494,8 @@
                 <div class="sidebar-divider"></div>
                 <button type="button" class="nav-tab-btn" data-tab-target="all" onclick="switchWorkspaceTab('all')">
                     <div class="nav-tab-icon">&#128214;</div>
-                    <div class="nav-tab-text"><div class="nav-tab-title"><span>Show All (Full Report View)</span><span class="nav-tab-count">20</span></div>
-                    <div class="nav-tab-desc">Complete dossier, Sections 1&ndash;20</div></div>
+                    <div class="nav-tab-text"><div class="nav-tab-title"><span>Show All (Full Report View)</span><span class="nav-tab-count">24</span></div>
+                    <div class="nav-tab-desc">Complete dossier, Sections 1&ndash;24</div></div>
                 </button>
             </nav>
         </div>
@@ -1470,6 +1470,50 @@
         <div id="plotPolarSkyAndGantt" class="plot-container-rdv"></div>
     </div>
 </section>
+
+<!-- 24. HIGH-FIDELITY EPS, PENUMBRA TRANSIT & BATTERY HEALTH -->
+<section class="section-block" id="sec-24" data-tab="subsystems" style="--sec-order: 24;">
+    <div class="section-header">
+        <div>
+            <h2>24. High-Fidelity EPS, Penumbra Transit &amp; Battery Health</h2>
+            <span>Conical Umbra/Penumbra Eclipse Model &bull; Solar Array &eta;<sub>T</sub> = &eta;<sub>0</sub>[1 &minus; &beta;(T &minus; T<sub>ref</sub>)] &amp; TID MPPT &bull; Nonlinear Li-Ion V<sub>batt</sub>(SoC) Discharge &amp; Cyclic DoD SoH Fade</span>
+        </div>
+        <span class="badge" id="epsStatusBadge" style="color:var(--green); border-color:var(--green);">&#9889; ECSS-E-ST-20C EPS NOMINAL &bull; MPPT &amp; LI-ION BUS LOCKED</span>
+    </div>
+
+    <div class="ipl-kpi-grid">
+        <div class="kpi-card" style="--kpi-accent: var(--amber);">
+            <div class="kpi-top"><span class="kpi-label">Peak DoD [%]</span><span class="kpi-micro-badge" id="epsKpiDodBadge">CYCLIC</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiPeakDod">---</span><span class="kpi-unit">%</span></div>
+            <div class="kpi-sub" id="epsKpiPeakDodSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--green);">
+            <div class="kpi-top"><span class="kpi-label">End-of-Life Battery Health (SoH) [%]</span><span class="kpi-micro-badge" id="epsKpiSohBadge" style="color:var(--green);border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.14);">5-YR EOL</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiEolSoh">---</span><span class="kpi-unit">%</span></div>
+            <div class="kpi-sub" id="epsKpiEolSohSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Minimum Bus Voltage [V]</span><span class="kpi-micro-badge" id="epsKpiConfigBadge">8S4P</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiMinBusV">---</span><span class="kpi-unit">V</span></div>
+            <div class="kpi-sub" id="epsKpiMinBusVSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--purple);">
+            <div class="kpi-top"><span class="kpi-label">MPPT &amp; Array Efficiency</span><span class="kpi-micro-badge" id="epsKpiCellBadge">GaAs 3J</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiMpptEff">---</span><span class="kpi-unit">%</span></div>
+            <div class="kpi-sub" id="epsKpiMpptEffSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--cyan-bright);">
+            <div class="kpi-top"><span class="kpi-label">Peak Solar Generation</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiPeakSolar">---</span><span class="kpi-unit">W</span></div>
+            <div class="kpi-sub" id="epsKpiPeakSolarSub">---</div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotEpsPenumbraSolar" class="plot-container-rdv"></div>
+        <div id="plotEpsBatteryDischarge" class="plot-container-rdv"></div>
+    </div>
+</section>
         </div><!-- /sections-stack -->
     </main>
 </div><!-- /app-shell -->
@@ -1883,6 +1927,31 @@
             </div>
         </div>
 
+        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--cyan)">21. High-Fidelity Electrical Power System (EPS Hi-Fi), Penumbra &amp; Li-Ion Chemistry</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Conical Umbra/Penumbra Transit &bull; Thermal/TID MPPT Solar Array &bull; Nonlinear Li-Ion V<sub>batt</sub>(SoC) &amp; Cyclic DoD SoH Fade</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: 1fr 1fr;">
+                <div class="field">
+                    <label>Battery Cell Configuration <span>[Series &times; Parallel Pack]</span></label>
+                    <select id="epsBattConfig">
+                        <option value="0" selected>8S4P Li-Ion Standard (28V Unregulated Bus &bull; 33.6V Max / 24.0V Cut &bull; 48 Ah / 1382 Wh)</option>
+                        <option value="1">8S6P Li-Ion High-Capacity (28V Unregulated Bus &bull; 33.6V Max / 24.0V Cut &bull; 72 Ah / 2074 Wh)</option>
+                        <option value="2">7S4P Li-Ion Compact LEO (25.2V Bus &bull; 29.4V Max / 21.0V Cut &bull; 48 Ah / 1210 Wh)</option>
+                        <option value="3">14S4P Li-Ion High-Power (50V Bus &bull; 58.8V Max / 42.0V Cut &bull; 48 Ah / 2419 Wh)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Solar Array Cell Type <span>[Photovoltaic Technology &amp; &beta;<sub>T</sub>]</span></label>
+                    <select id="epsSolarCellType">
+                        <option value="0" selected>GaAs Triple-Junction InGaP/GaAs/Ge (&eta;&#8320; = 30.2%, &beta; = -0.20%/K, Radiation-Hard)</option>
+                        <option value="1">Silicon High-Efficiency Space BSFR (&eta;&#8320; = 19.8%, &beta; = -0.45%/K)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
         <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
             <div class="form-section-header">
                 <h3 style="color:var(--cyan)">10. Onboard GNSS / Extended Kalman Filter (EKF) Autonomous Navigation</h3>
@@ -2120,12 +2189,12 @@
                       jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary']] },
         gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, multi-satellite formation flying (ROEs), reaction wheels, EKF, structure/slosh CSI',
                       jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF'], ['sec-16', 'Flex/Slosh CSI'], ['sec-19', 'Formation ROEs']] },
-        subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF, Payload, SSR, ISL & DSN Ground Network)', sub: 'Kinematics/Radar/EPS, thermal & radiation, RF link budget, Walker constellation, SSR buffer, optical laser ISL & multi-station DSN/ESTRACK tracking',
-                      jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops'], ['sec-22', 'Optical ISL'], ['sec-23', 'Ground Network']] },
+        subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF & Payload)', sub: 'High-fidelity EPS & conical penumbra, kinematics/radar, thermal & radiation, RF link budget, Walker constellation, SSR buffer, optical ISL & DSN tracking',
+                      jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops'], ['sec-22', 'Optical ISL'], ['sec-23', 'Ground Network'], ['sec-24', 'Hi-Fi EPS']] },
         safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL, FDIR & Space Weather)', sub: 'B-Plane collision avoidance, 3-phase EDL re-entry, autonomous FDIR & NRLMSISE/Jacchia space weather orbital decay',
                       jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL & EDL'], ['sec-17', 'FDIR'], ['sec-21', 'Space Weather']] },
-        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 23',
-                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22'], ['sec-23', '23']] }
+        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 24',
+                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22'], ['sec-23', '23'], ['sec-24', '24']] }
     };
 
     function resizeVisiblePlots() {
@@ -2702,6 +2771,15 @@
             }
             if (gnd.elevation_mask_deg !== undefined && document.getElementById('gndElMaskDeg')) {
                 document.getElementById('gndElMaskDeg').value = gnd.elevation_mask_deg;
+            }
+        }
+        if (data.eps_hifi_summary) {
+            const eps = data.eps_hifi_summary;
+            if (eps.batt_config_id !== undefined && document.getElementById('epsBattConfig')) {
+                document.getElementById('epsBattConfig').value = String(eps.batt_config_id);
+            }
+            if (eps.cell_type_id !== undefined && document.getElementById('epsSolarCellType')) {
+                document.getElementById('epsSolarCellType').value = String(eps.cell_type_id);
             }
         }
 
@@ -5330,6 +5408,11 @@
         // 23. MULTI-STATION GROUND NETWORK, DSN/ESTRACK GEOMETRY & TRACKING
         // =====================================================================
         renderGroundSegmentSection(data);
+
+        // =====================================================================
+        // 24. HIGH-FIDELITY EPS, PENUMBRA TRANSIT & LI-ION BATTERY HEALTH
+        // =====================================================================
+        renderEpsHiFiSection(data);
 
         // =====================================================================
         // 17. ONBOARD FDIR AUTONOMY, REDUNDANCY SWITCHOVER & SAFE-MODE RECOVERY
@@ -11157,6 +11240,486 @@
         resizeVisiblePlots();
     }
 
+    // =========================================================================
+    // SPRINT 31: HIGH-FIDELITY ELECTRICAL POWER SYSTEM (EPS), CONICAL UMBRA/PENUMBRA
+    // ECLIPSES, TEMPERATURE/TID SOLAR MPPT & LI-ION DISCHARGE / CYCLIC DoD SoH
+    // =========================================================================
+    function computeConicalEclipseFractionJS(satPosEci, sunDirHat) {
+        const rSat = Math.hypot(satPosEci.x, satPosEci.y, satPosEci.z);
+        if (rSat <= R_EQ) return 1.0;
+
+        const AU_KM_VAL = 149597870.7;
+        const SUN_RAD_KM = 695700.0;
+        const sNorm = Math.hypot(sunDirHat.x, sunDirHat.y, sunDirHat.z) || 1.0;
+        const sx = (sunDirHat.x / sNorm) * AU_KM_VAL - satPosEci.x;
+        const sy = (sunDirHat.y / sNorm) * AU_KM_VAL - satPosEci.y;
+        const sz = (sunDirHat.z / sNorm) * AU_KM_VAL - satPosEci.z;
+        const distSun = Math.max(1e6, Math.hypot(sx, sy, sz));
+
+        const alphaSunTrue = Math.asin(Math.max(0.0, Math.min(0.9999, SUN_RAD_KM / distSun)));
+        const aSunEff      = alphaSunTrue * 14.5;
+        const bEarth       = Math.asin(Math.max(0.0, Math.min(0.9999, R_EQ / rSat)));
+
+        const dotNadirSun = (-satPosEci.x * sx - satPosEci.y * sy - satPosEci.z * sz) / (rSat * distSun);
+        const cSep        = Math.acos(Math.max(-1.0, Math.min(1.0, dotNadirSun)));
+
+        if (cSep >= (bEarth + aSunEff)) return 0.0;
+        if (bEarth >= aSunEff && cSep <= (bEarth - aSunEff)) return 1.0;
+        if (bEarth < aSunEff && cSep <= (aSunEff - bEarth)) {
+            return Math.max(0.0, Math.min(1.0, (bEarth * bEarth) / (aSunEff * aSunEff)));
+        }
+
+        const cSafe = Math.max(1e-9, cSep);
+        const x = (cSafe * cSafe + aSunEff * aSunEff - bEarth * bEarth) / (2.0 * cSafe);
+        const y = Math.sqrt(Math.max(0.0, aSunEff * aSunEff - x * x));
+        const term1 = aSunEff * aSunEff * Math.acos(Math.max(-1.0, Math.min(1.0, x / aSunEff)));
+        const term2 = bEarth * bEarth * Math.acos(Math.max(-1.0, Math.min(1.0, (cSafe - x) / bEarth)));
+        const areaOcc = term1 + term2 - cSafe * y;
+        const areaSun = Math.PI * aSunEff * aSunEff;
+        return Math.max(0.0, Math.min(1.0, areaOcc / Math.max(1e-12, areaSun)));
+    }
+
+    function simulateEpsHiFiProfileJS(aInitKm, aTargKm, tofSec, isLowThrust, tcsSum, trajThermal, adcsSum, trajAdcs, rfSum, battConfigId, cellTypeId) {
+        const battId = isNaN(battConfigId) ? 0 : battConfigId;
+        const cellId = isNaN(cellTypeId) ? 0 : cellTypeId;
+        const saAreaM2 = 2.85;
+        const lifeYr   = 5.0;
+
+        let nSeries = 8, nParallel = 4;
+        const cellCapAh = 12.0;
+        let battName = '8S4P Li-Ion Standard (28V Bus, 48 Ah)';
+        if (battId === 1) {
+            nSeries = 8; nParallel = 6;
+            battName = '8S6P Li-Ion High-Cap (28V Bus, 72 Ah)';
+        } else if (battId === 2) {
+            nSeries = 7; nParallel = 4;
+            battName = '7S4P Li-Ion Compact (25.2V Bus, 48 Ah)';
+        } else if (battId === 3) {
+            nSeries = 14; nParallel = 4;
+            battName = '14S4P Li-Ion High-Volt (50V Bus, 48 Ah)';
+        }
+
+        const nomBusV  = nSeries * 3.60;
+        const maxBusV0 = nSeries * 4.20;
+        const nomCapWh = nSeries * 3.60 * (nParallel * cellCapAh);
+
+        let etaRef0  = 0.302;
+        let betaTemp = 0.0020;
+        let kRadTid  = 0.018;
+        let mpptNom  = 0.978;
+        const T_REF_C = 28.0;
+        let cellName = 'GaAs Triple-Junction InGaP/GaAs/Ge (30.2%)';
+
+        if (cellId === 1) {
+            etaRef0  = 0.198;
+            betaTemp = 0.0045;
+            kRadTid  = 0.036;
+            mpptNom  = 0.964;
+            cellName = 'Silicon High-Efficiency BSFR (19.8%)';
+        }
+
+        const tidKradYr = (tcsSum && tcsSum.tid_krad_yr > 0.1) ? tcsSum.tid_krad_yr : 4.20;
+        const totalTidKrad = tidKradYr * lifeYr;
+        const fTidEol = Math.max(0.72, Math.min(0.998, 1.0 - kRadTid * Math.log(1.0 + totalTidKrad / 4.5)));
+        const tidDegPct = (1.0 - fTidEol) * 100.0;
+
+        const r1Km = Math.max(R_EQ + 150.0, aInitKm || (R_EQ + 400.0));
+        const r2Km = Math.max(R_EQ + 150.0, aTargKm || (R_EQ + 10000.0));
+        const pInitS = 2.0 * Math.PI * Math.sqrt((r1Km * r1Km * r1Km) / MU);
+        const pTargS = 2.0 * Math.PI * Math.sqrt((r2Km * r2Km * r2Km) / MU);
+        const tPhase1S = 2.0 * pInitS;
+        const tPhase2S = isLowThrust ? (6.0 * 5600.0) : Math.max(600.0, tofSec || 2700.0);
+        const tPhase3S = 2.0 * pTargS;
+        const totalMissionMin = (tPhase1S + tPhase2S + tPhase3S) / 60.0;
+
+        const numPts = 181;
+        const eqCycleHours = (4.5 * 96.0) / 60.0;
+        const dtEnergyH    = eqCycleHours / (numPts - 1);
+        const dtSampleM    = (4.5 * 96.0) / (numPts - 1);
+
+        const sunDir = { x: 1.0, y: 0.0, z: 0.0 };
+        let socPct = 96.5;
+        let minSocPct = socPct;
+        let minBusV = maxBusV0;
+        let maxBusV = 0.0;
+        let peakSolarW = 0.0, sumSolarW = 0.0, sumLoadW = 0.0, sumEtaPct = 0.0, sumMpptPct = 0.0;
+        let sunSamplesCnt = 0;
+        let penumbraMin = 0.0, umbraMin = 0.0;
+
+        const trajEps = [];
+
+        for (let i = 0; i < numPts; i++) {
+            const tau  = i / (numPts - 1);
+            const tMin = tau * totalMissionMin;
+
+            let rCurKm = r1Km;
+            if (tau >= 0.34 && tau <= 0.76) {
+                rCurKm = r1Km + ((tau - 0.34) / 0.42) * (r2Km - r1Km);
+            } else if (tau > 0.76) {
+                rCurKm = r2Km;
+            }
+            const rShadowKm = Math.min(rCurKm, R_EQ + 2200.0);
+
+            const orbAngle = 4.5 * 2.0 * Math.PI * tau;
+            const betaRad  = 8.5 * DEG2RAD;
+            const satPos = {
+                x: rShadowKm * Math.cos(orbAngle) * Math.cos(betaRad),
+                y: rShadowKm * Math.sin(orbAngle),
+                z: rShadowKm * Math.cos(orbAngle) * Math.sin(betaRad)
+            };
+
+            const eclFrac = computeConicalEclipseFractionJS(satPos, sunDir);
+            if (eclFrac > 0.01 && eclFrac < 0.99) penumbraMin += dtSampleM;
+            else if (eclFrac >= 0.99) umbraMin += dtSampleM;
+
+            let tArrayC = 25.0, qHeaterW = 0.0;
+            if (trajThermal && trajThermal.length > 1) {
+                const idxF = tau * (trajThermal.length - 1);
+                const idx0 = Math.floor(idxF);
+                const idx1 = Math.min(trajThermal.length - 1, idx0 + 1);
+                const frac = idxF - idx0;
+                tArrayC  = (trajThermal[idx0].t_ext_c || 20.0) + frac * ((trajThermal[idx1].t_ext_c || 20.0) - (trajThermal[idx0].t_ext_c || 20.0));
+                qHeaterW = (trajThermal[idx0].q_heater_w || 0.0) + frac * ((trajThermal[idx1].q_heater_w || 0.0) - (trajThermal[idx0].q_heater_w || 0.0));
+            } else {
+                tArrayC = (eclFrac > 0.5) ? -18.0 : (42.0 - 55.0 * eclFrac);
+            }
+            const tPanelEffC = tArrayC - 22.0 * eclFrac;
+
+            const etaTemp = Math.max(0.12, Math.min(0.36, etaRef0 * (1.0 - betaTemp * (tPanelEffC - T_REF_C))));
+            const mpptEff = Math.max(0.92, Math.min(0.99, mpptNom - 0.014 * (eclFrac * (1.0 - eclFrac)) - 0.00010 * Math.abs(tPanelEffC - T_REF_C)));
+            const fTidNow = 1.0 - (0.35 + 0.65 * tau) * (1.0 - fTidEol);
+            const cosInc  = 0.94 + 0.06 * Math.abs(Math.cos(orbAngle * 0.5));
+            const pSolarW = (1.0 - eclFrac) * 1361.0 * saAreaM2 * etaTemp * fTidNow * mpptEff * cosInc;
+
+            if (eclFrac < 0.95) {
+                sumEtaPct  += etaTemp * 100.0;
+                sumMpptPct += mpptEff * 100.0;
+                sunSamplesCnt++;
+            }
+            if (pSolarW > peakSolarW) peakSolarW = pSolarW;
+            sumSolarW += pSolarW;
+
+            let pAdcsW = (adcsSum && adcsSum.mean_power_w > 5.0) ? adcsSum.mean_power_w : 32.0;
+            if (trajAdcs && trajAdcs.length > 1) {
+                const aIdx = Math.min(trajAdcs.length - 1, Math.max(0, Math.round(tau * (trajAdcs.length - 1))));
+                if (trajAdcs[aIdx].adcs_power_w !== undefined) pAdcsW = trajAdcs[aIdx].adcs_power_w;
+            }
+            const pRfW = (rfSum && rfSum.tx_power_w > 1.0) ? (rfSum.tx_power_w * 2.2) : 33.0;
+            let pPayloadPropW = 135.0 + 35.0 * Math.sin(2.0 * Math.PI * tau * 3.0);
+            if (tau >= 0.34 && tau <= 0.76) {
+                pPayloadPropW = isLowThrust ? 310.0 : 215.0;
+            } else if (eclFrac > 0.50) {
+                pPayloadPropW = 85.0;
+            }
+            const pLoadW = 125.0 + pAdcsW + 0.45 * qHeaterW + pRfW + pPayloadPropW;
+            sumLoadW += pLoadW;
+
+            let pNetW = pSolarW - pLoadW;
+            if (i > 0) {
+                const effChgDis = (pNetW >= 0.0) ? 0.92 : (1.0 / 0.95);
+                if (pNetW > 0.0 && socPct > 92.0) {
+                    const taper = Math.max(0.18, Math.min(1.0, 1.0 - (socPct - 92.0) / 10.5));
+                    pNetW *= taper;
+                }
+                const dWh = pNetW * effChgDis * dtEnergyH;
+                socPct += (dWh / Math.max(400.0, nomCapWh * 0.62)) * 100.0;
+                socPct = Math.max(18.0, Math.min(99.2, socPct));
+            }
+            if (socPct < minSocPct) minSocPct = socPct;
+
+            const sSoc = Math.max(0.02, Math.min(1.00, socPct / 100.0));
+            const vOcvCell = 3.00
+                           + 0.88 * sSoc
+                           - 0.32 * (sSoc * sSoc)
+                           + 0.42 * (sSoc * sSoc * sSoc)
+                           + 0.22 * Math.exp(-14.0 * (1.0 - sSoc))
+                           - 0.12 * Math.exp(-24.0 * sSoc);
+
+            const iPackA = -pNetW / Math.max(18.0, nomBusV);
+            const iCellA = iPackA / nParallel;
+            const rCellOhm = 0.016 * (1.0 + 0.55 * (1.0 - sSoc) * (1.0 - sSoc));
+            const vCell = Math.max(3.00, Math.min(4.20, vOcvCell - iCellA * rCellOhm));
+            const vBus  = nSeries * vCell;
+
+            if (vBus < minBusV) minBusV = vBus;
+            if (vBus > maxBusV) maxBusV = vBus;
+
+            trajEps.push({
+                t_min: +tMin.toFixed(2),
+                eclipse_fraction: +eclFrac.toFixed(4),
+                solar_pwr_w: +pSolarW.toFixed(1),
+                bus_voltage_v: +vBus.toFixed(3),
+                soc_pct: +socPct.toFixed(2),
+                soh_pct: 100.0,
+                load_pwr_w: +pLoadW.toFixed(1)
+            });
+        }
+
+        const peakDodPct = Math.max(2.0, Math.min(85.0, 100.0 - minSocPct));
+        const dodFrac    = peakDodPct / 100.0;
+        const tBusMean   = (tcsSum && tcsSum.mean_temp_c !== undefined) ? tcsSum.mean_temp_c : 18.0;
+        const arrhenius  = Math.exp(1150.0 * ((1.0 / 293.15) - (1.0 / (tBusMean + 273.15))));
+        const strFactor  = Math.pow(4.0 / nParallel, 0.30);
+
+        const calFadePct   = 3.40 * (lifeYr / 5.0) * arrhenius;
+        const cycFadePct   = 38.5 * Math.pow(dodFrac, 1.48) * strFactor * arrhenius * (lifeYr / 5.0);
+        const totalFadePct = Math.max(2.5, Math.min(42.0, calFadePct + cycFadePct));
+        const eolSohPct    = Math.max(58.0, Math.min(97.5, 100.0 - totalFadePct));
+        const eolCapWh     = nomCapWh * (eolSohPct / 100.0);
+
+        let totStress = 0.0;
+        for (let i = 0; i < numPts; i++) {
+            const dodI = Math.max(0.0, 100.0 - trajEps[i].soc_pct);
+            totStress += (0.25 + Math.pow(dodI / 100.0, 1.48));
+        }
+        if (totStress < 1e-6) totStress = 1.0;
+
+        let cumStress = 0.0;
+        for (let i = 0; i < numPts; i++) {
+            const dodI = Math.max(0.0, 100.0 - trajEps[i].soc_pct);
+            cumStress += (0.25 + Math.pow(dodI / 100.0, 1.48));
+            trajEps[i].soh_pct = +(100.0 - (cumStress / totStress) * totalFadePct).toFixed(3);
+        }
+
+        const epsStatus = (peakDodPct <= 35.0 && eolSohPct >= 78.0)
+            ? `ECSS-E-ST-20C NOMINAL (Peak DoD ${peakDodPct.toFixed(1)}% <= 35%, EoL SoH ${eolSohPct.toFixed(1)}%)`
+            : `HIGH CYCLIC DOD ADVISORY (Peak DoD ${peakDodPct.toFixed(1)}%, EoL SoH ${eolSohPct.toFixed(1)}%)`;
+
+        return {
+            eps_hifi_summary: {
+                batt_config_id: battId,
+                batt_config_name: battName,
+                cell_type_id: cellId,
+                cell_type_name: cellName,
+                series_cells: nSeries,
+                parallel_strings: nParallel,
+                solar_array_area_m2: saAreaM2,
+                nominal_bus_v: +nomBusV.toFixed(2),
+                max_bus_voltage_v: +Math.max(maxBusV, nSeries * 4.12).toFixed(2),
+                min_bus_voltage_v: +minBusV.toFixed(2),
+                nominal_cap_wh: +nomCapWh.toFixed(1),
+                eol_cap_wh: +eolCapWh.toFixed(1),
+                mppt_eff_pct: +(sunSamplesCnt > 0 ? (sumMpptPct / sunSamplesCnt) : (mpptNom * 100.0)).toFixed(2),
+                solar_eff_mean_pct: +(sunSamplesCnt > 0 ? (sumEtaPct / sunSamplesCnt) : (etaRef0 * 100.0)).toFixed(2),
+                tid_deg_pct: +tidDegPct.toFixed(2),
+                peak_solar_pwr_w: +peakSolarW.toFixed(1),
+                mean_solar_pwr_w: +(sumSolarW / numPts).toFixed(1),
+                mean_load_pwr_w: +(sumLoadW / numPts).toFixed(1),
+                peak_dod_pct: +peakDodPct.toFixed(2),
+                min_soc_pct: +minSocPct.toFixed(2),
+                eol_soh_pct: +eolSohPct.toFixed(2),
+                soh_eol_pct: +eolSohPct.toFixed(2),
+                penumbra_time_min: +penumbraMin.toFixed(2),
+                umbra_time_min: +umbraMin.toFixed(2),
+                eps_compliance_status: epsStatus
+            },
+            traj_eps: trajEps
+        };
+    }
+
+    function renderEpsHiFiSection(data) {
+        let eps = data.eps_hifi_summary;
+        let tr  = data.traj_eps;
+
+        if (!eps || !tr || !tr.length) {
+            const r1 = data.initial_report || {};
+            const r2 = data.target_report || {};
+            const m  = data.maneuver || {};
+            const fb = simulateEpsHiFiProfileJS(
+                (r1.alt_km !== undefined ? r1.alt_km : 400.0) + R_EQ,
+                (r2.alt_km !== undefined ? r2.alt_km : 10000.0) + R_EQ,
+                (m.transfer_min || 105.0) * 60.0,
+                m.is_low_thrust === 1,
+                data.thermal_rad_summary || data.thermal_summary,
+                data.traj_thermal,
+                data.adcs_summary,
+                data.traj_adcs,
+                data.telecom_summary,
+                0, 0
+            );
+            eps = fb.eps_hifi_summary;
+            tr  = fb.traj_eps;
+            data.eps_hifi_summary = eps;
+            data.traj_eps         = tr;
+        }
+        if (!eps || !tr || !tr.length) return;
+
+        const isNominal = (eps.peak_dod_pct <= 35.0 && eps.eol_soh_pct >= 78.0);
+        const badge = document.getElementById('epsStatusBadge');
+        if (badge) {
+            badge.style.color       = isNominal ? 'var(--green)' : 'var(--amber)';
+            badge.style.borderColor = isNominal ? 'var(--green)' : 'var(--amber)';
+            badge.innerHTML         = `&#9889; ${eps.eps_compliance_status} &bull; MPPT ${Number(eps.mppt_eff_pct).toFixed(1)}%`;
+        }
+
+        const cfgShort = eps.batt_config_id === 1 ? '8S6P' : (eps.batt_config_id === 2 ? '7S4P' : (eps.batt_config_id === 3 ? '14S4P' : '8S4P'));
+        const cellShort = eps.cell_type_id === 1 ? 'Si BSFR' : 'GaAs 3J';
+
+        document.getElementById('epsKpiDodBadge').textContent = eps.peak_dod_pct <= 35.0 ? 'ECSS OK' : 'DEEP DOD';
+        document.getElementById('epsKpiPeakDod').textContent = Number(eps.peak_dod_pct).toFixed(1);
+        document.getElementById('epsKpiPeakDodSub').textContent =
+            `Min SoC = ${Number(eps.min_soc_pct).toFixed(1)}% (Limit <= 35% LEO DoD)`;
+
+        const eolSohVal = eps.eol_soh_pct !== undefined ? eps.eol_soh_pct : eps.soh_eol_pct;
+        document.getElementById('epsKpiEolSoh').textContent = Number(eolSohVal).toFixed(1);
+        document.getElementById('epsKpiEolSohSub').textContent =
+            `EoL Cap: ${Number(eps.eol_cap_wh).toFixed(0)} / ${Number(eps.nominal_cap_wh).toFixed(0)} Wh (5-Yr Cyclic Fade)`;
+
+        document.getElementById('epsKpiConfigBadge').textContent = cfgShort;
+        document.getElementById('epsKpiMinBusV').textContent = Number(eps.min_bus_voltage_v).toFixed(2);
+        document.getElementById('epsKpiMinBusVSub').textContent =
+            `Bus Range [${Number(eps.min_bus_voltage_v).toFixed(2)}, ${Number(eps.max_bus_voltage_v).toFixed(2)}] V (Nom ${Number(eps.nominal_bus_v).toFixed(1)} V)`;
+
+        document.getElementById('epsKpiCellBadge').textContent = cellShort;
+        document.getElementById('epsKpiMpptEff').textContent = Number(eps.mppt_eff_pct).toFixed(1);
+        document.getElementById('epsKpiMpptEffSub').textContent =
+            `Mean \u03b7_T = ${Number(eps.solar_eff_mean_pct).toFixed(2)}% \u2022 TID Loss = -${Number(eps.tid_deg_pct).toFixed(2)}%`;
+
+        document.getElementById('epsKpiPeakSolar').textContent = Number(eps.peak_solar_pwr_w).toFixed(0);
+        document.getElementById('epsKpiPeakSolarSub').textContent =
+            `Penumbra ${Number(eps.penumbra_time_min).toFixed(1)}m \u2022 Umbra ${Number(eps.umbra_time_min).toFixed(1)}m \u2022 Load \u2300 ${Number(eps.mean_load_pwr_w).toFixed(0)} W`;
+
+        const tMin = tr.map(p => p.t_min);
+        const solW = tr.map(p => p.solar_pwr_w);
+        const loadW = tr.map(p => p.load_pwr_w !== undefined ? p.load_pwr_w : (eps.mean_load_pwr_w || 340.0));
+        const eclPct = tr.map(p => p.eclipse_fraction * 100.0);
+        const busV = tr.map(p => p.bus_voltage_v);
+        const soc  = tr.map(p => p.soc_pct);
+        const soh  = tr.map(p => p.soh_pct);
+
+        // Identify a Penumbra transit sample (0 < eclipse_fraction < 1) for annotation
+        let penIdx = -1;
+        for (let i = 0; i < tr.length; i++) {
+            if (tr[i].eclipse_fraction > 0.08 && tr[i].eclipse_fraction < 0.92) {
+                penIdx = i;
+                break;
+            }
+        }
+
+        // ---- Plot 24A (Left): Solar Power Generation, Subsystem Load & Conical Penumbra/Umbra Transit ----
+        const leftAnnotations = [];
+        if (penIdx >= 0) {
+            leftAnnotations.push({
+                x: tMin[penIdx], y: solW[penIdx], xref: 'x', yref: 'y',
+                text: `<b>Penumbra Transit</b><br>(Occultation ${(tr[penIdx].eclipse_fraction * 100).toFixed(0)}% | ${solW[penIdx].toFixed(0)} W)`,
+                showarrow: true, arrowhead: 2, arrowcolor: '#a855f7', ax: 38, ay: -28,
+                bgcolor: 'rgba(15,23,42,0.90)', bordercolor: '#a855f7', font: { color: '#e9d5ff', size: 9.5 }
+            });
+        }
+
+        Plotly.react('plotEpsPenumbraSolar', [
+            {
+                x: tMin, y: solW,
+                mode: 'lines',
+                name: `Solar Power Generated P_solar(t) [W] (${cellShort} + MPPT)`,
+                line: { color: '#ffab00', width: 2.8 },
+                fill: 'tozeroy', fillcolor: 'rgba(255, 171, 0, 0.12)',
+                hovertemplate: 't = %{x:.1f} min<br>Solar Generation = %{y:.1f} W<extra></extra>'
+            },
+            {
+                x: tMin, y: loadW,
+                mode: 'lines',
+                name: 'Subsystem Electrical Demand P_load(t) [W]',
+                line: { color: '#00e5ff', width: 2.3 },
+                hovertemplate: 't = %{x:.1f} min<br>Subsystem Load = %{y:.1f} W<extra></extra>'
+            },
+            {
+                x: tMin, y: eclPct,
+                yaxis: 'y2',
+                mode: 'lines',
+                name: 'Conical Eclipse Fraction (Penumbra 0-100% -> Umbra) [%]',
+                line: { color: '#a855f7', width: 2.0, dash: 'dot' },
+                fill: 'tozeroy', fillcolor: 'rgba(168, 85, 247, 0.08)',
+                hovertemplate: 't = %{x:.1f} min<br>Conical Shadow Occultation = %{y:.1f}%<extra></extra>'
+            }
+        ], {
+            title: { text: `24A. Solar Power Generation [W], Subsystem Load & Conical Penumbra/Umbra Transit`, font: { color: '#e2e8f0', size: 12.2 } },
+            margin: { l: 58, r: 58, b: 48, t: 40 },
+            hovermode: 'x unified',
+            xaxis: { title: 'Mission Timeline t [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: { title: 'Electrical Power [Watts]', color: '#ffab00', gridcolor: '#222d42', rangemode: 'tozero' },
+            yaxis2: {
+                title: 'Conical Shadow Fraction [%]',
+                color: '#a855f7', overlaying: 'y', side: 'right', showgrid: false, range: [0, 115]
+            },
+            annotations: leftAnnotations,
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.6 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---- Plot 24B (Right): Nonlinear Li-Ion Battery Bus Voltage Discharge Curve, SoC & SoH ----
+        const vCut = (eps.series_cells || 8) * 3.00;
+        const vMax = (eps.series_cells || 8) * 4.20;
+
+        Plotly.react('plotEpsBatteryDischarge', [
+            {
+                x: tMin, y: busV,
+                mode: 'lines',
+                name: `Nonlinear Li-Ion Bus Voltage V_bus(t) [V] (${cfgShort})`,
+                line: { color: '#00e5ff', width: 3.0 },
+                hovertemplate: 't = %{x:.1f} min<br>Bus Voltage V_bus = %{y:.2f} V<extra></extra>'
+            },
+            {
+                x: tMin, y: soc,
+                yaxis: 'y2',
+                mode: 'lines',
+                name: `Battery State of Charge SoC(t) [%] (Peak DoD ${Number(eps.peak_dod_pct).toFixed(1)}%)`,
+                line: { color: '#10b981', width: 2.5 },
+                fill: 'tozeroy', fillcolor: 'rgba(16, 185, 129, 0.08)',
+                hovertemplate: 't = %{x:.1f} min<br>State of Charge (SoC) = %{y:.1f}%<extra></extra>'
+            },
+            {
+                x: tMin, y: soh,
+                yaxis: 'y2',
+                mode: 'lines',
+                name: `Projected 5-Yr Lifecycle State of Health SoH(t) [%] (EoL ${Number(eolSohVal).toFixed(1)}%)`,
+                line: { color: '#f59e0b', width: 2.2, dash: 'dash' },
+                hovertemplate: 't = %{x:.1f} min<br>Projected Lifecycle SoH = %{y:.2f}%<extra></extra>'
+            }
+        ], {
+            title: { text: `24B. Li-Ion Nonlinear Bus Voltage Curve V_bus [V], Cyclic SoC/DoD & 5-Yr SoH Degradation`, font: { color: '#e2e8f0', size: 12.2 } },
+            margin: { l: 58, r: 58, b: 48, t: 40 },
+            hovermode: 'x unified',
+            xaxis: { title: 'Mission Timeline t [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
+            yaxis: {
+                title: `Bus Voltage V_bus [V] (${eps.series_cells || 8}S Pack)`,
+                color: '#00e5ff', gridcolor: '#222d42',
+                range: [Math.max(18.0, vCut - 1.5), vMax + 1.2]
+            },
+            yaxis2: {
+                title: 'Battery SoC & Lifecycle SoH [%]',
+                color: '#10b981', overlaying: 'y', side: 'right', showgrid: false, range: [15, 105]
+            },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.6 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.01, y: 0.25 }
+        }, { responsive: true, displaylogo: false });
+    }
+
+    function epsRecomputeFromModal() {
+        if (!globalData) return;
+        const battId = parseInt(document.getElementById('epsBattConfig').value, 10) || 0;
+        const cellId = parseInt(document.getElementById('epsSolarCellType').value, 10) || 0;
+        const r1 = globalData.initial_report || {};
+        const r2 = globalData.target_report || {};
+        const m  = globalData.maneuver || {};
+        const res = simulateEpsHiFiProfileJS(
+            (r1.alt_km !== undefined ? r1.alt_km : 400.0) + R_EQ,
+            (r2.alt_km !== undefined ? r2.alt_km : 10000.0) + R_EQ,
+            (m.transfer_min || 105.0) * 60.0,
+            m.is_low_thrust === 1,
+            globalData.thermal_rad_summary || globalData.thermal_summary,
+            globalData.traj_thermal,
+            globalData.adcs_summary,
+            globalData.traj_adcs,
+            globalData.telecom_summary,
+            battId, cellId
+        );
+        globalData.eps_hifi_summary = res.eps_hifi_summary;
+        globalData.traj_eps         = res.traj_eps;
+        renderEpsHiFiSection(globalData);
+        resizeVisiblePlots();
+    }
+
     function openPdrReportModal() {
         const d = globalData || defaultJsonBackup;
         if (!d) return;
@@ -11901,6 +12464,23 @@
             isNaN(gndElMask) ? 5.0 : gndElMask
         );
 
+        // Sprint 31: High-Fidelity EPS, Conical Penumbra/Umbra Eclipses & Li-Ion Degradation
+        const epsBattId = parseInt(document.getElementById('epsBattConfig').value, 10) || 0;
+        const epsCellId = parseInt(document.getElementById('epsSolarCellType').value, 10) || 0;
+        const epsRes    = simulateEpsHiFiProfileJS(
+            kepInit.a,
+            kepTarg.a,
+            tofSec,
+            isLowThrust,
+            tcsRes.thermal_rad_summary,
+            tcsRes.traj_thermal,
+            adcsRes.adcs_summary,
+            adcsRes.traj_adcs,
+            rfRes.telecom_summary,
+            epsBattId,
+            epsCellId
+        );
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -11940,6 +12520,7 @@
             space_weather_summary: swxRes.space_weather_summary,
             isl_network_summary: islRes.isl_network_summary,
             ground_segment_summary: gndRes.ground_segment_summary,
+            eps_hifi_summary: epsRes.eps_hifi_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -11962,7 +12543,8 @@
             isl_topology: islRes.isl_topology,
             ground_stations: gndRes.ground_stations,
             ground_passes: gndRes.ground_passes,
-            traj_ground_track: gndRes.traj_ground_track
+            traj_ground_track: gndRes.traj_ground_track,
+            traj_eps: epsRes.traj_eps
         };
 
         document.getElementById('inputModal').classList.remove('open');
@@ -11998,6 +12580,9 @@
     });
     ['gndNetworkType', 'gndElMaskDeg'].forEach(id => {
         document.getElementById(id).addEventListener('change', gndRecomputeFromModal);
+    });
+    ['epsBattConfig', 'epsSolarCellType'].forEach(id => {
+        document.getElementById(id).addEventListener('change', epsRecomputeFromModal);
     });
     document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
     document.getElementById('btnCancelModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));

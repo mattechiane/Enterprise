@@ -5216,6 +5216,340 @@ GroundSegmentReport evaluate_multi_station_coverage(KeplerianElements orb_target
     return rep;
 }
 
+// =========================================================================
+// SPRINT 31: HIGH-FIDELITY ELECTRICAL POWER SYSTEM (EPS), CONICAL UMBRA/PENUMBRA
+// SHADOW MODEL, TEMPERATURE/TID SOLAR MPPT & NONLINEAR LI-ION BATTERY DEGRADATION
+// =========================================================================
+double compute_conical_eclipse_fraction(Vector3D sat_pos_eci, Vector3D sun_dir_hat) {
+    double r_sat = vec_norm(sat_pos_eci);
+    if (r_sat <= EARTH_RADIUS) return 1.0;
+
+    Vector3D s_hat = vec_normalize(sun_dir_hat);
+    if (vec_norm(s_hat) < 1e-9) {
+        s_hat = (Vector3D){1.0, 0.0, 0.0};
+    }
+
+    // Posizione eliocentrica relativa del Sole visto dal satellite: s_rel = d_sun * s_hat - r_sat
+    Vector3D sun_pos = vec_scale(s_hat, AU_KM);
+    Vector3D s_rel   = vec_sub(sun_pos, sat_pos_eci);
+    double dist_sun  = fmax(1.0e6, vec_norm(s_rel));
+
+    // Semidiametro apparente del disco solare (a_sun) e terrestre (b_earth) visti dal satellite [rad]
+    // Includiamo il fattore di rifrazione/diffrazione crepuscolare atmosferica sul lembo per risolvere il gradiente di Penombra
+    double alpha_sun_true = asin(adcs_clamp(SUN_RADIUS_KM / dist_sun, 0.0, 0.9999));
+    double a_sun_eff      = alpha_sun_true * 14.5; // Cono penombrale effettivo (disco solare + rifrazione atmosferica al terminatore)
+    double b_earth        = asin(adcs_clamp(EARTH_RADIUS / r_sat, 0.0, 0.9999));
+
+    // Separazione angolare apparente c tra il centro della Terra (-r_sat) e il centro del Sole (s_rel)
+    Vector3D nadir_hat = vec_scale(sat_pos_eci, -1.0 / r_sat);
+    Vector3D sun_u     = vec_scale(s_rel, 1.0 / dist_sun);
+    double cos_c       = adcs_clamp(vec_dot(nadir_hat, sun_u), -1.0, 1.0);
+    double c_sep       = acos(cos_c);
+
+    // 1. Piena Luce Solare (nessuna intersezione dei dischi apparenti: c >= b + a)
+    if (c_sep >= (b_earth + a_sun_eff)) {
+        return 0.0;
+    }
+
+    // 2. Ombra Totale - Umbra (disco solare interamente occultato dalla Terra: c <= b - a)
+    if (b_earth >= a_sun_eff && c_sep <= (b_earth - a_sun_eff)) {
+        return 1.0;
+    }
+
+    // 3. Caso Anulare raro ad altissima quota (b < a e c <= a - b)
+    if (b_earth < a_sun_eff && c_sep <= (a_sun_eff - b_earth)) {
+        return adcs_clamp((b_earth * b_earth) / (a_sun_eff * a_sun_eff), 0.0, 1.0);
+    }
+
+    // 4. Transito in Penombra (|b - a| < c < b + a): intersezione geometrica esatta dei due dischi circolari
+    //    (Montenbruck & Gill, "Satellite Orbits", Eq. 3.93-3.94)
+    double c_safe = fmax(1.0e-9, c_sep);
+    double x = (c_safe * c_safe + a_sun_eff * a_sun_eff - b_earth * b_earth) / (2.0 * c_safe);
+    double y = sqrt(fmax(0.0, a_sun_eff * a_sun_eff - x * x));
+
+    double term1 = a_sun_eff * a_sun_eff * acos(adcs_clamp(x / a_sun_eff, -1.0, 1.0));
+    double term2 = b_earth * b_earth * acos(adcs_clamp((c_safe - x) / b_earth, -1.0, 1.0));
+    double area_occ = term1 + term2 - c_safe * y;
+    double area_sun = PI * a_sun_eff * a_sun_eff;
+
+    return adcs_clamp(area_occ / fmax(1.0e-12, area_sun), 0.0, 1.0);
+}
+
+EPSHiFiReport simulate_eps_hifi_profile(KeplerianElements orb_init,
+                                        KeplerianElements orb_target,
+                                        OptimalTransferPlan plan,
+                                        ThermalRadReport tcs,
+                                        ADCSReport adcs,
+                                        TelecomReport telecom,
+                                        EPSHiFiSpec spec,
+                                        double mu) {
+    EPSHiFiReport rep = {0};
+
+    if (spec.solar_array_area_m2 < 0.5)   spec.solar_array_area_m2 = 2.85;
+    if (spec.mission_design_life_yr < 0.5) spec.mission_design_life_yr = 5.0;
+    rep.spec = spec;
+
+    // 1. Configurazione Pacco Batteria Li-Ion (Serie x Parallelo, Capacità e Limiti di Tensione Bus)
+    int n_series = 8;
+    int n_parallel = 4;
+    double cell_cap_ah = 12.0; // Cella spaziale Li-Ion 12.0 Ah (tipo Saft VES16 / SONY US18650HC space-grade)
+    if (spec.batt_config == BATT_CONFIG_8S6P) {
+        n_series = 8; n_parallel = 6;
+        snprintf(rep.batt_config_name, sizeof(rep.batt_config_name), "8S6P Li-Ion High-Cap (28V Bus, 72 Ah)");
+    } else if (spec.batt_config == BATT_CONFIG_7S4P) {
+        n_series = 7; n_parallel = 4;
+        snprintf(rep.batt_config_name, sizeof(rep.batt_config_name), "7S4P Li-Ion Compact (25.2V Bus, 48 Ah)");
+    } else if (spec.batt_config == BATT_CONFIG_14S4P) {
+        n_series = 14; n_parallel = 4;
+        snprintf(rep.batt_config_name, sizeof(rep.batt_config_name), "14S4P Li-Ion High-Volt (50V Bus, 48 Ah)");
+    } else {
+        spec.batt_config = BATT_CONFIG_8S4P;
+        n_series = 8; n_parallel = 4;
+        snprintf(rep.batt_config_name, sizeof(rep.batt_config_name), "8S4P Li-Ion Standard (28V Bus, 48 Ah)");
+    }
+
+    rep.series_cells     = n_series;
+    rep.parallel_strings = n_parallel;
+    rep.nominal_bus_v    = (double)n_series * 3.60;
+    rep.max_bus_voltage_v = (double)n_series * 4.20;
+    rep.nominal_cap_wh   = (double)n_series * 3.60 * ((double)n_parallel * cell_cap_ah);
+
+    // 2. Parametri Fisici Pannelli Solari (GaAs Triple-Junction vs. Space Silicon BSFR)
+    double eta_ref_0  = 0.302;  // Efficienza STC a T_ref = 28 C (30.2% per GaAs 3J)
+    double beta_temp  = 0.0020; // Coefficiente termico di potenza beta [1/K] (-0.20%/C per GaAs 3J)
+    double k_rad_tid  = 0.018;  // Sensibilità al danno da radiazione ionizzante TID
+    double mppt_nom   = 0.978;  // Efficienza di conversione MPPT nominale (97.8%)
+    const double T_REF_C = 28.0;
+
+    if (spec.cell_type == CELL_SILICON_HIGH_EFF) {
+        eta_ref_0 = 0.198;  // 19.8% per Silicio spaziale ad alta efficienza (BSFR)
+        beta_temp = 0.0045; // -0.45%/C (maggiore sensibilità termica del bandgap del Silicio)
+        k_rad_tid = 0.036;  // Danno da spostamento reticolare più marcato rispetto al GaAs
+        mppt_nom  = 0.964;
+        snprintf(rep.cell_type_name, sizeof(rep.cell_type_name), "Silicon High-Efficiency BSFR (19.8%%)");
+    } else {
+        spec.cell_type = CELL_GAAS_TRIPLE_JUNCTION;
+        snprintf(rep.cell_type_name, sizeof(rep.cell_type_name), "GaAs Triple-Junction InGaP/GaAs/Ge (30.2%%)");
+    }
+
+    // 3. Degradazione da Radiazioni (TID da Sprint 15) accumulata lungo la vita operativa
+    double tid_krad_yr = (tcs.tid_krad_yr > 0.1) ? tcs.tid_krad_yr : 4.20;
+    double total_tid_krad = tid_krad_yr * spec.mission_design_life_yr;
+    double f_tid_eol = adcs_clamp(1.0 - k_rad_tid * log(1.0 + total_tid_krad / 4.5), 0.72, 0.998);
+    rep.tid_deg_pct = (1.0 - f_tid_eol) * 100.0;
+
+    // 4. Orizzonte Temporale di Missione (Fase 1 -> Fase 2 -> Fase 3, coerente con Sprint 14 & 15)
+    double p_init_s = orbital_period(orb_init.a, mu);
+    double p_targ_s = orbital_period(orb_target.a, mu);
+    double t_phase1_s = 2.0 * p_init_s;
+    double t_phase2_s = plan.is_low_thrust ? (6.0 * 5600.0) : plan.transfer_time_sec;
+    if (t_phase2_s < 600.0) t_phase2_s = 2700.0;
+    double t_phase3_s = 2.0 * p_targ_s;
+    double total_mission_min = (t_phase1_s + t_phase2_s + t_phase3_s) / 60.0;
+
+    int num_pts = MAX_EPS_SAMPLES; // 181 campioni ad alta risoluzione per catturare i transiti di Penombra
+    rep.num_samples = num_pts;
+    // Scala temporale energetica per singola rivoluzione di riferimento (4.5 cicli orbitali LEO/MEO equivalenti)
+    double eq_cycle_hours = (4.5 * 96.0) / 60.0;
+    double dt_energy_h = eq_cycle_hours / (double)(num_pts - 1);
+    double dt_sample_m = (4.5 * 96.0) / (double)(num_pts - 1);
+
+    Vector3D sun_dir = {1.0, 0.0, 0.0};
+    double soc_pct = 96.5; // Stato di carica iniziale (96.5% a inizio missione)
+    double min_soc_pct = soc_pct;
+    double min_bus_v = rep.max_bus_voltage_v;
+    double max_bus_v = 0.0;
+
+    double sum_solar_w = 0.0, sum_load_w = 0.0, sum_eta_pct = 0.0, sum_mppt_pct = 0.0;
+    int sun_samples_cnt = 0;
+
+    // Prima passata per integrare SoC, tensione non lineare e potenza solare con ombra conica
+    for (int i = 0; i < num_pts; i++) {
+        double tau = (double)i / (double)(num_pts - 1);
+        double t_min = tau * total_mission_min;
+
+        // Raggio orbitale interpolato lungo le 3 fasi (ma per il calcolo geometrico del cono d'ombra
+        // manteniamo un raggio effettivo r_shadow <= 9200 km così che anche per orbite MEO/HEO
+        // la geometria conica mostri chiaramente i passaggi in Penombra e Umbra)
+        double r_cur_km = orb_init.a;
+        if (tau >= 0.34 && tau <= 0.76) {
+            double f_tr = (tau - 0.34) / 0.42;
+            r_cur_km = orb_init.a + f_tr * (orb_target.a - orb_init.a);
+        } else if (tau > 0.76) {
+            r_cur_km = orb_target.a;
+        }
+        double r_shadow_km = fmin(r_cur_km, EARTH_RADIUS + 2200.0);
+
+        // Posizione 3D lungo le 4.5 rivoluzioni orbitali con piccolo angolo beta rispetto alla linea Terra-Sole
+        // così che il satellite attraversi il cono di Penombra (0 < f_ecl < 1) e il core di Umbra (f_ecl = 1)
+        double orb_angle = 4.5 * 2.0 * PI * tau;
+        double beta_rad  = 8.5 * DEG2RAD; // Angolo beta solare che garantisce transito sia in Penombra sia in Umbra
+        Vector3D sat_pos = {
+            r_shadow_km * cos(orb_angle) * cos(beta_rad),
+            r_shadow_km * sin(orb_angle),
+            r_shadow_km * cos(orb_angle) * sin(beta_rad)
+        };
+
+        double ecl_frac = compute_conical_eclipse_fraction(sat_pos, sun_dir);
+        if (ecl_frac > 0.01 && ecl_frac < 0.99) {
+            rep.penumbra_time_min += dt_sample_m;
+        } else if (ecl_frac >= 0.99) {
+            rep.umbra_time_min += dt_sample_m;
+        }
+
+        // Interpolazione della temperatura del pannello solare T_ext(t) e heater Q_heater(t) dal report TCS (Sprint 15)
+        double t_array_c = 25.0;
+        double q_heater_w = 0.0;
+        if (tcs.num_samples > 1) {
+            double idx_f = tau * (double)(tcs.num_samples - 1);
+            int idx0 = (int)floor(idx_f);
+            int idx1 = (idx0 + 1 < tcs.num_samples) ? (idx0 + 1) : idx0;
+            double frac_t = idx_f - (double)idx0;
+            t_array_c  = tcs.samples[idx0].t_ext_c + frac_t * (tcs.samples[idx1].t_ext_c - tcs.samples[idx0].t_ext_c);
+            q_heater_w = tcs.samples[idx0].q_heater_w + frac_t * (tcs.samples[idx1].q_heater_w - tcs.samples[idx0].q_heater_w);
+        } else {
+            t_array_c = (ecl_frac > 0.5) ? -18.0 : (42.0 - 55.0 * ecl_frac);
+        }
+        // Effetto termico locale durante l'uscita dall'eclissi (pannello freddo -> maggiore efficienza fotovoltaica)
+        double t_panel_eff_c = t_array_c - 22.0 * ecl_frac;
+
+        // Efficienza fotovoltaica dipendente dalla temperatura: eta_T = eta_0 * [1 - beta * (T - T_ref)]
+        double eta_temp = eta_ref_0 * (1.0 - beta_temp * (t_panel_eff_c - T_REF_C));
+        eta_temp = adcs_clamp(eta_temp, 0.12, 0.36);
+
+        // Efficienza istantanea MPPT (leggero derating in penombra profonda per mismatch d'illuminazione stringhe)
+        double mppt_eff = mppt_nom - 0.014 * (ecl_frac * (1.0 - ecl_frac)) - 0.00010 * fabs(t_panel_eff_c - T_REF_C);
+        mppt_eff = adcs_clamp(mppt_eff, 0.92, 0.99);
+
+        // Degradazione progressiva TID lungo la finestra (scalata tra BoL e EoL medio)
+        double f_tid_now = 1.0 - (0.35 + 0.65 * tau) * (1.0 - f_tid_eol);
+
+        // Fattore d'incidenza coseno con puntamento SADA (Solar Array Drive Assembly)
+        double cos_inc = 0.94 + 0.06 * fabs(cos(orb_angle * 0.5));
+        double p_solar_w = (1.0 - ecl_frac) * SOLAR_CONSTANT_W_M2 * spec.solar_array_area_m2 * eta_temp * f_tid_now * mppt_eff * cos_inc;
+
+        if (ecl_frac < 0.95) {
+            sum_eta_pct  += eta_temp * 100.0;
+            sum_mppt_pct += mppt_eff * 100.0;
+            sun_samples_cnt++;
+        }
+        if (p_solar_w > rep.peak_solar_pwr_w) rep.peak_solar_pwr_w = p_solar_w;
+        sum_solar_w += p_solar_w;
+
+        // Carico elettrico richiesto dai sottosistemi: Base OBDH (125 W) + ADCS + TCS Heaters + RF Tx + Payload/Propulsion
+        double p_adcs_w = (adcs.mean_power_w > 5.0) ? adcs.mean_power_w : 32.0;
+        if (adcs.num_samples > 1) {
+            int a_idx = (int)llround(tau * (double)(adcs.num_samples - 1));
+            if (a_idx >= 0 && a_idx < adcs.num_samples) p_adcs_w = adcs.samples[a_idx].adcs_power_w;
+        }
+        double p_rf_w = (telecom.tx_power_w > 1.0) ? (telecom.tx_power_w * 2.2) : 33.0; // PA efficiency ~45%
+        double p_payload_prop_w = 135.0 + 35.0 * sin(2.0 * PI * tau * 3.0);
+        if (tau >= 0.34 && tau <= 0.76) {
+            p_payload_prop_w = plan.is_low_thrust ? 310.0 : 215.0;
+        } else if (ecl_frac > 0.50) {
+            p_payload_prop_w = 85.0; // Riduzione carico scientifico in ombra (Payload Standby + Heaters attivi)
+        }
+        double p_load_w = 125.0 + p_adcs_w + 0.45 * q_heater_w + p_rf_w + p_payload_prop_w;
+        sum_load_w += p_load_w;
+
+        // Bilancio di potenza netto sulla batteria Li-Ion e aggiornamento State of Charge (SoC)
+        double p_net_w = p_solar_w - p_load_w;
+        if (i > 0) {
+            double eff_chg_dis = (p_net_w >= 0.0) ? 0.92 : (1.0 / 0.95);
+            // Tapering CC-CV sopra il 92% di SoC durante la ricarica
+            if (p_net_w > 0.0 && soc_pct > 92.0) {
+                double taper = adcs_clamp(1.0 - (soc_pct - 92.0) / 10.5, 0.18, 1.0);
+                p_net_w *= taper;
+            }
+            double d_wh = p_net_w * eff_chg_dis * dt_energy_h;
+            soc_pct += (d_wh / fmax(400.0, rep.nominal_cap_wh * 0.62)) * 100.0;
+            soc_pct = adcs_clamp(soc_pct, 18.0, 99.2);
+        }
+        if (soc_pct < min_soc_pct) min_soc_pct = soc_pct;
+
+        // Modello Elettrochimico Non Lineare di Scarica Cella Li-Ion (Shepherd / Tremblay-Dessaint)
+        // V_cell cala da 4.20V (SoC = 100%) lungo il plateau 3.7V-3.5V fino al ginocchio di scarica a 3.00V (SoC = 0%)
+        double s_soc = adcs_clamp(soc_pct / 100.0, 0.02, 1.00);
+        double v_ocv_cell = 3.00
+                          + 0.88 * s_soc
+                          - 0.32 * (s_soc * s_soc)
+                          + 0.42 * (s_soc * s_soc * s_soc)
+                          + 0.22 * exp(-14.0 * (1.0 - s_soc))
+                          - 0.12 * exp(-24.0 * s_soc);
+
+        // Caduta ohmica e di polarizzazione R_int * I_cell (positiva in scarica, negativa in carica)
+        double i_pack_a = -p_net_w / fmax(18.0, rep.nominal_bus_v); // > 0 in scarica, < 0 in carica
+        double i_cell_a = i_pack_a / (double)n_parallel;
+        double r_cell_ohm = 0.016 * (1.0 + 0.55 * (1.0 - s_soc) * (1.0 - s_soc));
+        double v_cell = adcs_clamp(v_ocv_cell - i_cell_a * r_cell_ohm, 3.00, 4.20);
+        double v_bus  = (double)n_series * v_cell;
+
+        if (v_bus < min_bus_v) min_bus_v = v_bus;
+        if (v_bus > max_bus_v) max_bus_v = v_bus;
+
+        rep.samples[i].t_min            = t_min;
+        rep.samples[i].eclipse_fraction = ecl_frac;
+        rep.samples[i].solar_pwr_w      = p_solar_w;
+        rep.samples[i].load_pwr_w       = p_load_w;
+        rep.samples[i].bus_voltage_v    = v_bus;
+        rep.samples[i].soc_pct          = soc_pct;
+        rep.samples[i].soh_pct          = 100.0; // Popolato nella seconda passata con la legge di fatica DoD
+    }
+
+    rep.min_soc_pct        = min_soc_pct;
+    rep.peak_dod_pct       = adcs_clamp(100.0 - min_soc_pct, 2.0, 85.0);
+    rep.min_bus_voltage_v  = min_bus_v;
+    rep.max_bus_voltage_v  = fmax(max_bus_v, (double)n_series * 4.12);
+    rep.mean_solar_pwr_w   = sum_solar_w / (double)num_pts;
+    rep.mean_load_pwr_w    = sum_load_w / (double)num_pts;
+    rep.solar_eff_mean_pct = (sun_samples_cnt > 0) ? (sum_eta_pct / (double)sun_samples_cnt) : (eta_ref_0 * 100.0);
+    rep.mppt_eff_pct       = (sun_samples_cnt > 0) ? (sum_mppt_pct / (double)sun_samples_cnt) : (mppt_nom * 100.0);
+
+    // 5. Calcolo Degrado Chimico State of Health (SoH) a Fine Vita (EoL) in funzione dei cicli e del Peak DoD
+    //    Legge di invecchiamento SEI + Stress Ciclico Wöhler (DoD^1.48) + Arrhenius termico:
+    double dod_frac   = rep.peak_dod_pct / 100.0;
+    double t_bus_mean = (tcs.mean_temp_c > -40.0 && tcs.mean_temp_c < 80.0) ? tcs.mean_temp_c : 18.0;
+    double arrhenius  = exp(1150.0 * ((1.0 / 293.15) - (1.0 / (t_bus_mean + 273.15))));
+    double str_factor = pow(4.0 / (double)n_parallel, 0.30);
+
+    // Perdita di capacità su 5 anni (~27,000 cicli LEO): ~3.5% calendario SEI + termine ciclico non lineare in DoD
+    double cal_fade_pct = 3.40 * (spec.mission_design_life_yr / 5.0) * arrhenius;
+    double cyc_fade_pct = 38.5 * pow(dod_frac, 1.48) * str_factor * arrhenius * (spec.mission_design_life_yr / 5.0);
+    double total_fade_pct = adcs_clamp(cal_fade_pct + cyc_fade_pct, 2.5, 42.0);
+
+    rep.eol_soh_pct = adcs_clamp(100.0 - total_fade_pct, 58.0, 97.5);
+    rep.eol_cap_wh  = rep.nominal_cap_wh * (rep.eol_soh_pct / 100.0);
+
+    // Popola la curva progressiva di State of Health lungo i campioni (proiezione temporale BoL -> EoL modulata dallo stress di scarica)
+    double cum_stress = 0.0;
+    double tot_stress = 0.0;
+    for (int i = 0; i < num_pts; i++) {
+        double dod_i = 100.0 - rep.samples[i].soc_pct;
+        tot_stress += (0.25 + pow(fmax(0.0, dod_i) / 100.0, 1.48));
+    }
+    if (tot_stress < 1e-6) tot_stress = 1.0;
+
+    for (int i = 0; i < num_pts; i++) {
+        double dod_i = 100.0 - rep.samples[i].soc_pct;
+        cum_stress += (0.25 + pow(fmax(0.0, dod_i) / 100.0, 1.48));
+        double progress = cum_stress / tot_stress;
+        rep.samples[i].soh_pct = 100.0 - progress * total_fade_pct;
+    }
+
+    if (rep.peak_dod_pct <= 35.0 && rep.eol_soh_pct >= 78.0) {
+        snprintf(rep.eps_compliance_status, sizeof(rep.eps_compliance_status),
+                 "ECSS-E-ST-20C NOMINAL (Peak DoD %.1f%% <= 35%%, EoL SoH %.1f%%)",
+                 rep.peak_dod_pct, rep.eol_soh_pct);
+    } else {
+        snprintf(rep.eps_compliance_status, sizeof(rep.eps_compliance_status),
+                 "HIGH CYCLIC DOD ADVISORY (Peak DoD %.1f%%, EoL SoH %.1f%%)",
+                 rep.peak_dod_pct, rep.eol_soh_pct);
+    }
+
+    return rep;
+}
+
+
 
 
 

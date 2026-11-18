@@ -213,4 +213,17 @@ GroundSegmentReport evaluate_multi_station_coverage(KeplerianElements orb_target
                                                     GroundNetworkSpec spec,
                                                     double mu);
 
+// Sprint 31: High-Fidelity Electrical Power System (EPS), Conical Umbra/Penumbra Eclipse Model,
+// Temperature/TID Solar Array MPPT & Nonlinear Li-Ion Battery Discharge / Cyclic DoD SoH Degradation
+double compute_conical_eclipse_fraction(Vector3D sat_pos_eci, Vector3D sun_dir_hat);
+
+EPSHiFiReport simulate_eps_hifi_profile(KeplerianElements orb_init,
+                                        KeplerianElements orb_target,
+                                        OptimalTransferPlan plan,
+                                        ThermalRadReport tcs,
+                                        ADCSReport adcs,
+                                        TelecomReport telecom,
+                                        EPSHiFiSpec spec,
+                                        double mu);
+
 #endif // MISSION_ANALYSIS_H

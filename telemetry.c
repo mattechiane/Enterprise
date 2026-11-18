@@ -545,6 +545,17 @@ static void write_ground_track_json_array(FILE *fp, GroundSegmentReport gnd) {
     fprintf(fp, "  ]");
 }
 
+static void write_eps_trajectory_json_array(FILE *fp, EPSHiFiReport eps) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < eps.num_samples; i++) {
+        EPSSample s = eps.samples[i];
+        fprintf(fp, "    {\"t_min\":%.2f,\"eclipse_fraction\":%.4f,\"solar_pwr_w\":%.1f,\"bus_voltage_v\":%.3f,\"soc_pct\":%.2f,\"soh_pct\":%.3f,\"load_pwr_w\":%.1f}%s\n",
+                s.t_min, s.eclipse_fraction, s.solar_pwr_w, s.bus_voltage_v, s.soc_pct, s.soh_pct, s.load_pwr_w,
+                (i < eps.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 static void format_oem_utc_timestamp(double elapsed_sec, char *buf, size_t buf_size) {
     // Base Epoch: 2026-11-12T00:00:00.000 UTC
     int total_ms = (int)llround(fmax(0.0, elapsed_sec) * 1000.0);
@@ -712,6 +723,7 @@ bool export_web_mission_json(const char *filename,
                              OrbitLifetimeReport swx,
                              ISLNetworkReport isl,
                              GroundSegmentReport gnd,
+                             EPSHiFiReport eps,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -1151,6 +1163,26 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"peak_antenna_slew_deg_s\": %.4f, \"num_passes_24h\": %d\n  },\n",
             gnd.peak_antenna_slew_deg_s, gnd.num_passes);
 
+    fprintf(fp, "  \"eps_hifi_summary\": {\n");
+    fprintf(fp, "    \"batt_config_id\": %d, \"batt_config_name\": \"%s\",\n",
+            (int)eps.spec.batt_config, eps.batt_config_name);
+    fprintf(fp, "    \"cell_type_id\": %d, \"cell_type_name\": \"%s\",\n",
+            (int)eps.spec.cell_type, eps.cell_type_name);
+    fprintf(fp, "    \"series_cells\": %d, \"parallel_strings\": %d, \"solar_array_area_m2\": %.2f,\n",
+            eps.series_cells, eps.parallel_strings, eps.spec.solar_array_area_m2);
+    fprintf(fp, "    \"nominal_bus_v\": %.2f, \"max_bus_voltage_v\": %.2f, \"min_bus_voltage_v\": %.2f,\n",
+            eps.nominal_bus_v, eps.max_bus_voltage_v, eps.min_bus_voltage_v);
+    fprintf(fp, "    \"nominal_cap_wh\": %.1f, \"eol_cap_wh\": %.1f,\n",
+            eps.nominal_cap_wh, eps.eol_cap_wh);
+    fprintf(fp, "    \"mppt_eff_pct\": %.2f, \"solar_eff_mean_pct\": %.2f, \"tid_deg_pct\": %.2f,\n",
+            eps.mppt_eff_pct, eps.solar_eff_mean_pct, eps.tid_deg_pct);
+    fprintf(fp, "    \"peak_solar_pwr_w\": %.1f, \"mean_solar_pwr_w\": %.1f, \"mean_load_pwr_w\": %.1f,\n",
+            eps.peak_solar_pwr_w, eps.mean_solar_pwr_w, eps.mean_load_pwr_w);
+    fprintf(fp, "    \"peak_dod_pct\": %.2f, \"min_soc_pct\": %.2f, \"eol_soh_pct\": %.2f, \"soh_eol_pct\": %.2f,\n",
+            eps.peak_dod_pct, eps.min_soc_pct, eps.eol_soh_pct, eps.eol_soh_pct);
+    fprintf(fp, "    \"penumbra_time_min\": %.2f, \"umbra_time_min\": %.2f, \"eps_compliance_status\": \"%s\"\n  },\n",
+            eps.penumbra_time_min, eps.umbra_time_min, eps.eps_compliance_status);
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -1283,6 +1315,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_ground_track\": ");
     write_ground_track_json_array(fp, gnd);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_eps\": ");
+    write_eps_trajectory_json_array(fp, eps);
     fprintf(fp, "\n}\n");
 
     fclose(fp);

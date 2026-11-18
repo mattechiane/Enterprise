@@ -6,7 +6,7 @@
 
 int main(void) {
     printf("======================================================================\n");
-    printf("   PROJECT ENTERPRISE - SPRINT 30: MULTI-STATION DSN/ESTRACK & HANDOVERS \n");
+    printf("   PROJECT ENTERPRISE - SPRINT 31: HIGH-FIDELITY EPS & PENUMBRA MODEL \n");
     printf("======================================================================\n\n");
 
     // 1. INPUT UTENTE: Massa, Propellente e Vincolo di Tempo Massimo
@@ -213,6 +213,15 @@ int main(void) {
         .elevation_mask_deg = 5.0           // Maschera di elevazione minima sopra l'orizzonte [deg]
     };
     GroundSegmentReport gnd = evaluate_multi_station_coverage(orb_target, plan, &sc, gnd_spec, EARTH_MU);
+
+    // 22. SPRINT 31: HIGH-FIDELITY EPS, CONICAL PENUMBRA/UMBRA ECLIPSES & LI-ION DEGRADATION
+    EPSHiFiSpec eps_spec = {
+        .batt_config            = BATT_CONFIG_8S4P,          // 8S4P Li-Ion per 28V Unregulated Bus (48 Ah, 1382 Wh)
+        .cell_type              = CELL_GAAS_TRIPLE_JUNCTION, // GaAs Triple-Junction InGaP/GaAs/Ge (eta_0 = 30.2%)
+        .solar_array_area_m2    = 2.85,                      // Area efficace pannelli solari A_sa [m^2]
+        .mission_design_life_yr = 5.0                        // Vita operativa di progetto (5 anni)
+    };
+    EPSHiFiReport eps = simulate_eps_hifi_profile(orb_initial, orb_target, plan, tcs, adcs, telecom, eps_spec, EARTH_MU);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -446,15 +455,26 @@ int main(void) {
     printf("  * Antenna Pedestal Slew : Peak Mechanical Slew Rate = %.4f deg/s (Zenith Tracking OK)\n\n",
            gnd.peak_antenna_slew_deg_s);
 
+    printf("[HIGH-FIDELITY EPS, CONICAL PENUMBRA/UMBRA ECLIPSES & LI-ION DEGRADATION]\n");
+    printf("  * Solar Array & MPPT    : %s | eta_T = %.2f%% | MPPT Eff = %.2f%% | TID Loss = -%.2f%%\n",
+           eps.cell_type_name, eps.solar_eff_mean_pct, eps.mppt_eff_pct, eps.tid_deg_pct);
+    printf("  * Conical Shadow Model  : Penumbra Transit = %.2f min | Umbra Core = %.2f min | Peak Solar = %.1f W\n",
+           eps.penumbra_time_min, eps.umbra_time_min, eps.peak_solar_pwr_w);
+    printf("  * Li-Ion Battery Pack   : %s | Bus Range = [ %.2f, %.2f ] V (Nom %.1f V)\n",
+           eps.batt_config_name, eps.min_bus_voltage_v, eps.max_bus_voltage_v, eps.nominal_bus_v);
+    printf("  * Cyclic DoD & EoL SoH  : Peak DoD = %.2f%% (Min SoC = %.2f%%) | End-of-Life SoH = %.2f%% (%.0f / %.0f Wh)\n",
+           eps.peak_dod_pct, eps.min_soc_pct, eps.eol_soh_pct, eps.eol_cap_wh, eps.nominal_cap_wh);
+    printf("  * ECSS Power Verdict    : %s\n\n", eps.eps_compliance_status);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Multi-Station DSN/ESTRACK Tracking, ISL Mesh & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with High-Fidelity EPS, Multi-Station DSN & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;
