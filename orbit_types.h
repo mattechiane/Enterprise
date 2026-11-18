@@ -1574,4 +1574,57 @@ typedef struct {
     AerocaptureSample samples[MAX_AEROCAPTURE_SAMPLES];
 } AerocaptureReport;
 
+// ==========================================
+// 5W. SPRINT 35: SOLAR SAIL CONTINUOUS THRUST & SOLAR RADIATION PRESSURE (SRP) DYNAMICS
+// ==========================================
+#define MAX_SOLAR_SAIL_SAMPLES 161      // Campioni temporali della spirale eliocentrica 3D a vela solare
+#define SRP_1AU_N_M2           4.5398e-6 // Pressione di radiazione solare nominale P_sun/c a 1 AU [N/m^2]
+
+typedef struct {
+    bool                 enable_sail;      // Abilita/disabilita la propulsione continua a Vela Solare
+    InterplanetaryTarget target_planet;    // Pianeta bersaglio della spirale (0=Mars Outward, 1=Venus Inward)
+    double               sail_area_m2;     // Area riflettente della vela solare A_sail [m^2] (default 1200.0 m^2)
+    double               sailcraft_mass_kg;// Massa totale del veliero solare (bus + boom + membrana CP1) [kg] (default 160.0 kg)
+    double               reflectivity;     // Coefficiente di riflettanza speculare della vela eta_refl [-] (default 0.91)
+} SolarSailSpec;
+
+typedef struct {
+    double t_days;         // Tempo di volo trascorso lungo la spirale eliocentrica [giorni]
+    double x_au;           // Coordinata X eliocentrica eclittica [AU]
+    double y_au;           // Coordinata Y eliocentrica eclittica [AU]
+    double z_au;           // Coordinata Z eliocentrica fuori piano [AU]
+    double r_au;           // Distanza radiale dal Sole r(t) [AU]
+    double vel_kms;        // Velocità orbitale eliocentrica istantanea [km/s]
+    double alpha_deg;      // Angolo di beccheggio (Pitch / Cone Angle) della normale vela rispetto al Sole [deg]
+    double psi_deg;        // Angolo di Clock fuori piano comandato dall'ADCS [deg]
+    double a_srp_mms2;     // Accelerazione istantanea da Pressione di Radiazione Solare ||a_SRP|| [mm/s^2]
+    double thrust_mn;      // Forza di spinta fotonica istantanea [mN]
+    double cum_dv_kms;     // Delta-V cumulativo accumulato gratuitamente dalla luce solare [km/s]
+    double nx, ny, nz;     // Componenti del versore normale alla vela n_hat nel frame eclittico [-]
+} SolarSailSample;
+
+typedef struct {
+    SolarSailSpec spec;
+    char   target_planet_name[24];         // "Mars" (Outward Spiral) o "Venus" (Inward Spiral)
+    char   steering_law_name[64];          // "McInnes Optimal Tangential Gain (alpha* = +35.26 deg)"
+    double sail_loading_gm2;               // Carico areale sigma = m / A_sail [g/m^2]
+    double lightness_number_beta;          // Numero di leggerezza adimensionale beta = a_c / g_sun(1 AU) [-]
+    double char_accel_mms2;                // Accelerazione caratteristica a 1 AU a_c (per alpha = 0) [mm/s^2]
+    double eff_accel_1au_mms2;             // Accelerazione efficace a 1 AU all'angolo ottimo cos^2(alpha*) [mm/s^2]
+    double peak_srp_thrust_mn;             // Spinta fotonica massima a 1 AU [mN]
+    double opt_pitch_angle_deg;            // Angolo di beccheggio ottimo medio alpha* = +/-35.26 deg [deg]
+    double max_pitch_excursion_deg;        // Massima escursione di beccheggio ADCS durante la modulazione [deg]
+    double initial_r_au;                   // Raggio eliocentrico iniziale (1.000 AU) [AU]
+    double final_r_au;                     // Raggio eliocentrico finale raggiunto [AU]
+    double target_r_au;                    // Raggio eliocentrico del pianeta target [AU]
+    double spiral_tof_days;                // Durata totale del trasferimento a spirale [giorni]
+    double spiral_revolutions;             // Numero di rivoluzioni eliocentriche completate [-]
+    double total_dv_kms;                   // Delta-V totale accumulato dalla pressione di radiazione solare [km/s]
+    double total_dv_ms;                    // Delta-V totale accumulato dalla luce solare [m/s]
+    double eq_chemical_fuel_saved_kg;      // Massa di propellente chimico (MMH/NTO) equivalente risparmiata [kg]
+
+    int    num_samples;
+    SolarSailSample samples[MAX_SOLAR_SAIL_SAMPLES];
+} SolarSailReport;
+
 #endif // ORBIT_TYPES_H

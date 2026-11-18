@@ -253,4 +253,10 @@ AerocaptureReport simulate_aerocapture_pass(const InterplanetaryReport *ipl,
                                             OptimalTransferPlan plan,
                                             AerocaptureSpec spec);
 
+// Sprint 35: Solar Sail Continuous Thrust, Solar Radiation Pressure (SRP) Vector Dynamics
+// & 6-DOF ADCS Pitch Angle alpha(t) Modulation for Deep-Space Heliocentric Spiral
+SolarSailReport simulate_solar_sail_spiral(ADCSReport adcs,
+                                           OptimalTransferPlan plan,
+                                           SolarSailSpec spec);
+
 #endif // MISSION_ANALYSIS_H

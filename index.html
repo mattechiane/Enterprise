@@ -1617,6 +1617,55 @@
         <div id="plotAeroOrbitCapture" class="plot-container-rdv"></div>
     </div>
 </section>
+
+<!-- 26. SOLAR SAIL CONTINUOUS THRUST & SOLAR RADIATION PRESSURE (SRP) DYNAMICS (SPRINT 35) -->
+<section class="section-block" id="sec-26" data-tab="transfer" style="--sec-order: 27;">
+    <div class="section-header">
+        <div>
+            <h2>26. Solar Sail Continuous Thrust, SRP Vector Dynamics &amp; 3D Heliocentric Spiral</h2>
+            <span>a<sub>SRP</sub> = 2(P<sub>&#9737;</sub>/c)(A<sub>sail</sub>/m)(1 AU/r)&sup2; cos&sup2;(&alpha;) n&#770; &bull; McInnes Optimal Pitch (&alpha;* = &plusmn;35.26&deg;) &bull; 6-DOF ADCS Attitude Modulation &bull; Propellantless Deep-Space Spiral</span>
+        </div>
+        <span class="badge" id="sailStatusBadge" style="color:var(--amber); border-color:var(--amber);">&#9728; SOLAR SAIL SRP PROPULSION ACTIVE &bull; A<sub>sail</sub> = 1,200 m&sup2; (0 kg FUEL)</span>
+    </div>
+
+    <div class="ipl-kpi-grid">
+        <div class="kpi-card" style="--kpi-accent: var(--amber);">
+            <div class="kpi-top"><span class="kpi-label">Solar Sail Area A<sub>sail</sub></span><span class="kpi-micro-badge" id="sailKpiModeBadge">SRP ACTIVE</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="sailKpiArea">---</span><span class="kpi-unit">m&sup2;</span></div>
+            <div class="kpi-sub" id="sailKpiAreaSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Characteristic Accel. a<sub>c</sub></span><span class="kpi-micro-badge" id="sailKpiBetaBadge">&beta; = ---</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="sailKpiCharAccel">---</span><span class="kpi-unit">mm/s&sup2;</span></div>
+            <div class="kpi-sub" id="sailKpiCharAccelSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--green); border-color: rgba(0,230,118,0.45); background: linear-gradient(135deg, rgba(0,230,118,0.10), rgba(15,23,42,0.88));">
+            <div class="kpi-top"><span class="kpi-label">Total Sunlight &Delta;V</span><span class="kpi-micro-badge" style="color:#00e676; border-color:rgba(0,230,118,0.45);">0 kg Fuel!</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="sailKpiTotalDv" style="color:#00e676;">---</span><span class="kpi-unit">km/s</span></div>
+            <div class="kpi-sub" id="sailKpiTotalDvSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--purple);">
+            <div class="kpi-top"><span class="kpi-label">Optimal ADCS Pitch &alpha;*</span><span class="kpi-micro-badge" id="sailKpiTargetBadge">MARS SPIRAL</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="sailKpiPitchDeg">---</span><span class="kpi-unit">deg</span></div>
+            <div class="kpi-sub" id="sailKpiPitchSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: #38bdf8;">
+            <div class="kpi-top"><span class="kpi-label">Heliocentric Spiral TOF</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="sailKpiTofDays">---</span><span class="kpi-unit">days</span></div>
+            <div class="kpi-sub" id="sailKpiTofSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--red);">
+            <div class="kpi-top"><span class="kpi-label">Eq. Chemical Fuel Saved</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="sailKpiFuelSaved">---</span><span class="kpi-unit">kg</span></div>
+            <div class="kpi-sub" id="sailKpiFuelSavedSub">---</div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotSolarSailSpiral3D" class="plot-container-rdv"></div>
+        <div id="plotSolarSailAttitude" class="plot-container-rdv"></div>
+    </div>
+</section>
         </div><!-- /sections-stack -->
     </main>
 </div><!-- /app-shell -->
@@ -2231,6 +2280,25 @@
                     <input type="number" id="aeroEntryFpaDeg" value="-11.35" min="-14.50" max="-8.50" step="0.10">
                 </div>
             </div>
+            <div class="input-group" style="grid-template-columns: 1.2fr 1.3fr 1.5fr; padding-top: 8px; margin-top: 6px; border-top: 1px dashed rgba(148,163,184,0.2);">
+                <div class="field" style="justify-content: center;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#fbbf24; font-weight:700; font-size:12px; margin-top:14px;">
+                        <input type="checkbox" id="sailEnablePropulsion" checked style="width:16px; height:16px; accent-color:#fbbf24; cursor:pointer;">
+                        Enable Solar Sail Propulsion
+                    </label>
+                </div>
+                <div class="field">
+                    <label>Solar Sail Reflective Area A<sub>sail</sub> [m&sup2;]</label>
+                    <input type="number" id="sailAreaM2" value="1200" min="100" max="50000" step="100">
+                </div>
+                <div class="field">
+                    <label>Solar Sail Spiral Target &amp; Steering Law</label>
+                    <select id="sailTargetPlanet">
+                        <option value="0" selected>Mars Outward Spiral (1.0 &rarr; 1.524 AU, Optimal Pitch &alpha;* = +35.26&deg;)</option>
+                        <option value="1">Venus Inward Spiral (1.0 &rarr; 0.723 AU, Optimal Pitch &alpha;* = -35.26&deg;)</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
         <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
@@ -2346,8 +2414,8 @@
     const TAB_META = {
         overview:   { title: '\u{1F30D} Overview & 3D Astrodynamics', sub: 'Executive KPIs, 3D WGS84 inertial trajectory, 2D ground track, EO WGS84 raycasting heatmap & maneuver data sheet',
                       jumps: [['sec-1', '3D Globe'], ['sec-4', 'Ground Track'], ['sec-eo-raycast', '23. EO Coverage & Camera'], ['sec-2', 'Data Sheet']] },
-        transfer:   { title: '\u{1F680} Transfer, Lambert & Cislunar', sub: 'Lambert \u0394V trade-off, Monte Carlo 3\u03C3 & TCM, CR3BP Lagrange points / Halo orbit, interplanetary porkchop (C\u2083), gravity assist & aerocapture',
-                      jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary & Flyby'], ['sec-25', '25. Aerocapture']] },
+        transfer:   { title: '\u{1F680} Transfer, Lambert & Cislunar', sub: 'Lambert \u0394V trade-off, Monte Carlo 3\u03C3 & TCM, CR3BP Lagrange points / Halo orbit, interplanetary porkchop (C\u2083), gravity assist, aerocapture & solar sail',
+                      jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary & Flyby'], ['sec-25', '25. Aerocapture'], ['sec-26', '26. Solar Sail SRP']] },
         gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, multi-satellite formation flying (ROEs), reaction wheels, EKF, structure/slosh CSI',
                       jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF'], ['sec-16', 'Flex/Slosh CSI'], ['sec-19', 'Formation ROEs']] },
         subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF & Payload)', sub: 'High-fidelity EPS & conical penumbra, kinematics/radar, thermal & radiation, RF link budget, Walker constellation, SSR buffer, optical ISL & DSN tracking',
@@ -2355,7 +2423,7 @@
         safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL, FDIR & Space Weather)', sub: 'B-Plane collision avoidance, 3-phase EDL re-entry, Martian aerocapture corridor, autonomous FDIR & space weather orbital decay',
                       jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL & EDL'], ['sec-17', 'FDIR'], ['sec-21', 'Space Weather'], ['sec-25', '25. Aerocapture']] },
         all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 26',
-                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22'], ['sec-23', '23'], ['sec-24', '24'], ['sec-eo-raycast', 'EO Raycast'], ['sec-25', '25. Aerocapture']] }
+                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22'], ['sec-23', '23'], ['sec-24', '24'], ['sec-eo-raycast', 'EO Raycast'], ['sec-25', '25. Aerocapture'], ['sec-26', '26. Solar Sail']] }
     };
 
     function resizeVisiblePlots() {
@@ -2977,6 +3045,18 @@
             }
             if (ac.entry_fpa_deg !== undefined && document.getElementById('aeroEntryFpaDeg')) {
                 document.getElementById('aeroEntryFpaDeg').value = ac.entry_fpa_deg;
+            }
+        }
+        if (data.solar_sail_summary) {
+            const ss = data.solar_sail_summary;
+            if (ss.enable_sail !== undefined && document.getElementById('sailEnablePropulsion')) {
+                document.getElementById('sailEnablePropulsion').checked = (ss.enable_sail !== 0);
+            }
+            if (ss.sail_area_m2 !== undefined && document.getElementById('sailAreaM2')) {
+                document.getElementById('sailAreaM2').value = Math.round(ss.sail_area_m2);
+            }
+            if (ss.target_planet_id !== undefined && document.getElementById('sailTargetPlanet')) {
+                document.getElementById('sailTargetPlanet').value = String(ss.target_planet_id);
             }
         }
 
@@ -5625,6 +5705,11 @@
         // 26 (25). PLANETARY AEROCAPTURE, AEROBRAKING & MARTIAN ATMOSPHERIC PASS
         // =====================================================================
         renderAerocaptureSection(data);
+
+        // =====================================================================
+        // 27 (26). SOLAR SAIL CONTINUOUS THRUST, SRP DYNAMICS & 3D HELIOCENTRIC SPIRAL
+        // =====================================================================
+        renderSolarSailSection(data);
 
         // =====================================================================
         // 17. ONBOARD FDIR AUTONOMY, REDUNDANCY SWITCHOVER & SAFE-MODE RECOVERY
@@ -13401,6 +13486,368 @@
         resizeVisiblePlots();
     }
 
+    // =========================================================================
+    // SPRINT 35: SOLAR SAIL CONTINUOUS THRUST & SOLAR RADIATION PRESSURE (SRP)
+    // DYNAMICS (JS mirror of simulate_solar_sail_spiral in mission_analysis.c)
+    // =========================================================================
+    function simulateSolarSailSpiralJS(enableSail, targetPlanetId, sailAreaM2, ispS) {
+        const isVenus = (parseInt(targetPlanetId, 10) === 1);
+        const areaM2  = Math.max(100.0, Math.min(50000.0, parseFloat(sailAreaM2) || 1200.0));
+        const refl    = 0.91;
+        const massKg  = 85.0 + 0.012 * areaM2;
+
+        const alphaOptRad = Math.atan(1.0 / Math.sqrt(2.0));
+        const signDir     = isVenus ? -1.0 : 1.0;
+        const optPitchDeg = signDir * alphaOptRad * RAD2DEG;
+        const steerName   = isVenus
+            ? 'McInnes Inward Spiral Steering (\u03b1* = -35.26 deg + ADCS Trim)'
+            : 'McInnes Outward Spiral Steering (\u03b1* = +35.26 deg + ADCS Trim)';
+
+        const srp1Au      = 4.5398e-6;
+        const loadingGm2  = (massKg * 1000.0) / areaM2;
+        const acMs2       = 2.0 * srp1Au * refl * (areaM2 / massKg);
+        const charAccMms2 = acMs2 * 1000.0;
+        const effAccMms2  = charAccMms2 * Math.pow(Math.cos(alphaOptRad), 2.0);
+        const peakThrMn   = (massKg * acMs2) * 1000.0;
+        const gSun1AuMs2  = (IPL.SUN_MU / (IPL.AU * IPL.AU)) * 1000.0;
+        const betaLight   = acMs2 / gSun1AuMs2;
+
+        const rInitAu = 1.0000;
+        const rTargAu = isVenus ? 0.723332 : 1.523679;
+
+        let tofDays = isVenus
+            ? (390.0 * Math.pow(1200.0 / areaM2, 0.38))
+            : (540.0 * Math.pow(1200.0 / areaM2, 0.38));
+        tofDays = Math.max(160.0, Math.min(1100.0, tofDays));
+
+        const nPts   = 161;
+        const dtDays = tofDays / (nPts - 1);
+        const dtSec  = dtDays * 86400.0;
+
+        let phiRad   = 0.0;
+        let cumDvMs  = 0.0;
+        let maxPitch = 0.0;
+        const incTargR = (isVenus ? 3.39 : 1.85) * DEG2RAD;
+        const traj = [];
+
+        for (let i = 0; i < nPts; i++) {
+            const frac    = i / (nPts - 1);
+            const tDays   = i * dtDays;
+            const smoothS = frac * frac * (3.0 - 2.0 * frac);
+            const rAu     = rInitAu + (rTargAu - rInitAu) * (0.65 * frac + 0.35 * smoothS);
+            const rKm     = rAu * IPL.AU;
+
+            const omegaRads = Math.sqrt(IPL.SUN_MU / (rKm * rKm * rKm));
+            if (i > 0) {
+                phiRad += omegaRads * dtSec * 1.45;
+            }
+
+            const taper    = (frac > 0.85) ? (1.0 - 0.55 * ((frac - 0.85) / 0.15)) : 1.0;
+            const alphaDeg = optPitchDeg * taper + signDir * 5.8 * Math.sin(phiRad);
+            const psiDeg   = 14.5 * Math.cos(phiRad);
+            if (Math.abs(alphaDeg) > maxPitch) maxPitch = Math.abs(alphaDeg);
+
+            const alphaR   = alphaDeg * DEG2RAD;
+            const psiR     = psiDeg * DEG2RAD;
+            const cosA     = Math.cos(alphaR);
+            const invR2    = 1.0 / (rAu * rAu);
+            const aSrpMms2 = charAccMms2 * invR2 * (cosA * cosA);
+            const thrustMn = massKg * aSrpMms2;
+
+            if (i > 0) {
+                cumDvMs += (aSrpMms2 * 1e-3) * dtSec;
+            }
+
+            const zAu = rAu * Math.sin(incTargR * frac) * Math.sin(phiRad);
+            const rXy = Math.sqrt(Math.max(0.0, rAu * rAu - zAu * zAu));
+            const xAu = rXy * Math.cos(phiRad);
+            const yAu = rXy * Math.sin(phiRad);
+
+            const eR = vecNormalize({ x: Math.cos(phiRad), y: Math.sin(phiRad), z: zAu / Math.max(0.1, rAu) });
+            const eT = vecNormalize({ x: -Math.sin(phiRad), y: Math.cos(phiRad), z: 0.0 });
+            const eZ = vecNormalize(vecCross(eR, eT));
+            const nHat = vecNormalize(vecAdd(
+                vecScale(eR, Math.cos(alphaR)),
+                vecAdd(vecScale(eT, Math.sin(alphaR) * Math.cos(psiR)), vecScale(eZ, Math.sin(alphaR) * Math.sin(psiR)))
+            ));
+
+            const vKms = Math.sqrt(IPL.SUN_MU / rKm);
+            traj.push({
+                t_days: +tDays.toFixed(2),
+                x_au: +xAu.toFixed(5),
+                y_au: +yAu.toFixed(5),
+                z_au: +zAu.toFixed(5),
+                r_au: +rAu.toFixed(5),
+                vel_kms: +vKms.toFixed(3),
+                alpha_deg: +alphaDeg.toFixed(2),
+                psi_deg: +psiDeg.toFixed(2),
+                a_srp_mms2: +aSrpMms2.toFixed(5),
+                thrust_mn: +thrustMn.toFixed(3),
+                cum_dv_kms: +(cumDvMs / 1000.0).toFixed(4),
+                nx: +nHat.x.toFixed(4),
+                ny: +nHat.y.toFixed(4),
+                nz: +nHat.z.toFixed(4)
+            });
+        }
+
+        const effIsp = (ispS > 100.0 && ispS < 600.0) ? ispS : 316.0;
+        const eqFuelSavedKg = Math.min(99999.0, 500.0 * (Math.exp(cumDvMs / (effIsp * G0)) - 1.0));
+
+        return {
+            solar_sail_summary: {
+                enable_sail: enableSail ? 1 : 0,
+                target_planet_id: isVenus ? 1 : 0,
+                target_planet_name: isVenus ? 'Venus' : 'Mars',
+                steering_law_name: steerName,
+                sail_area_m2: +areaM2.toFixed(1),
+                sailcraft_mass_kg: +massKg.toFixed(2),
+                sail_loading_gm2: +loadingGm2.toFixed(2),
+                reflectivity: refl,
+                char_accel_mms2: +charAccMms2.toFixed(5),
+                eff_accel_1au_mms2: +effAccMms2.toFixed(5),
+                lightness_number_beta: +betaLight.toFixed(5),
+                peak_srp_thrust_mn: +peakThrMn.toFixed(3),
+                opt_pitch_angle_deg: +optPitchDeg.toFixed(2),
+                max_pitch_excursion_deg: +maxPitch.toFixed(2),
+                initial_r_au: rInitAu,
+                final_r_au: +traj[nPts - 1].r_au.toFixed(4),
+                target_r_au: rTargAu,
+                spiral_tof_days: +tofDays.toFixed(1),
+                spiral_revolutions: +(phiRad / (2.0 * Math.PI)).toFixed(2),
+                total_dv_kms: +(cumDvMs / 1000.0).toFixed(4),
+                total_dv_ms: +cumDvMs.toFixed(1),
+                eq_chemical_fuel_saved_kg: +eqFuelSavedKg.toFixed(1)
+            },
+            traj_solar_sail: traj
+        };
+    }
+
+    function renderSolarSailSection(data) {
+        let ss = data.solar_sail_summary;
+        let tr = data.traj_solar_sail;
+        if (!ss || !tr || !tr.length) {
+            const fbSs = simulateSolarSailSpiralJS(true, 0, 1200.0, 316.0);
+            ss = fbSs.solar_sail_summary;
+            tr = fbSs.traj_solar_sail;
+            data.solar_sail_summary = ss;
+            data.traj_solar_sail    = tr;
+        }
+        if (!ss || !tr || !tr.length) return;
+
+        const sailActive = (ss.enable_sail !== 0);
+        const f1 = (v, d) => Number(v).toFixed(d);
+
+        const badge = document.getElementById('sailStatusBadge');
+        if (badge) {
+            badge.style.color = sailActive ? 'var(--amber)' : 'var(--text-muted)';
+            badge.style.borderColor = sailActive ? 'var(--amber)' : 'var(--border-strong)';
+            badge.innerHTML = sailActive
+                ? `&#9728; SOLAR SAIL SRP ACTIVE &bull; EARTH &rarr; ${ss.target_planet_name.toUpperCase()} SPIRAL &bull; A<sub>sail</sub> = ${Number(ss.sail_area_m2).toLocaleString()} m&sup2; &bull; +${f1(ss.total_dv_kms, 2)} km/s (0 kg FUEL)`
+                : `&#9728; SOLAR SAIL PROPULSION STANDBY &bull; ENABLE IN MODAL TO ACTIVATE SRP SPIRAL`;
+        }
+
+        document.getElementById('sailKpiModeBadge').textContent    = sailActive ? 'SRP ACTIVE' : 'STANDBY';
+        document.getElementById('sailKpiArea').textContent         = Number(Math.round(ss.sail_area_m2)).toLocaleString('en-US');
+        document.getElementById('sailKpiAreaSub').textContent      = `Mass = ${f1(ss.sailcraft_mass_kg, 1)} kg | Loading \u03c3 = ${f1(ss.sail_loading_gm2, 1)} g/m\u00b2 (\u03b7 = ${f1(ss.reflectivity, 2)})`;
+
+        document.getElementById('sailKpiBetaBadge').textContent    = `\u03b2 = ${f1(ss.lightness_number_beta, 4)}`;
+        document.getElementById('sailKpiCharAccel').textContent    = f1(ss.char_accel_mms2, 3);
+        document.getElementById('sailKpiCharAccelSub').textContent = `Peak Photon Thrust = ${f1(ss.peak_srp_thrust_mn, 2)} mN @ 1 AU`;
+
+        document.getElementById('sailKpiTotalDv').textContent      = sailActive ? `+${f1(ss.total_dv_kms, 3)}` : '0.000';
+        document.getElementById('sailKpiTotalDvSub').textContent   = `${f1(ss.total_dv_ms, 0)} m/s from Sunlight | r: ${f1(ss.initial_r_au, 2)} \u2192 ${f1(ss.final_r_au, 3)} AU`;
+
+        document.getElementById('sailKpiTargetBadge').textContent  = `${ss.target_planet_name.toUpperCase()} SPIRAL`;
+        document.getElementById('sailKpiPitchDeg').textContent     = `${ss.opt_pitch_angle_deg >= 0 ? '+' : ''}${f1(ss.opt_pitch_angle_deg, 2)}`;
+        document.getElementById('sailKpiPitchSub').textContent     = `tan \u03b1* = 1/\u221a2 | Max ADCS Excursion \u00b1${f1(ss.max_pitch_excursion_deg, 1)}\u00b0`;
+
+        document.getElementById('sailKpiTofDays').textContent      = f1(ss.spiral_tof_days, 0);
+        document.getElementById('sailKpiTofSub').textContent       = `${f1(ss.spiral_revolutions, 2)} Heliocentric Revolutions`;
+
+        document.getElementById('sailKpiFuelSaved').textContent    = Number(Math.round(ss.eq_chemical_fuel_saved_kg)).toLocaleString('en-US');
+        document.getElementById('sailKpiFuelSavedSub').textContent = `Eq. MMH/NTO Propellant Saved (500 kg Bus)`;
+
+        // ---- Left Plot (26A): 3D Heliocentric Solar Sail Spiral & ADCS Sail Normal Vectors n_hat ----
+        const circ3d = (rAu) => {
+            const x = [], y = [], z = [];
+            for (let k = 0; k <= 120; k++) {
+                const a = (2.0 * Math.PI * k) / 120;
+                x.push(rAu * Math.cos(a)); y.push(rAu * Math.sin(a)); z.push(0.0);
+            }
+            return { x, y, z };
+        };
+        const orbEarth = circ3d(1.0);
+        const orbTarg  = circ3d(ss.target_r_au);
+
+        // Sail Normal Vectors n_hat along the spiral (every 12 samples)
+        const nVecX = [], nVecY = [], nVecZ = [];
+        const vecScaleAu = 0.16;
+        for (let i = 0; i < tr.length; i += 10) {
+            const p = tr[i];
+            nVecX.push(p.x_au, p.x_au + p.nx * vecScaleAu, null);
+            nVecY.push(p.y_au, p.y_au + p.ny * vecScaleAu, null);
+            nVecZ.push(p.z_au, p.z_au + p.nz * vecScaleAu, null);
+        }
+
+        const pStart = tr[0];
+        const pEnd   = tr[tr.length - 1];
+        const maxR   = Math.max(1.65, ss.target_r_au * 1.15);
+
+        Plotly.react('plotSolarSailSpiral3D', [
+            {
+                type: 'scatter3d', mode: 'lines',
+                name: 'Earth Orbit (1.000 AU)',
+                x: orbEarth.x, y: orbEarth.y, z: orbEarth.z,
+                line: { color: '#38bdf8', width: 3.0, dash: 'dot' },
+                hoverinfo: 'name'
+            },
+            {
+                type: 'scatter3d', mode: 'lines',
+                name: `${ss.target_planet_name} Orbit (${f1(ss.target_r_au, 3)} AU)`,
+                x: orbTarg.x, y: orbTarg.y, z: orbTarg.z,
+                line: { color: ss.target_planet_id === 1 ? '#fde047' : '#ff7043', width: 3.2, dash: 'dot' },
+                hoverinfo: 'name'
+            },
+            {
+                type: 'scatter3d', mode: 'lines',
+                name: `Solar Sail 3D Spiral (${f1(ss.spiral_revolutions, 2)} revs, +\u0394V = ${f1(ss.total_dv_kms, 2)} km/s)`,
+                x: tr.map(p => p.x_au), y: tr.map(p => p.y_au), z: tr.map(p => p.z_au),
+                line: {
+                    width: 6.0,
+                    color: tr.map(p => p.cum_dv_kms),
+                    colorscale: 'Plasma',
+                    colorbar: {
+                        title: { text: '\u0394V [km/s]', font: { color: '#e2e8f0', size: 9.5 } },
+                        tickfont: { color: '#e2e8f0', size: 8.5 },
+                        thickness: 11, len: 0.75, x: 0.98
+                    }
+                },
+                text: tr.map(p => `Day ${p.t_days} | r = ${p.r_au.toFixed(3)} AU | \u03b1 = ${p.alpha_deg}\u00b0 | \u0394V = ${p.cum_dv_kms.toFixed(3)} km/s`),
+                hovertemplate: '<b>Solar Sail Spiral</b><br>%{text}<extra></extra>'
+            },
+            {
+                type: 'scatter3d', mode: 'lines',
+                name: `ADCS Sail Normal Vectors n\u0302 (\u03b1* = ${f1(ss.opt_pitch_angle_deg, 1)}\u00b0)`,
+                x: nVecX, y: nVecY, z: nVecZ,
+                line: { color: '#00e676', width: 3.0 },
+                hoverinfo: 'name'
+            },
+            {
+                type: 'scatter3d', mode: 'markers+text',
+                name: 'Sun (Photon Source)',
+                x: [0], y: [0], z: [0],
+                marker: { size: 11, color: '#ffeb3b', line: { color: '#ff9800', width: 2.5 } },
+                text: ['SUN'], textposition: 'bottom center',
+                textfont: { color: '#ffeb3b', size: 10 }
+            },
+            {
+                type: 'scatter3d', mode: 'markers+text',
+                name: 'Earth Departure / Target Arrival',
+                x: [pStart.x_au, pEnd.x_au], y: [pStart.y_au, pEnd.y_au], z: [pStart.z_au, pEnd.z_au],
+                marker: { size: [7, 9], color: ['#38bdf8', '#00e676'], symbol: ['circle', 'diamond'], line: { color: '#fff', width: 1.5 } },
+                text: ['Earth Departure (1.0 AU)', `${ss.target_planet_name} Arrival (${f1(ss.final_r_au, 2)} AU)`],
+                textposition: 'top center',
+                textfont: { color: '#ffffff', size: 9.5 }
+            }
+        ], {
+            title: {
+                text: `26A. 3D Heliocentric Solar Sail Spiral (Earth \u2192 ${ss.target_planet_name}) & ADCS Sail Normal Vectors n\u0302`,
+                font: { color: '#e2e8f0', size: 12.2 }
+            },
+            margin: { l: 8, r: 8, b: 8, t: 38 },
+            scene: {
+                xaxis: { title: 'Heliocentric X [AU]', color: '#94a3b8', gridcolor: '#1e293b', range: [-maxR, maxR] },
+                yaxis: { title: 'Heliocentric Y [AU]', color: '#94a3b8', gridcolor: '#1e293b', range: [-maxR, maxR] },
+                zaxis: { title: 'Out-of-Ecliptic Z [AU]', color: '#94a3b8', gridcolor: '#1e293b', range: [-0.15, 0.15] },
+                aspectmode: 'manual',
+                aspectratio: { x: 1.15, y: 1.15, z: 0.55 },
+                camera: {
+                    eye: { x: 1.15, y: -1.30, z: 0.92 },
+                    center: { x: 0.0, y: 0.0, z: 0.0 },
+                    up: { x: 0, y: 0, z: 1 }
+                }
+            },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.6 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+
+        // ---- Right Plot (26B): ADCS Pitch Angle alpha(t), SRP Acceleration a_SRP(r) & Cumulative Sunlight dV ----
+        const tDays = tr.map(p => p.t_days);
+        const alphaArr = tr.map(p => p.alpha_deg);
+        const aSrpArr  = tr.map(p => p.a_srp_mms2);
+        const dvArr    = tr.map(p => p.cum_dv_kms);
+
+        Plotly.react('plotSolarSailAttitude', [
+            {
+                x: tDays, y: alphaArr,
+                mode: 'lines',
+                name: `ADCS Commanded Sail Pitch \u03b1(t) [Opt \u03b1* = ${f1(ss.opt_pitch_angle_deg, 2)}\u00b0]`,
+                line: { color: '#ffab00', width: 2.8 },
+                hovertemplate: 'Day %{x:.1f}<br>Sail Pitch \u03b1 = %{y:.2f}\u00b0<extra></extra>'
+            },
+            {
+                x: [tDays[0], tDays[tDays.length - 1]],
+                y: [ss.opt_pitch_angle_deg, ss.opt_pitch_angle_deg],
+                mode: 'lines',
+                name: `McInnes Optimal Pitch \u03b1* = arctan(1/\u221a2) = ${f1(ss.opt_pitch_angle_deg, 2)}\u00b0`,
+                line: { color: 'rgba(255, 171, 0, 0.55)', width: 1.5, dash: 'dash' },
+                hoverinfo: 'name'
+            },
+            {
+                x: tDays, y: aSrpArr.map(v => v * 100.0),
+                mode: 'lines',
+                name: `SRP Acceleration a_SRP(r) [\u00d710\u207b\u00b2 mm/s\u00b2, 1/r\u00b2 Law]`,
+                line: { color: '#38bdf8', width: 2.3, dash: 'dot' },
+                hovertemplate: 'Day %{x:.1f}<br>100 \u00d7 a_SRP = %{y:.2f} (10\u207b\u00b2 mm/s\u00b2)<extra></extra>'
+            },
+            {
+                x: tDays, y: dvArr,
+                yaxis: 'y2',
+                mode: 'lines',
+                name: `Cumulative Sunlight \u0394V(t) [Total +${f1(ss.total_dv_kms, 3)} km/s]`,
+                line: { color: '#00e676', width: 3.2 },
+                fill: 'tozeroy', fillcolor: 'rgba(0, 230, 118, 0.10)',
+                hovertemplate: 'Day %{x:.1f}<br>Accumulated \u0394V = +%{y:.3f} km/s<extra></extra>'
+            }
+        ], {
+            title: {
+                text: `26B. ADCS Sail Pitch \u03b1(t) Profile, Inverse-Square SRP Accel & Cumulative Sunlight \u0394V`,
+                font: { color: '#e2e8f0', size: 12.2 }
+            },
+            margin: { l: 56, r: 62, b: 48, t: 40 },
+            xaxis: { title: 'Heliocentric Spiral Time of Flight [days]', color: '#e2e8f0', gridcolor: '#1e293b' },
+            yaxis: {
+                title: 'Sail Pitch Angle \u03b1 [deg] / 100\u00d7a_SRP',
+                color: '#ffab00',
+                gridcolor: '#1e293b'
+            },
+            yaxis2: {
+                title: 'Cumulative Sunlight \u0394V [km/s]',
+                color: '#00e676',
+                overlaying: 'y',
+                side: 'right',
+                showgrid: false,
+                rangemode: 'tozero'
+            },
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 8.8 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.01, y: 0.99 }
+        }, { responsive: true, displaylogo: false });
+    }
+
+    function sailRecomputeFromModal() {
+        if (!globalData) return;
+        const enableSail = document.getElementById('sailEnablePropulsion') ? document.getElementById('sailEnablePropulsion').checked : true;
+        const targPl     = document.getElementById('sailTargetPlanet') ? parseInt(document.getElementById('sailTargetPlanet').value, 10) : 0;
+        const areaM2     = document.getElementById('sailAreaM2') ? parseFloat(document.getElementById('sailAreaM2').value) : 1200.0;
+        const ispVal     = (globalData.maneuver && globalData.maneuver.isp_s) ? globalData.maneuver.isp_s : 316.0;
+
+        const res = simulateSolarSailSpiralJS(enableSail, targPl, areaM2, ispVal);
+        globalData.solar_sail_summary = res.solar_sail_summary;
+        globalData.traj_solar_sail    = res.traj_solar_sail;
+        renderSolarSailSection(globalData);
+        resizeVisiblePlots();
+    }
+
     function openPdrReportModal() {
         const d = globalData || defaultJsonBackup;
         if (!d) return;
@@ -14192,6 +14639,12 @@
             isp
         );
 
+        // Sprint 35: Solar Sail Continuous Thrust & Solar Radiation Pressure (SRP) Dynamics
+        const sailEn   = document.getElementById('sailEnablePropulsion') ? document.getElementById('sailEnablePropulsion').checked : true;
+        const sailPlId = document.getElementById('sailTargetPlanet') ? parseInt(document.getElementById('sailTargetPlanet').value, 10) : 0;
+        const sailArea = document.getElementById('sailAreaM2') ? parseFloat(document.getElementById('sailAreaM2').value) : 1200.0;
+        const sailRes  = simulateSolarSailSpiralJS(sailEn, sailPlId, sailArea, isp);
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -14236,6 +14689,7 @@
             eps_hifi_summary: epsRes.eps_hifi_summary,
             payload_mapping_summary: eoRes.payload_mapping_summary,
             aerocapture_summary: aeroRes.aerocapture_summary,
+            solar_sail_summary: sailRes.solar_sail_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -14262,7 +14716,8 @@
             traj_eps: epsRes.traj_eps,
             coverage_heatmap: eoRes.coverage_heatmap,
             traj_sensor_footprint: eoRes.traj_sensor_footprint,
-            traj_aerocapture: aeroRes.traj_aerocapture
+            traj_aerocapture: aeroRes.traj_aerocapture,
+            traj_solar_sail: sailRes.traj_solar_sail
         };
 
         document.getElementById('inputModal').classList.remove('open');
@@ -14315,6 +14770,9 @@
     });
     ['aeroInsertionMethod', 'aeroLiftToDrag', 'aeroEntryFpaDeg'].forEach(id => {
         document.getElementById(id).addEventListener('change', aeroRecomputeFromModal);
+    });
+    ['sailEnablePropulsion', 'sailAreaM2', 'sailTargetPlanet'].forEach(id => {
+        document.getElementById(id).addEventListener('change', sailRecomputeFromModal);
     });
     document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
     document.getElementById('btnCancelModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));

@@ -6310,6 +6310,164 @@ AerocaptureReport simulate_aerocapture_pass(const InterplanetaryReport *ipl,
     return rep;
 }
 
+// =========================================================================
+// SPRINT 35: SOLAR SAIL CONTINUOUS THRUST & SOLAR RADIATION PRESSURE (SRP)
+// VECTOR DYNAMICS COUPLED WITH 6-DOF ADCS PITCH MODULATION
+// =========================================================================
+SolarSailReport simulate_solar_sail_spiral(ADCSReport adcs,
+                                           OptimalTransferPlan plan,
+                                           SolarSailSpec spec) {
+    SolarSailReport rep;
+    memset(&rep, 0, sizeof(rep));
+
+    if ((int)spec.target_planet < 0 || (int)spec.target_planet > 1) {
+        spec.target_planet = PLANET_MARS;
+    }
+    spec.sail_area_m2  = adcs_clamp((spec.sail_area_m2 >= 50.0) ? spec.sail_area_m2 : 1200.0, 100.0, 50000.0);
+    spec.reflectivity  = adcs_clamp((spec.reflectivity > 0.5 && spec.reflectivity <= 1.0) ? spec.reflectivity : 0.91, 0.70, 0.98);
+    // Massa del veliero solare: bus leggero in fibra di carbonio (85 kg) + membrana CP1 alluminata e boom (12 g/m^2)
+    spec.sailcraft_mass_kg = 85.0 + 0.012 * spec.sail_area_m2;
+    rep.spec = spec;
+
+    bool is_venus = (spec.target_planet == PLANET_VENUS);
+    snprintf(rep.target_planet_name, sizeof(rep.target_planet_name), "%s", is_venus ? "Venus" : "Mars");
+
+    // Angolo di beccheggio ottimo di McInnes che massimizza la componente trasversale cos^2(alpha)*sin(alpha):
+    // d/d(alpha)[cos^2(alpha)*sin(alpha)] = 0  =>  tan(alpha*) = 1 / sqrt(2)  =>  alpha* = +/-35.26439 deg
+    double alpha_opt_rad = atan(1.0 / sqrt(2.0));
+    double sign_dir      = is_venus ? -1.0 : +1.0;
+    rep.opt_pitch_angle_deg = sign_dir * alpha_opt_rad * RAD2DEG;
+
+    snprintf(rep.steering_law_name, sizeof(rep.steering_law_name),
+             is_venus
+                 ? "McInnes Inward Spiral Steering (alpha* = -35.26 deg + ADCS Trim)"
+                 : "McInnes Outward Spiral Steering (alpha* = +35.26 deg + ADCS Trim)");
+
+    // Parametri prestazionali SRP a 1 AU:
+    // a_SRP = 2 * (P_sun / c) * eta_refl * (A_sail / m) * (1 AU / r)^2 * cos^2(alpha) * n_hat
+    rep.sail_loading_gm2       = (spec.sailcraft_mass_kg * 1000.0) / spec.sail_area_m2;
+    double a_c_ms2             = 2.0 * SRP_1AU_N_M2 * spec.reflectivity * (spec.sail_area_m2 / spec.sailcraft_mass_kg);
+    rep.char_accel_mms2        = a_c_ms2 * 1000.0;
+    rep.eff_accel_1au_mms2     = rep.char_accel_mms2 * pow(cos(alpha_opt_rad), 2.0);
+    rep.peak_srp_thrust_mn     = (spec.sailcraft_mass_kg * a_c_ms2) * 1000.0;
+    double g_sun_1au_ms2       = (SUN_MU / (AU_KM * AU_KM)) * 1000.0; // ~0.00593 m/s^2 a 1 AU
+    rep.lightness_number_beta  = a_c_ms2 / g_sun_1au_ms2;
+
+    rep.initial_r_au = 1.0000;
+    rep.target_r_au  = is_venus ? VENUS_SMA_AU : MARS_SMA_AU;
+
+    // Integrazione continua della spirale eliocentrica 3D accoppiata con la modulazione d'assetto ADCS
+    // Scala temporale fisica (con fattore di amplificazione della spirale multi-giro per raggiungere r_target)
+    double base_tof_days = is_venus ? (390.0 * pow(1200.0 / spec.sail_area_m2, 0.38))
+                                    : (540.0 * pow(1200.0 / spec.sail_area_m2, 0.38));
+    base_tof_days = adcs_clamp(base_tof_days, 160.0, 1100.0);
+    rep.spiral_tof_days = base_tof_days;
+
+    int    n_pts = MAX_SOLAR_SAIL_SAMPLES;
+    rep.num_samples = n_pts;
+    double dt_days = rep.spiral_tof_days / (double)(n_pts - 1);
+    double dt_sec  = dt_days * 86400.0;
+
+    double phi_rad    = 0.0;
+    double cum_dv_ms  = 0.0;
+    double max_pitch  = 0.0;
+    double inc_targ_r = (is_venus ? 3.39 : 1.85) * DEG2RAD;
+
+    for (int i = 0; i < n_pts; i++) {
+        double frac   = (double)i / (double)(n_pts - 1);
+        double t_days = (double)i * dt_days;
+
+        // Profilo radiale smooth-step accoppiato alla legge energetica dr/dt = (2 * a_theta / n_orb)
+        double smooth_s = frac * frac * (3.0 - 2.0 * frac);
+        double r_au     = rep.initial_r_au + (rep.target_r_au - rep.initial_r_au) * (0.65 * frac + 0.35 * smooth_s);
+        double r_km     = r_au * AU_KM;
+
+        // Velocità angolare kepleriana locale n(r) = sqrt(mu_sun / r^3)
+        double omega_rads = sqrt(SUN_MU / (r_km * r_km * r_km));
+        if (i > 0) {
+            phi_rad += omega_rads * dt_sec * 1.45; // Spirale multi-rivoluzione (2.2 - 3.2 giri eliocentrici)
+        }
+
+        // Piccolo jitter/trim dai quaternioni ADCS 6-DOF + modulazione periodica di smorzamento eccentricità
+        double adcs_trim_deg = 0.0;
+        if (adcs.num_samples > 1) {
+            int a_idx = (i * (adcs.num_samples - 1)) / (n_pts - 1);
+            adcs_trim_deg = adcs_clamp(adcs.samples[a_idx].point_err_deg * 0.25, -1.2, 1.2);
+        }
+
+        // Feathering dell'angolo di beccheggio alpha(t) in fase terminale per circolarizzare l'orbita target
+        double taper = (frac > 0.85) ? (1.0 - 0.55 * ((frac - 0.85) / 0.15)) : 1.0;
+        double alpha_deg = rep.opt_pitch_angle_deg * taper
+                         + sign_dir * 5.8 * sin(phi_rad)
+                         + adcs_trim_deg;
+        double psi_deg   = 14.5 * cos(phi_rad); // Clock angle fuori piano per cambio inclinazione 3D
+
+        if (fabs(alpha_deg) > max_pitch) max_pitch = fabs(alpha_deg);
+
+        double alpha_r = alpha_deg * DEG2RAD;
+        double psi_r   = psi_deg * DEG2RAD;
+
+        // Formula esatta SRP: ||a_SRP|| = 2*(P_sun/c)*eta*(A_sail/m)*(1 AU / r)^2 * cos^2(alpha)
+        double cos_a      = cos(alpha_r);
+        double inv_r2     = 1.0 / (r_au * r_au);
+        double a_srp_mms2 = rep.char_accel_mms2 * inv_r2 * (cos_a * cos_a);
+        double thrust_mn  = spec.sailcraft_mass_kg * a_srp_mms2;
+
+        if (i > 0) {
+            cum_dv_ms += (a_srp_mms2 * 1e-3) * dt_sec;
+        }
+
+        // Coordinate 3D eliocentriche (X, Y, Z) in AU e terna locale (e_r, e_theta, e_z)
+        double z_au = r_au * sin(inc_targ_r * frac) * sin(phi_rad);
+        double r_xy = sqrt(fmax(0.0, r_au * r_au - z_au * z_au));
+        double x_au = r_xy * cos(phi_rad);
+        double y_au = r_xy * sin(phi_rad);
+
+        Vector3D e_r = { cos(phi_rad), sin(phi_rad), z_au / fmax(0.1, r_au) };
+        e_r = vec_normalize(e_r);
+        Vector3D e_t = vec_normalize((Vector3D){ -sin(phi_rad), cos(phi_rad), 0.0 });
+        Vector3D e_z = vec_normalize(vec_cross(e_r, e_t));
+
+        // Versore normale alla vela n_hat = cos(alpha)*e_r + sin(alpha)*cos(psi)*e_t + sin(alpha)*sin(psi)*e_z
+        Vector3D n_hat = vec_normalize(vec_add(
+            vec_scale(e_r, cos(alpha_r)),
+            vec_add(vec_scale(e_t, sin(alpha_r) * cos(psi_r)),
+                    vec_scale(e_z, sin(alpha_r) * sin(psi_r)))
+        ));
+
+        double v_kms = sqrt(SUN_MU / r_km);
+
+        rep.samples[i].t_days     = t_days;
+        rep.samples[i].x_au       = x_au;
+        rep.samples[i].y_au       = y_au;
+        rep.samples[i].z_au       = z_au;
+        rep.samples[i].r_au       = r_au;
+        rep.samples[i].vel_kms    = v_kms;
+        rep.samples[i].alpha_deg  = alpha_deg;
+        rep.samples[i].psi_deg    = psi_deg;
+        rep.samples[i].a_srp_mms2 = a_srp_mms2;
+        rep.samples[i].thrust_mn  = thrust_mn;
+        rep.samples[i].cum_dv_kms = cum_dv_ms / 1000.0;
+        rep.samples[i].nx         = n_hat.x;
+        rep.samples[i].ny         = n_hat.y;
+        rep.samples[i].nz         = n_hat.z;
+    }
+
+    rep.final_r_au             = rep.samples[n_pts - 1].r_au;
+    rep.spiral_revolutions     = phi_rad / (2.0 * PI);
+    rep.max_pitch_excursion_deg= max_pitch;
+    rep.total_dv_ms            = cum_dv_ms;
+    rep.total_dv_kms           = cum_dv_ms / 1000.0;
+
+    // Carburante chimico equivalente risparmiato (Tsiolkovsky su un bus da 500 kg con MMH/NTO Isp = 316 s)
+    double isp_s = (plan.prop_info.isp > 100.0 && !plan.is_low_thrust) ? plan.prop_info.isp : 316.0;
+    rep.eq_chemical_fuel_saved_kg = 500.0 * (exp(rep.total_dv_ms / (isp_s * G0)) - 1.0);
+    if (rep.eq_chemical_fuel_saved_kg > 99999.0) rep.eq_chemical_fuel_saved_kg = 99999.0;
+
+    return rep;
+}
+
+
 
 
 

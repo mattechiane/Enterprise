@@ -254,6 +254,16 @@ int main(void) {
         .final_periapsis_km   = 400.0                  // Quota di pericentro finale dopo Periapsis Raise Burn [km]
     };
     AerocaptureReport aero = simulate_aerocapture_pass(&ipl, plan, aero_spec);
+
+    // 26. SPRINT 35: SOLAR SAIL CONTINUOUS THRUST & SOLAR RADIATION PRESSURE (SRP) DYNAMICS
+    SolarSailSpec sail_spec = {
+        .enable_sail       = true,        // Abilita propulsione continua a Vela Solare (Propellantless Deep-Space)
+        .target_planet     = PLANET_MARS, // Spirale eliocentrica esterna 1.0 AU -> 1.524 AU (Marte)
+        .sail_area_m2      = 1200.0,      // Area riflettente vela solare A_sail = 1200.0 m^2
+        .sailcraft_mass_kg = 99.4,        // Massa del veliero solare [kg]
+        .reflectivity      = 0.91         // Riflettanza speculare membrana CP1 alluminata eta_refl = 0.91
+    };
+    SolarSailReport sail = simulate_solar_sail_spiral(adcs, plan, sail_spec);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -528,15 +538,25 @@ int main(void) {
     printf("  * Orbit Capture & Fuel  : e_in = %.3f -> e_final = %.3f (h_a = %.0f km) | Eq. dV Saved = %.3f km/s (%.0f kg Heavy Stack Fuel Saved!)\n\n",
            aero.initial_hyp_ecc, aero.final_eccentricity, aero.captured_apoapsis_km, aero.eq_dv_saved_kms, aero.fuel_saved_heavy_stack_kg);
 
+    printf("[SOLAR SAIL CONTINUOUS THRUST & SOLAR RADIATION PRESSURE (SRP) DYNAMICS]\n");
+    printf("  * Sail Geometry & Mass  : A_sail = %.0f m^2 | Sailcraft Mass = %.1f kg (Loading = %.1f g/m^2, eta = %.2f)\n",
+           sail.spec.sail_area_m2, sail.spec.sailcraft_mass_kg, sail.sail_loading_gm2, sail.spec.reflectivity);
+    printf("  * SRP Performance (1AU) : Char. Accel a_c = %.4f mm/s^2 (beta = %.4f) | Peak Photon Thrust = %.2f mN\n",
+           sail.char_accel_mms2, sail.lightness_number_beta, sail.peak_srp_thrust_mn);
+    printf("  * ADCS Steering & Spiral: %s | %.2f revs in %.0f days (%.3f -> %.3f AU)\n",
+           sail.steering_law_name, sail.spiral_revolutions, sail.spiral_tof_days, sail.initial_r_au, sail.final_r_au);
+    printf("  * Total Sunlight dV     : %.3f km/s (%.0f m/s) Accumulated at 0 kg Fuel (Eq. Chemical Saved = %.0f kg)\n\n",
+           sail.total_dv_kms, sail.total_dv_ms, sail.eq_chemical_fuel_saved_kg);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with Martian Aerocapture, Gravity Assist, EO Raycasting & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, sail, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with Solar Sail SRP Spiral, Martian Aerocapture, Gravity Assist & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, sail, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;
