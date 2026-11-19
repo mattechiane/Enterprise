@@ -1,0 +1,15 @@
+{
+  "name": "project-enterprise",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Project ENTERPRISE — Flight Dynamics Suite (Tauri v2 Desktop App)",
+  "scripts": {
+    "prepare:dist": "node scripts/prepare-dist.mjs",
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

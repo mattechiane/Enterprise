@@ -1,0 +1,6 @@
+# Node.js & Frontend staging
+node_modules/
+dist/
+
+# Tauri / Rust build artifacts
+src-tauri/target/
