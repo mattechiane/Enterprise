@@ -444,12 +444,12 @@
     </div>
 
     <div class="header-telemetry-strip" aria-label="Live Spacecraft Telemetry">
-        <span class="badge" id="phaseBadge" style="color:var(--cyan-bright)">PHASE 1: INITIAL ORBIT</span>
+        <span class="badge" id="phaseBadge" style="color:var(--text-muted); border-color:var(--text-muted);">STANDBY</span>
         <div class="telemetry-pill"><span>ALT</span><strong id="liveAlt">---</strong><span class="unit">km</span></div>
         <div class="telemetry-pill"><span>VEL</span><strong id="liveVel">---</strong><span class="unit">km/s</span></div>
         <div class="telemetry-pill"><span>SoC</span><strong id="liveSoc" style="color:var(--green)">---</strong><span class="unit">%</span></div>
         <div class="telemetry-pill"><span>SUB</span><strong id="liveLatLon">---</strong></div>
-        <span class="badge" id="eclipseBadge" style="color:var(--amber)">&#9728; SUNLIGHT</span>
+        <span class="badge" id="eclipseBadge" style="color:var(--text-muted); border-color:var(--text-muted);">STANDBY</span>
     </div>
 
     <div class="header-actions">
@@ -519,7 +519,7 @@
 
         <div class="kpi-hero-grid" id="kpiHeroGrid">
             <div class="kpi-card" style="--kpi-accent: var(--cyan);">
-                <div class="kpi-top"><span class="kpi-label">Total &Delta;V Budget</span><span class="kpi-micro-badge" id="kpiTotalDvBadge">OPTIMAL</span></div>
+                <div class="kpi-top"><span class="kpi-label">Total &Delta;V Budget</span><span class="kpi-micro-badge" id="kpiTotalDvBadge" style="color:var(--text-muted); border-color:rgba(148,163,184,0.3); background:rgba(148,163,184,0.08);">STANDBY</span></div>
                 <div class="kpi-main-row"><span class="kpi-value" id="kpiTotalDv">---</span><span class="kpi-unit">m/s</span></div>
                 <div class="kpi-sub" id="kpiTotalDvSub">---</div>
             </div>
@@ -544,7 +544,7 @@
                 <div class="kpi-sub" id="kpiTcmSub">---</div>
             </div>
             <div class="kpi-card" style="--kpi-accent: var(--green);">
-                <div class="kpi-top"><span class="kpi-label">Mission Cost / Status</span><span class="kpi-micro-badge" id="kpiCostBadge" style="color:var(--green);border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.12);">NOMINAL</span></div>
+                <div class="kpi-top"><span class="kpi-label">Mission Cost / Status</span><span class="kpi-micro-badge" id="kpiCostBadge" style="color:var(--text-muted); border-color:rgba(148,163,184,0.3); background:rgba(148,163,184,0.08);">STANDBY</span></div>
                 <div class="kpi-main-row"><span class="kpi-value" id="kpiCost">---</span><span class="kpi-unit">M&euro;</span></div>
                 <div class="kpi-sub" id="kpiCostSub">---</div>
             </div>
@@ -588,7 +588,7 @@
 
     <div class="maneuver-banner">
         <div class="title-group">
-            <h3 id="bannerManeuverType">OPTIMAL MANEUVER: Loading...</h3>
+            <h3 id="bannerManeuverType">OPTIMAL MANEUVER: STANDBY / AWAITING DATA</h3>
             <p id="bannerPropellant">Propellant: ---</p>
         </div>
         <div class="cost-highlight">
@@ -651,7 +651,7 @@
             <h2>6. Terminal Rendezvous &amp; Proximity Operations &mdash; LVLH Hill Frame</h2>
             <span>Clohessy-Wiltshire (CW) Two-Impulse Targeting &bull; V-Bar / R-Bar Relative Trajectory, Safety Approach Corridor &amp; Soft-Docking Profile</span>
         </div>
-        <span class="badge" id="rdvStatusBadge" style="color:var(--green); border-color:var(--green);">&#10004; SOFT-DOCKING CAPTURE VERIFIED ([0, 0, 0] m | 0.00 m/s)</span>
+        <span class="badge" id="rdvStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.12), rgba(0,230,118,0.10)); border-color: var(--cyan);">
@@ -678,7 +678,7 @@
             <h2>7. Monte Carlo Navigation Uncertainty, 3&sigma; Dispersion Ellipsoid &amp; TCM Budget</h2>
             <span>100-Run Box-Muller Stochastic Simulation &bull; 3D Arrival Covariance Ellipsoid (99.7% CEP) &amp; Mid-Course Trajectory Correction Maneuver</span>
         </div>
-        <span class="badge" id="mcStatusBadge" style="color:var(--amber); border-color:var(--amber);">&#127922; N = 100 MONTE CARLO RUNS (99.7% 3&sigma; CONFIDENCE)</span>
+        <span class="badge" id="mcStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(213,0,249,0.13), rgba(255,23,68,0.10)); border-color: var(--purple);">
@@ -724,7 +724,7 @@
             <h2>8. 6-DOF Attitude Dynamics (ADCS), Slew Maneuvers &amp; Reaction Wheel Momentum</h2>
             <span>Euler Rigid-Body Dynamics &bull; Quaternion PD Slew Control &bull; 3-Axis Reaction Wheels &amp; Magnetorquer Momentum Dumping</span>
         </div>
-        <span class="badge" id="adcsStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#128752; 6-DOF QUATERNION SLEW &amp; RW DESATURATION ACTIVE</span>
+        <span class="badge" id="adcsStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.13), rgba(255,171,0,0.11)); border-color: var(--cyan);">
@@ -770,7 +770,7 @@
             <h2>9. Spacecraft Thermal Control (TCS) &amp; Ionizing Radiation Environment</h2>
             <span>2-Node Stefan-Boltzmann Thermal Solver (T<sub>ext</sub> &amp; T<sub>bus</sub>) &bull; Solar, Albedo &amp; Earth IR Fluxes &bull; Van Allen Belts TID, SAA Proton Core &amp; Al Shielding</span>
         </div>
-        <span class="badge" id="tcsStatusBadge" style="color:var(--green); border-color:var(--green);">&#127777; TCS &amp; RADIATION ENVELOPE NOMINAL</span>
+        <span class="badge" id="tcsStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(255,171,0,0.13), rgba(0,229,255,0.10)); border-color: var(--amber);">
@@ -816,7 +816,7 @@
             <h2>10. RF Telecommunication Link Budget, E<sub>b</sub>/N<sub>0</sub> Margin &amp; Data Downlink</h2>
             <span>Slant-Range FSPL(t) &bull; Atmospheric &amp; Elevation Loss &bull; E<sub>b</sub>/N<sub>0</sub> Carrier Lock Threshold &bull; ACM Downlink Throughput &amp; Data Volume [GB]</span>
         </div>
-        <span class="badge" id="rfStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#128225; RF DOWNLINK CARRIER LOCKED (X-BAND 8.4 GHz)</span>
+        <span class="badge" id="rfStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.13), rgba(0,230,118,0.11)); border-color: var(--cyan);">
@@ -862,7 +862,7 @@
             <h2>11. Payload Swath Coverage, Walker Delta Constellation &amp; Mission Mass/Cost Budget</h2>
             <span>Optical/SAR Sensor Swath Width &amp; Diffraction GSD &bull; Symmetrical Walker Delta Constellation (i : T / P / F) &bull; SMAD Mass Breakdown &amp; NASA NICM Cost Model</span>
         </div>
-        <span class="badge" id="sysStatusBadge" style="color:var(--green); border-color:var(--green);">&#128752; PHASE-A MISSION ARCHITECTURE VERIFIED (WALKER 24/3/1)</span>
+        <span class="badge" id="sysStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(213,0,249,0.13), rgba(0,229,255,0.11)); border-color: var(--purple);">
@@ -908,7 +908,7 @@
             <h2>12. Autonomous Onboard Navigation, General Relativity (1PN) &amp; X-Ray Pulsar Timing (XNAV)</h2>
             <span>6-State GNSS EKF (LEO) &bull; 8-State Deep-Space XNAV EKF with Onboard Atomic Clock (Crab, Vela, PSR J0030+0451) &bull; 1PN Post-Newtonian Dynamics &amp; Proper Time Dilation</span>
         </div>
-        <span class="badge" id="ekfStatusBadge" style="color:var(--green); border-color:var(--green);">&#128752; XNAV PULSAR EKF &amp; 1PN GR ACTIVE</span>
+        <span class="badge" id="ekfStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.13), rgba(0,230,118,0.11)); border-color: var(--cyan);">
@@ -925,12 +925,12 @@
     <!-- Sprint 37 KPI Cards: General Relativity (1PN) & X-Ray Pulsar Navigation (XNAV) -->
     <div class="ipl-kpi-grid" style="margin-bottom: 16px;">
         <div class="kpi-card" style="--kpi-accent: var(--purple); border-color: rgba(192,132,252,0.42); background: linear-gradient(135deg, rgba(168,85,247,0.12), rgba(15,23,42,0.90));">
-            <div class="kpi-top"><span class="kpi-label">Relativistic Time Dilation Offset</span><span class="kpi-micro-badge" id="xnavKpiModeBadge" style="color:#d8b4fe; border-color:rgba(192,132,252,0.45);">1PN GR</span></div>
+            <div class="kpi-top"><span class="kpi-label">Relativistic Time Dilation Offset</span><span class="kpi-micro-badge" id="xnavKpiModeBadge" style="color:var(--text-muted); border-color:rgba(148,163,184,0.3); background:rgba(148,163,184,0.08);">STANDBY</span></div>
             <div class="kpi-main-row"><span class="kpi-value" id="xnavKpiDilation" style="color:#e9d5ff;">---</span><span class="kpi-unit">ns</span></div>
             <div class="kpi-sub" id="xnavKpiDilationSub">---</div>
         </div>
         <div class="kpi-card" style="--kpi-accent: var(--green); border-color: rgba(0,230,118,0.45); background: linear-gradient(135deg, rgba(0,230,118,0.11), rgba(15,23,42,0.90));">
-            <div class="kpi-top"><span class="kpi-label">Pulsar EKF Convergence</span><span class="kpi-micro-badge" id="xnavKpiSourceBadge" style="color:#00e676; border-color:rgba(0,230,118,0.45);">XNAV 8-STATE</span></div>
+            <div class="kpi-top"><span class="kpi-label">Pulsar EKF Convergence</span><span class="kpi-micro-badge" id="xnavKpiSourceBadge" style="color:var(--text-muted); border-color:rgba(148,163,184,0.3); background:rgba(148,163,184,0.08);">STANDBY</span></div>
             <div class="kpi-main-row"><span class="kpi-value" id="xnavKpiPosErr" style="color:#00e676;">---</span><span class="kpi-unit">km</span></div>
             <div class="kpi-sub" id="xnavKpiPosErrSub">---</div>
         </div>
@@ -994,7 +994,7 @@
             <h2>13. Space Situational Awareness (SSA), B-Plane Conjunction &amp; Collision Avoidance (CAM)</h2>
             <span>2D Encounter B-Plane (&xi;, &zeta;) Projection &bull; Foster/Alfriend 2D Collision Probability P<sub>c</sub> &bull; In-Track Phasing Burn &Delta;V<sub>CAM</sub> &bull; ESA Space Debris Office Standard</span>
         </div>
-        <span class="badge" id="camStatusBadge" style="color:var(--red); border-color:var(--red);">&#9888; RED CONJUNCTION ALERT (P<sub>c</sub> &gt; 10<sup>-4</sup> &mdash; CAM MANDATORY)</span>
+        <span class="badge" id="camStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" id="camBannerBox" style="background: linear-gradient(90deg, rgba(255,82,82,0.14), rgba(0,229,255,0.11)); border-color: var(--red);">
@@ -1040,12 +1040,12 @@
             <h2>14. End-of-Life (EoL) &amp; EDL Re-Entry: Hypersonic Braking, Parachute &amp; Powered Descent</h2>
             <span>3-Phase EDL Sequence (Aero C<sub>D</sub>(M) &rarr; Supersonic Disk-Gap-Band Chute &rarr; Skycrane Powered Descent) &bull; Sutton-Graves Heating &bull; Touchdown V<sub>td</sub> &lt; 2.5 m/s</span>
         </div>
-        <span class="badge" id="eolStatusBadge" style="color:var(--green); border-color:var(--green);">&#9851; 3-PHASE EDL QUALIFIED &amp; ESA ZERO-DEBRIS COMPLIANT</span>
+        <span class="badge" id="eolStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="ipl-kpi-grid">
         <div class="kpi-card" style="--kpi-accent: var(--green);">
-            <div class="kpi-top"><span class="kpi-label">Touchdown Velocity V<sub>td</sub></span><span class="kpi-micro-badge" id="edlKpiTouchdownBadge" style="color:var(--green);border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.14);">SOFT &lt; 2.5 m/s</span></div>
+            <div class="kpi-top"><span class="kpi-label">Touchdown Velocity V<sub>td</sub></span><span class="kpi-micro-badge" id="edlKpiTouchdownBadge" style="color:var(--text-muted); border-color:rgba(148,163,184,0.3); background:rgba(148,163,184,0.08);">STANDBY</span></div>
             <div class="kpi-main-row"><span class="kpi-value" id="edlKpiTouchdownVel">---</span><span class="kpi-unit">m/s</span></div>
             <div class="kpi-sub" id="edlKpiTouchdownSub">---</div>
         </div>
@@ -1114,7 +1114,7 @@
             <h2>15. Cislunar CR3BP, Weak Stability Boundary (WSB) &amp; 4-Body Ballistic Lunar Transfer (BLT)</h2>
             <span>Earth-Moon Synodic CR3BP (&mu;<sub>EM</sub> = 0.01215059) &bull; Bicircular 4-Body Sun-Earth-Moon-S/C (BCR4BP) &bull; 1.5M km Sun-Earth L<sub>1</sub> WSB Loop &bull; Solar Tidal Perigee Pumping &amp; Ballistic Lunar Capture</span>
         </div>
-        <span class="badge" id="cislunarStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#127769; 4-BODY WSB / BLT &amp; CR3BP ACTIVE (|&Delta;C<sub>J</sub>/C<sub>J,0</sub>| &lt; 10<sup>-8</sup>)</span>
+        <span class="badge" id="cislunarStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.13), rgba(213,0,249,0.12)); border-color: var(--cyan);">
@@ -1196,7 +1196,7 @@
             <h2>16. Flexible Solar Array Modes, Propellant Sloshing &amp; Control-Structure Interaction (CSI)</h2>
             <span>Cantilever Solar Array Bending (f<sub>flex,1</sub>) &bull; Abramson Equivalent Slosh Pendulum (&omega;<sub>slosh</sub>, &zeta;<sub>slosh</sub>) &bull; GNC Cascade Bi-Quad Notch Filter &bull; Launch Vehicle QSL &amp; Stiffness</span>
         </div>
-        <span class="badge" id="csiStatusBadge" style="color:var(--green); border-color:var(--green);">&#9881; GNC NOTCH FILTER ACTIVE &bull; CSI STABLE &amp; LAUNCH QSL COMPLIANT</span>
+        <span class="badge" id="csiStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(213,0,249,0.13), rgba(0,230,118,0.12)); border-color: var(--purple);">
@@ -1242,7 +1242,7 @@
             <h2>17. Onboard FDIR Autonomy, Redundancy Switchover &amp; Safe-Mode Recovery</h2>
             <span>OBDH Fault Detection, Isolation &amp; Recovery State Machine &bull; Hot/Warm B-Side Redundancy Takeover &bull; 28V Bus Protection &bull; NORAD TLE &amp; CCSDS OEM 2.0</span>
         </div>
-        <span class="badge" id="fdirStatusBadge" style="color:var(--green); border-color:var(--green);">&#128737; FDIR AUTONOMOUS RECOVERY OK &bull; CCSDS OEM 2.0 COMPLIANT</span>
+        <span class="badge" id="fdirStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(255,82,82,0.14), rgba(0,229,255,0.12)); border-color: var(--red);">
@@ -1288,7 +1288,7 @@
             <h2>18. Interplanetary Patched-Conics, Porkchop Contour (C<sub>3</sub>) &amp; Planetary Gravity Assist (Flyby)</h2>
             <span>Heliocentric Lambert (&mu;<sub>&#9737;</sub> = 1.3271244&times;10<sup>11</sup> km&sup3;/s&sup2;) &bull; Porkchop C<sub>3</sub> Grid &bull; Planetary Slingshot V<sub>&infin;</sub> Rotation (&delta; = 2 arcsin(1/e<sub>hyp</sub>)) &bull; 3D B-Plane Targeting &amp; Zero-Propellant &Delta;V Gain</span>
         </div>
-        <span class="badge" id="iplStatusBadge" style="color:var(--cyan); border-color:var(--cyan);">&#9737; PATCHED CONICS &amp; FLYBY</span>
+        <span class="badge" id="iplStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="ipl-kpi-grid">
@@ -1341,7 +1341,7 @@
             <h2>19. Multi-Satellite Formation Flying, E/I-Vector Passive Safety &amp; LVLH Relative Orbits</h2>
             <span>D'Amico Quasi-Nonsingular ROEs (&delta;<b>&alpha;</b>) &bull; Schaub-Alfriend J<sub>2</sub>-Invariance &bull; Chief + 3 Deputies 3D LVLH Cluster &bull; Passive E/I-Vector Separation</span>
         </div>
-        <span class="badge" id="formStatusBadge" style="color:var(--green); border-color:var(--green);">&#128752; E/I-VECTOR PASSIVE SAFETY VERIFIED (&delta;<b>e</b> &parallel; &delta;<b>i</b>)</span>
+        <span class="badge" id="formStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="ipl-kpi-grid">
@@ -1386,7 +1386,7 @@
             <span>Onboard Activity Scheduler (Science / Downlink / Slew / Sun-Charge / Eclipse) &bull; Solid-State Recorder (SSR) Buffer &bull; 95% Overflow Protection &bull; ECSS-E-ST-10C / NASA PDR Readiness</span>
         </div>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <span class="badge" id="opsStatusBadge" style="color:var(--green); border-color:var(--green);">&#9989; ECSS / NASA PDR APPROVED (ALL SUBSYSTEMS NOMINAL)</span>
+            <span class="badge" id="opsStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
             <button type="button" class="btn-sim" style="border-color:var(--cyan); color:var(--cyan-bright);" onclick="openPdrReportModal()">&#128196; Open ECSS/NASA PDR Report</button>
         </div>
     </div>
@@ -1413,7 +1413,7 @@
             <div class="kpi-sub" id="opsKpiDownlinkedSub">---</div>
         </div>
         <div class="kpi-card" style="--kpi-accent: var(--green);">
-            <div class="kpi-top"><span class="kpi-label">Overall ECSS/NASA Readiness</span><span class="kpi-micro-badge" id="opsKpiVerdictBadge" style="color:var(--green);border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.14);">PDR PASS</span></div>
+            <div class="kpi-top"><span class="kpi-label">Overall ECSS/NASA Readiness</span><span class="kpi-micro-badge" id="opsKpiVerdictBadge" style="color:var(--text-muted); border-color:rgba(148,163,184,0.3); background:rgba(148,163,184,0.08);">STANDBY</span></div>
             <div class="kpi-main-row"><span class="kpi-value" id="opsKpiReadiness">---</span><span class="kpi-unit">%</span></div>
             <div class="kpi-sub" id="opsKpiReadinessSub">---</div>
         </div>
@@ -1432,12 +1432,12 @@
             <h2>21. Space Weather, Atmospheric Diurnal Bulge &amp; Long-Term Orbit Decay</h2>
             <span>NRLMSISE-00 / Jacchia-Bowman Thermosphere &bull; Exospheric Temperature T<sub>&infin;</sub>(F<sub>10.7</sub>, K<sub>p</sub>) &bull; Diurnal Bulge (+30&deg; East, 14:00 LST) &bull; King-Hele Secular Decay &amp; 25-Year Rule</span>
         </div>
-        <span class="badge" id="swxStatusBadge" style="color:var(--green); border-color:var(--green);">&#9728; PASS: IADC 25-YEAR DEBRIS RULE COMPLIANT</span>
+        <span class="badge" id="swxStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="ipl-kpi-grid">
         <div class="kpi-card" style="--kpi-accent: var(--cyan);">
-            <div class="kpi-top"><span class="kpi-label">Estimated Orbital Lifetime</span><span class="kpi-micro-badge" id="swxKpiPhaseBadge">NOMINAL</span></div>
+            <div class="kpi-top"><span class="kpi-label">Estimated Orbital Lifetime</span><span class="kpi-micro-badge" id="swxKpiPhaseBadge" style="color:var(--text-muted); border-color:rgba(148,163,184,0.3); background:rgba(148,163,184,0.08);">STANDBY</span></div>
             <div class="kpi-main-row"><span class="kpi-value" id="swxKpiLifetime">---</span><span class="kpi-unit">years</span></div>
             <div class="kpi-sub" id="swxKpiLifetimeSub">---</div>
         </div>
@@ -1457,7 +1457,7 @@
             <div class="kpi-sub" id="swxKpiRhoSub">---</div>
         </div>
         <div class="kpi-card" style="--kpi-accent: var(--green);">
-            <div class="kpi-top"><span class="kpi-label">Compliance with 25-Year Rule</span><span class="kpi-micro-badge" id="swxKpiRuleBadge" style="color:var(--green);border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.14);">IADC 25-YR</span></div>
+            <div class="kpi-top"><span class="kpi-label">Compliance with 25-Year Rule</span><span class="kpi-micro-badge" id="swxKpiRuleBadge" style="color:var(--text-muted); border-color:rgba(148,163,184,0.3); background:rgba(148,163,184,0.08);">STANDBY</span></div>
             <div class="kpi-main-row"><span class="kpi-value" id="swxKpiCompliance">---</span></div>
             <div class="kpi-sub" id="swxKpiComplianceSub">---</div>
         </div>
@@ -1476,7 +1476,7 @@
             <h2>22. Optical Inter-Satellite Links (ISL) &amp; Constellation Mesh Network</h2>
             <span>1550 nm Coherent Laser Terminals (LCT 10 Gbps) &bull; 3D Line-of-Sight (LoS) Atmospheric Limb Occultation (R<sub>occ</sub> = R<sub>E</sub> + 80 km) &bull; Intra-Plane &amp; Cross-Plane Walker Mesh</span>
         </div>
-        <span class="badge" id="islStatusBadge" style="color:var(--green); border-color:var(--green);">&#128752; FULL 3D SPHERICAL LASER MESH LOCKED</span>
+        <span class="badge" id="islStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="ipl-kpi-grid">
@@ -1520,7 +1520,7 @@
             <h2>23. Multi-Station Ground Network, DSN/ESTRACK Geometry &amp; Antenna Tracking</h2>
             <span>Topocentric SEZ Azimuth-Elevation-Range (AER) &bull; NASA DSN / ESA ESTRACK / Polar LEO Networks &bull; AOS/LOS Handovers &bull; Antenna Pedestal Slew Rate [deg/s]</span>
         </div>
-        <span class="badge" id="gndStatusBadge" style="color:var(--green); border-color:var(--green);">&#128225; GLOBAL MULTI-STATION TRACKING &amp; HANDOVER ACTIVE</span>
+        <span class="badge" id="gndStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="ipl-kpi-grid">
@@ -1564,7 +1564,7 @@
             <h2>24. High-Fidelity EPS, Penumbra Transit &amp; Battery Health</h2>
             <span>Conical Umbra/Penumbra Eclipse Model &bull; Solar Array &eta;<sub>T</sub> = &eta;<sub>0</sub>[1 &minus; &beta;(T &minus; T<sub>ref</sub>)] &amp; TID MPPT &bull; Nonlinear Li-Ion V<sub>batt</sub>(SoC) Discharge &amp; Cyclic DoD SoH Fade</span>
         </div>
-        <span class="badge" id="epsStatusBadge" style="color:var(--green); border-color:var(--green);">&#9889; ECSS-E-ST-20C EPS NOMINAL &bull; MPPT &amp; LI-ION BUS LOCKED</span>
+        <span class="badge" id="epsStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="ipl-kpi-grid">
@@ -1605,10 +1605,10 @@
 <section class="section-block" id="sec-eo-raycast" data-tab="overview" style="--sec-order: 25;">
     <div class="section-header">
         <div>
-            <h2>23. Earth Observation Coverage Heatmap &amp; Dynamic Sensor Footprint</h2>
+            <h2>25. Earth Observation Coverage Heatmap &amp; Dynamic Sensor Footprint</h2>
             <span>6-DOF Quaternion Boresight (+Z<sub>body</sub>) WGS84 Ellipsoid Raycasting &bull; Trapezoidal Swath Polygon &amp; Off-Nadir Pixel Smearing &bull; Synthetic Onboard Camera &amp; Cumulative Global Heatmap</span>
         </div>
-        <span class="badge" id="eoStatusBadge" style="color:var(--cyan-bright); border-color:var(--cyan);">&#128247; WGS84 6-DOF RAYCASTING ACTIVE &bull; NADIR PUSHBROOM FOV 10&deg;&times;15&deg;</span>
+        <span class="badge" id="eoStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="ipl-kpi-grid">
@@ -1649,10 +1649,10 @@
 <section class="section-block" id="sec-25" data-tab="safety" style="--sec-order: 26;">
     <div class="section-header">
         <div>
-            <h2>25. Planetary Aerocapture, Aerobraking &amp; Martian Atmospheric Pass</h2>
+            <h2>26. Planetary Aerocapture, Aerobraking &amp; Martian Atmospheric Pass</h2>
             <span>3-DOF Atmospheric Pass (h<sub>EI</sub> = 125 km) &bull; Drag &amp; Lift Bank-Angle Modulation (L/D) &bull; Sutton-Graves CO<sub>2</sub> Heating &bull; Hyperbolic-to-Elliptical Capture &amp; Apoapsis/Periapsis Raise</span>
         </div>
-        <span class="badge" id="aeroStatusBadge" style="color:var(--green); border-color:var(--green);">&#128293; MARTIAN AEROCAPTURE CORRIDOR LOCKED &bull; L/D = 0.25</span>
+        <span class="badge" id="aeroStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="ipl-kpi-grid">
@@ -1698,15 +1698,15 @@
 <section class="section-block" id="sec-26" data-tab="transfer" style="--sec-order: 27;">
     <div class="section-header">
         <div>
-            <h2>26. Solar Sail Continuous Thrust, SRP Vector Dynamics &amp; 3D Heliocentric Spiral</h2>
+            <h2>27. Solar Sail Continuous Thrust, SRP Vector Dynamics &amp; 3D Heliocentric Spiral</h2>
             <span>a<sub>SRP</sub> = 2(P<sub>&#9737;</sub>/c)(A<sub>sail</sub>/m)(1 AU/r)&sup2; cos&sup2;(&alpha;) n&#770; &bull; McInnes Optimal Pitch (&alpha;* = &plusmn;35.26&deg;) &bull; 6-DOF ADCS Attitude Modulation &bull; Propellantless Deep-Space Spiral</span>
         </div>
-        <span class="badge" id="sailStatusBadge" style="color:var(--amber); border-color:var(--amber);">&#9728; SOLAR SAIL SRP PROPULSION ACTIVE &bull; A<sub>sail</sub> = 1,200 m&sup2; (0 kg FUEL)</span>
+        <span class="badge" id="sailStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
     </div>
 
     <div class="ipl-kpi-grid">
         <div class="kpi-card" style="--kpi-accent: var(--amber);">
-            <div class="kpi-top"><span class="kpi-label">Solar Sail Area A<sub>sail</sub></span><span class="kpi-micro-badge" id="sailKpiModeBadge">SRP ACTIVE</span></div>
+            <div class="kpi-top"><span class="kpi-label">Solar Sail Area A<sub>sail</sub></span><span class="kpi-micro-badge" id="sailKpiModeBadge" style="color:var(--text-muted); border-color:rgba(148,163,184,0.3); background:rgba(148,163,184,0.08);">STANDBY</span></div>
             <div class="kpi-main-row"><span class="kpi-value" id="sailKpiArea">---</span><span class="kpi-unit">m&sup2;</span></div>
             <div class="kpi-sub" id="sailKpiAreaSub">---</div>
         </div>
@@ -2100,107 +2100,6 @@
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--cyan)">18. Onboard SSR Memory Buffer &amp; Autonomous Operations Scheduler</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">NAND Flash Solid-State Recorder (SSR) with EDAC &bull; 95% Overflow Protection &bull; Payload Acquisition vs. RF Downlink</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="field">
-                    <label>Solid-State Recorder (SSR) Capacity M<sub>SSR,max</sub> [GB]</label>
-                    <input type="number" id="ssrCapacityGb" value="128" min="8" max="8192" step="16">
-                </div>
-                <div class="field">
-                    <label>Payload Science Data Generation Rate R<sub>gen</sub> [Mbps]</label>
-                    <input type="number" id="ssrScienceRateMbps" value="120" min="5" max="2000" step="10">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--green)">19. Optical Inter-Satellite Links (ISL) &amp; Constellation Laser Mesh Network</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">1550 nm Laser Communication Terminals (LCT) &bull; 3D Line-of-Sight Limb Occultation (R<sub>E</sub> + 80 km) &bull; 10 Gbps/Link</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="field">
-                    <label>Optical Link Range Limit d<sub>ISL,max</sub> [km] <span>[500 - 25,000 km]</span></label>
-                    <input type="number" id="islMaxRangeKm" value="5000" min="500" max="25000" step="250">
-                </div>
-                <div class="field">
-                    <label>Per-Link Laser Data Rate [Gbps] <span>[Coherent BPSK LCT]</span></label>
-                    <input type="number" id="islLinkRateGbps" value="10.0" min="1.0" max="100.0" step="1.0">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--amber)">20. Multi-Station Ground Network (NASA DSN / ESA ESTRACK / Polar LEO) &amp; Tracking</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Topocentric SEZ Azimuth-Elevation-Range (AER) &bull; AOS/LOS Visibility Cones &bull; Antenna Pedestal Slew Rate</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: 2fr 1fr;">
-                <div class="field">
-                    <label>Active Global Ground Station Network</label>
-                    <select id="gndNetworkType">
-                        <option value="0" selected>NASA Deep Space Network (DSN: Goldstone, Madrid, Canberra + Milano-Bovisa)</option>
-                        <option value="1">ESA ESTRACK Global Network (Cebreros, Malarg&uuml;e, New Norcia, Kourou)</option>
-                        <option value="2">High-Latitude Polar LEO Network (Svalbard SvalSat, TrollSat, Fairbanks, Punta Arenas)</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>Antenna Elevation Mask El<sub>min</sub> [deg] <span>[0 - 45&deg;]</span></label>
-                    <input type="number" id="gndElMaskDeg" value="5.0" min="0.0" max="45.0" step="1.0">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--cyan)">21. High-Fidelity Electrical Power System (EPS Hi-Fi), Penumbra &amp; Li-Ion Chemistry</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Conical Umbra/Penumbra Transit &bull; Thermal/TID MPPT Solar Array &bull; Nonlinear Li-Ion V<sub>batt</sub>(SoC) &amp; Cyclic DoD SoH Fade</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: 1fr 1fr;">
-                <div class="field">
-                    <label>Battery Cell Configuration <span>[Series &times; Parallel Pack]</span></label>
-                    <select id="epsBattConfig">
-                        <option value="0" selected>8S4P Li-Ion Standard (28V Unregulated Bus &bull; 33.6V Max / 24.0V Cut &bull; 48 Ah / 1382 Wh)</option>
-                        <option value="1">8S6P Li-Ion High-Capacity (28V Unregulated Bus &bull; 33.6V Max / 24.0V Cut &bull; 72 Ah / 2074 Wh)</option>
-                        <option value="2">7S4P Li-Ion Compact LEO (25.2V Bus &bull; 29.4V Max / 21.0V Cut &bull; 48 Ah / 1210 Wh)</option>
-                        <option value="3">14S4P Li-Ion High-Power (50V Bus &bull; 58.8V Max / 42.0V Cut &bull; 48 Ah / 2419 Wh)</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>Solar Array Cell Type <span>[Photovoltaic Technology &amp; &beta;<sub>T</sub>]</span></label>
-                    <select id="epsSolarCellType">
-                        <option value="0" selected>GaAs Triple-Junction InGaP/GaAs/Ge (&eta;&#8320; = 30.2%, &beta; = -0.20%/K, Radiation-Hard)</option>
-                        <option value="1">Silicon High-Efficiency Space BSFR (&eta;&#8320; = 19.8%, &beta; = -0.45%/K)</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px; border-color: rgba(56,189,248,0.38);">
-            <div class="form-section-header">
-                <h3 style="color:var(--cyan-bright)">22. Earth Observation (EO) Sensor Raycasting, Rectangular FOV &amp; Off-Nadir Tilt</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">6-DOF Quaternion Boresight (+Z<sub>body</sub>) WGS84 Ellipsoid Intersection &bull; Trapezoidal Swath Polygon &amp; Global Heatmap</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(3, 1fr);">
-                <div class="field">
-                    <label>Sensor Along-Track FOV X [deg] <span>[1 - 55&deg;]</span></label>
-                    <input type="number" id="eoFovXDeg" value="10.0" min="1.0" max="55.0" step="1.0">
-                </div>
-                <div class="field">
-                    <label>Sensor Cross-Track FOV Y [deg] <span>[1 - 60&deg;]</span></label>
-                    <input type="number" id="eoFovYDeg" value="15.0" min="1.0" max="60.0" step="1.0">
-                </div>
-                <div class="field">
-                    <label>Sensor Boresight Off-Nadir Angle [deg] <span>[-40&deg; .. +40&deg; SAR/EO]</span></label>
-                    <input type="number" id="eoOffNadirDeg" value="0.0" min="-40.0" max="40.0" step="2.5">
-                </div>
-            </div>
-        </div>
-
         <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
             <div class="form-section-header">
                 <h3 style="color:var(--cyan)">10. Autonomous Onboard Navigation: GNSS (LEO) vs. X-Ray Pulsar Timing (XNAV + 1PN GR)</h3>
@@ -2338,6 +2237,44 @@
             </div>
         </div>
 
+        <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--purple)">14. Structural &amp; Slosh Dynamics (Flexible Solar Array Modes, Tank Sloshing &amp; CSI)</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Cantilever Solar Array Bending f<sub>flex</sub> &bull; Abramson Propellant Slosh Pendulum &zeta;<sub>slosh</sub> &bull; GNC Digital Notch Filter</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="field">
+                    <label>Solar Array 1st Bending Frequency f<sub>flex</sub> [Hz]</label>
+                    <input type="number" id="csiFlexFreqHz" value="0.85" min="0.20" max="3.00" step="0.05">
+                </div>
+                <div class="field">
+                    <label>Tank Slosh Baffle Damping Ratio &zeta;<sub>slosh</sub> [-]</label>
+                    <input type="number" id="csiSloshZeta" value="0.03" min="0.005" max="0.20" step="0.005">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section modal-cat-item" data-cat="safety" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--red)">15. Autonomous FDIR Fault Injection, B-Side Redundancy &amp; Safe-Mode Recovery</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">OBDH FDIR State Machine &bull; LCL Isolation &amp; B-Side Redundancy Switchover &bull; Sun-Pointing Safe Mode</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: 2fr 1fr;">
+                <div class="field">
+                    <label>FDIR Fault Injection Scenario</label>
+                    <select id="fdirFaultScenario">
+                        <option value="0" selected>RW-2 Actuator Failure (Tachometer/Driver Loss &rarr; Skewed RW-4 B-Side Takeover)</option>
+                        <option value="1">Solar Array Shunt Short (28V Bus Undervoltage &rarr; B-Side S3R-B Array Regulator)</option>
+                        <option value="2">Star Tracker Blinded (STR-A Optical Head SEU &rarr; Hot-Standby STR-B + FOG IMU)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Fault Injection Epoch t<sub>fault</sub> [s]</label>
+                    <input type="number" id="fdirInjectTimeS" value="12.0" min="3.0" max="55.0" step="1.0">
+                </div>
+            </div>
+        </div>
+
         <div class="form-section modal-cat-item" data-cat="orbit" style="margin-bottom: 10px;">
             <div class="form-section-header">
                 <h3 style="color:var(--amber)">16. Interplanetary Patched-Conics &amp; Planetary Gravity Assist (Flyby)</h3>
@@ -2420,23 +2357,6 @@
 
         <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
             <div class="form-section-header">
-                <h3 style="color:var(--purple)">14. Structural &amp; Slosh Dynamics (Flexible Solar Array Modes, Tank Sloshing &amp; CSI)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Cantilever Solar Array Bending f<sub>flex</sub> &bull; Abramson Propellant Slosh Pendulum &zeta;<sub>slosh</sub> &bull; GNC Digital Notch Filter</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="field">
-                    <label>Solar Array 1st Bending Frequency f<sub>flex</sub> [Hz]</label>
-                    <input type="number" id="csiFlexFreqHz" value="0.85" min="0.20" max="3.00" step="0.05">
-                </div>
-                <div class="field">
-                    <label>Tank Slosh Baffle Damping Ratio &zeta;<sub>slosh</sub> [-]</label>
-                    <input type="number" id="csiSloshZeta" value="0.03" min="0.005" max="0.20" step="0.005">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
-            <div class="form-section-header">
                 <h3 style="color:var(--green)">17. Multi-Satellite Formation Flying (Chief + 3 Deputies, D'Amico ROEs &amp; J<sub>2</sub>-Invariance)</h3>
                 <span style="font-size:11.5px; color:var(--text-muted);">Quasi-Nonsingular Relative Orbital Elements (&delta;<b>&alpha;</b>) &bull; E/I-Vector Passive Anti-Collision Safety &bull; LVLH [R, T, N]</span>
             </div>
@@ -2457,30 +2377,110 @@
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="safety" style="margin-bottom: 10px;">
+        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
             <div class="form-section-header">
-                <h3 style="color:var(--red)">15. Autonomous FDIR Fault Injection, B-Side Redundancy &amp; Safe-Mode Recovery</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">OBDH FDIR State Machine &bull; LCL Isolation &amp; B-Side Redundancy Switchover &bull; Sun-Pointing Safe Mode</span>
+                <h3 style="color:var(--cyan)">18. Onboard SSR Memory Buffer &amp; Autonomous Operations Scheduler</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">NAND Flash Solid-State Recorder (SSR) with EDAC &bull; 95% Overflow Protection &bull; Payload Acquisition vs. RF Downlink</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="field">
+                    <label>Solid-State Recorder (SSR) Capacity M<sub>SSR,max</sub> [GB]</label>
+                    <input type="number" id="ssrCapacityGb" value="128" min="8" max="8192" step="16">
+                </div>
+                <div class="field">
+                    <label>Payload Science Data Generation Rate R<sub>gen</sub> [Mbps]</label>
+                    <input type="number" id="ssrScienceRateMbps" value="120" min="5" max="2000" step="10">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--green)">19. Optical Inter-Satellite Links (ISL) &amp; Constellation Laser Mesh Network</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">1550 nm Laser Communication Terminals (LCT) &bull; 3D Line-of-Sight Limb Occultation (R<sub>E</sub> + 80 km) &bull; 10 Gbps/Link</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="field">
+                    <label>Optical Link Range Limit d<sub>ISL,max</sub> [km] <span>[500 - 25,000 km]</span></label>
+                    <input type="number" id="islMaxRangeKm" value="5000" min="500" max="25000" step="250">
+                </div>
+                <div class="field">
+                    <label>Per-Link Laser Data Rate [Gbps] <span>[Coherent BPSK LCT]</span></label>
+                    <input type="number" id="islLinkRateGbps" value="10.0" min="1.0" max="100.0" step="1.0">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--amber)">20. Multi-Station Ground Network (NASA DSN / ESA ESTRACK / Polar LEO) &amp; Tracking</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Topocentric SEZ Azimuth-Elevation-Range (AER) &bull; AOS/LOS Visibility Cones &bull; Antenna Pedestal Slew Rate</span>
             </div>
             <div class="input-group" style="grid-template-columns: 2fr 1fr;">
                 <div class="field">
-                    <label>FDIR Fault Injection Scenario</label>
-                    <select id="fdirFaultScenario">
-                        <option value="0" selected>RW-2 Actuator Failure (Tachometer/Driver Loss &rarr; Skewed RW-4 B-Side Takeover)</option>
-                        <option value="1">Solar Array Shunt Short (28V Bus Undervoltage &rarr; B-Side S3R-B Array Regulator)</option>
-                        <option value="2">Star Tracker Blinded (STR-A Optical Head SEU &rarr; Hot-Standby STR-B + FOG IMU)</option>
+                    <label>Active Global Ground Station Network</label>
+                    <select id="gndNetworkType">
+                        <option value="0" selected>NASA Deep Space Network (DSN: Goldstone, Madrid, Canberra + Milano-Bovisa)</option>
+                        <option value="1">ESA ESTRACK Global Network (Cebreros, Malarg&uuml;e, New Norcia, Kourou)</option>
+                        <option value="2">High-Latitude Polar LEO Network (Svalbard SvalSat, TrollSat, Fairbanks, Punta Arenas)</option>
                     </select>
                 </div>
                 <div class="field">
-                    <label>Fault Injection Epoch t<sub>fault</sub> [s]</label>
-                    <input type="number" id="fdirInjectTimeS" value="12.0" min="3.0" max="55.0" step="1.0">
+                    <label>Antenna Elevation Mask El<sub>min</sub> [deg] <span>[0 - 45&deg;]</span></label>
+                    <input type="number" id="gndElMaskDeg" value="5.0" min="0.0" max="45.0" step="1.0">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
+            <div class="form-section-header">
+                <h3 style="color:var(--cyan)">21. High-Fidelity Electrical Power System (EPS Hi-Fi), Penumbra &amp; Li-Ion Chemistry</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">Conical Umbra/Penumbra Transit &bull; Thermal/TID MPPT Solar Array &bull; Nonlinear Li-Ion V<sub>batt</sub>(SoC) &amp; Cyclic DoD SoH Fade</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: 1fr 1fr;">
+                <div class="field">
+                    <label>Battery Cell Configuration <span>[Series &times; Parallel Pack]</span></label>
+                    <select id="epsBattConfig">
+                        <option value="0" selected>8S4P Li-Ion Standard (28V Unregulated Bus &bull; 33.6V Max / 24.0V Cut &bull; 48 Ah / 1382 Wh)</option>
+                        <option value="1">8S6P Li-Ion High-Capacity (28V Unregulated Bus &bull; 33.6V Max / 24.0V Cut &bull; 72 Ah / 2074 Wh)</option>
+                        <option value="2">7S4P Li-Ion Compact LEO (25.2V Bus &bull; 29.4V Max / 21.0V Cut &bull; 48 Ah / 1210 Wh)</option>
+                        <option value="3">14S4P Li-Ion High-Power (50V Bus &bull; 58.8V Max / 42.0V Cut &bull; 48 Ah / 2419 Wh)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Solar Array Cell Type <span>[Photovoltaic Technology &amp; &beta;<sub>T</sub>]</span></label>
+                    <select id="epsSolarCellType">
+                        <option value="0" selected>GaAs Triple-Junction InGaP/GaAs/Ge (&eta;&#8320; = 30.2%, &beta; = -0.20%/K, Radiation-Hard)</option>
+                        <option value="1">Silicon High-Efficiency Space BSFR (&eta;&#8320; = 19.8%, &beta; = -0.45%/K)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px; border-color: rgba(56,189,248,0.38);">
+            <div class="form-section-header">
+                <h3 style="color:var(--cyan-bright)">22. Earth Observation (EO) Sensor Raycasting, Rectangular FOV &amp; Off-Nadir Tilt</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">6-DOF Quaternion Boresight (+Z<sub>body</sub>) WGS84 Ellipsoid Intersection &bull; Trapezoidal Swath Polygon &amp; Global Heatmap</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="field">
+                    <label>Sensor Along-Track FOV X [deg] <span>[1 - 55&deg;]</span></label>
+                    <input type="number" id="eoFovXDeg" value="10.0" min="1.0" max="55.0" step="1.0">
+                </div>
+                <div class="field">
+                    <label>Sensor Cross-Track FOV Y [deg] <span>[1 - 60&deg;]</span></label>
+                    <input type="number" id="eoFovYDeg" value="15.0" min="1.0" max="60.0" step="1.0">
+                </div>
+                <div class="field">
+                    <label>Sensor Boresight Off-Nadir Angle [deg] <span>[-40&deg; .. +40&deg; SAR/EO]</span></label>
+                    <input type="number" id="eoOffNadirDeg" value="0.0" min="-40.0" max="40.0" step="2.5">
                 </div>
             </div>
         </div>
 
         <div class="form-section modal-cat-item" data-cat="safety" style="margin-bottom: 10px;">
             <div class="form-section-header">
-                <h3 style="color:var(--amber)">16. Space Weather (Solar Activity F<sub>10.7</sub>, Diurnal Bulge &amp; Geomagnetic Storm K<sub>p</sub>)</h3>
+                <h3 style="color:var(--amber)">23. Space Weather (Solar Activity F<sub>10.7</sub>, Diurnal Bulge &amp; Geomagnetic Storm K<sub>p</sub>)</h3>
                 <span style="font-size:11.5px; color:var(--text-muted);">Jacchia-Bowman / NRLMSISE-00 Thermospheric Breathing &bull; Secular King-Hele Orbit Decay &bull; IADC 25-Year Rule</span>
             </div>
             <div class="input-group" style="grid-template-columns: 2fr 1fr;">
@@ -2530,17 +2530,17 @@
 
     const TAB_META = {
         overview:   { title: '\u{1F30D} Overview & 3D Astrodynamics', sub: 'Executive KPIs, 3D WGS84 inertial trajectory, 2D ground track, EO WGS84 raycasting heatmap & maneuver data sheet',
-                      jumps: [['sec-1', '3D Globe'], ['sec-4', 'Ground Track'], ['sec-eo-raycast', '23. EO Coverage & Camera'], ['sec-2', 'Data Sheet']] },
+                      jumps: [['sec-1', '3D Globe'], ['sec-4', 'Ground Track'], ['sec-eo-raycast', '25. EO Coverage & Camera'], ['sec-2', 'Data Sheet']] },
         transfer:   { title: '\u{1F680} Transfer, Lambert & Cislunar', sub: 'Lambert \u0394V trade-off, Monte Carlo 3\u03C3 & TCM, CR3BP Lagrange points / Halo orbit, interplanetary porkchop (C\u2083), gravity assist, aerocapture & solar sail',
-                      jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary & Flyby'], ['sec-25', '25. Aerocapture'], ['sec-26', '26. Solar Sail SRP']] },
+                      jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary & Flyby'], ['sec-25', '26. Aerocapture'], ['sec-26', '27. Solar Sail SRP']] },
         gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, multi-satellite formation flying (ROEs), reaction wheels, GNSS/XNAV Pulsar EKF (1PN GR), structure/slosh CSI',
                       jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF & XNAV (1PN GR)'], ['sec-16', 'Flex/Slosh CSI'], ['sec-19', 'Formation ROEs']] },
         subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF & Payload)', sub: 'High-fidelity EPS & conical penumbra, kinematics/radar, thermal & radiation, RF link budget, Walker constellation, SSR buffer, optical ISL & DSN tracking',
                       jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops'], ['sec-22', 'Optical ISL'], ['sec-23', 'Ground Network'], ['sec-24', 'Hi-Fi EPS']] },
         safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL, FDIR & Space Weather)', sub: 'B-Plane collision avoidance, 3-phase EDL re-entry, Martian aerocapture corridor, autonomous FDIR & space weather orbital decay',
-                      jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL & EDL'], ['sec-17', 'FDIR'], ['sec-21', 'Space Weather'], ['sec-25', '25. Aerocapture']] },
-        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 26',
-                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22'], ['sec-23', '23'], ['sec-24', '24'], ['sec-eo-raycast', 'EO Raycast'], ['sec-25', '25. Aerocapture'], ['sec-26', '26. Solar Sail']] }
+                      jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL & EDL'], ['sec-17', 'FDIR'], ['sec-21', 'Space Weather'], ['sec-25', '26. Aerocapture']] },
+        all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 27',
+                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22'], ['sec-23', '23'], ['sec-24', '24'], ['sec-eo-raycast', '25. EO Raycast'], ['sec-25', '26. Aerocapture'], ['sec-26', '27. Solar Sail']] }
     };
 
     function resizeVisiblePlots() {
@@ -2598,7 +2598,20 @@
             set('kpiTcmSub', `Reserve ${mc.tcm_fuel_99_kg !== undefined ? mc.tcm_fuel_99_kg : '---'} kg \u2022 EKF ${ekf.steady_pos_rmse_m !== undefined ? ekf.steady_pos_rmse_m : '---'} m`);
             const se = data.systems_engineering || {}, fd = data.fdir_summary || {};
             set('kpiCost', se.total_mission_cost_meur !== undefined ? se.total_mission_cost_meur : '---');
-            set('kpiCostBadge', fd.redundancy_status ? 'FDIR OK' : 'NOMINAL');
+            const fdirValid = !!(fd.redundancy_status && Number.isFinite(+fd.total_recovery_time_s));
+            set('kpiCostBadge', fdirValid ? 'FDIR OK' : 'STANDBY');
+            const costBadgeEl = document.getElementById('kpiCostBadge');
+            if (costBadgeEl) {
+                costBadgeEl.style.color = fdirValid ? 'var(--green)' : 'var(--text-muted)';
+                costBadgeEl.style.borderColor = fdirValid ? 'rgba(16,185,129,0.35)' : 'rgba(148,163,184,0.3)';
+                costBadgeEl.style.background = fdirValid ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.08)';
+            }
+            const dvBadgeEl = document.getElementById('kpiTotalDvBadge');
+            if (dvBadgeEl && Number.isFinite(+m.total_dv_ms)) {
+                dvBadgeEl.style.color = 'var(--cyan)';
+                dvBadgeEl.style.borderColor = 'rgba(0,229,255,0.35)';
+                dvBadgeEl.style.background = 'rgba(0,229,255,0.12)';
+            }
             set('kpiCostSub', se.walker_total_sats !== undefined ? `Walker ${se.walker_total_sats}/${se.walker_planes}/${se.walker_phasing} \u2022 CCSDS OEM 2.0` : 'CCSDS OEM 2.0');
         } catch (e) { console.warn('KPI update skipped:', e); }
     }
@@ -2610,7 +2623,6 @@
         document.querySelectorAll('.modal-subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
     }
 
-    document.addEventListener('DOMContentLoaded', () => { switchWorkspaceTab('overview'); switchModalCategory('orbit'); });
     window.addEventListener('resize', () => { clearTimeout(window.__rsz); window.__rsz = setTimeout(resizeVisiblePlots, 120); });
 
     const MU = 398600.4418;
@@ -3279,14 +3291,331 @@
     }
 
     // =========================================================================
+    // MISSION STATE MACHINE & REACTIVE AUDIT ENGINE (BUG-01..08)
+    // Global window.missionState, Per-Module Isolation & Pure Status Functions
+    // =========================================================================
+    const MST_MODULES = {
+        M00: 'Shared (Timeline / KPI / Playback)', M01: '3D WGS84 Earth & Transfer', M02: 'Mission Data Sheet & Maneuver Telemetry',
+        M03: 'Lambert Trade-Off', M04: '2D Ground Track', M05: 'Onboard Subsystems Telemetry', M06: 'Terminal Rendezvous (CW)',
+        M07: 'Monte Carlo & TCM', M08: '6-DOF ADCS', M09: 'Thermal & Radiation', M10: 'RF Link Budget', M11: 'Payload, Walker & Cost',
+        M12: 'Onboard EKF & XNAV (1PN GR)', M13: 'SSA & CAM', M14: 'EoL & EDL', M15: 'Cislunar CR3BP & BLT/WSB',
+        M16: 'Flex / Slosh CSI', M17: 'FDIR', M18: 'Interplanetary & Flyby', M19: 'Formation Flying', M20: 'Ops Scheduler, SSR & PDR',
+        M21: 'Space Weather', M22: 'Optical ISL', M23: 'Multi-Station Ground Network', M24: 'Hi-Fi EPS', M25: 'EO Raycasting & Coverage',
+        M26: 'Aerocapture', M27: 'Solar Sail SRP'
+    };
+    const MST_REQUIRED_KEYS = [
+        'station', 'initial_report', 'maneuver', 'target_report', 'rendezvous', 'monte_carlo', 'adcs_summary', 'telecom_summary',
+        'systems_engineering', 'ekf_summary', 'ssa_cam_summary', 'eol_reentry_summary', 'cislunar_summary', 'structural_csi_summary',
+        'fdir_summary', 'interplanetary_summary', 'formation_summary', 'ops_scheduler_summary', 'space_weather_summary',
+        'isl_network_summary', 'ground_segment_summary', 'eps_hifi_summary', 'payload_mapping_summary', 'aerocapture_summary',
+        'solar_sail_summary', 'blt_wsb_summary', 'xnav_relativity_summary',
+        'traj_initial', 'traj_transfer', 'traj_target', 'traj_rendezvous', 'traj_adcs', 'traj_thermal', 'traj_telecom', 'traj_ekf',
+        'traj_reentry', 'traj_cislunar_transfer', 'traj_csi', 'traj_fdir', 'traj_formation', 'traj_ops_ssr', 'traj_decay',
+        'traj_eps', 'traj_aerocapture', 'traj_solar_sail', 'traj_blt_wsb', 'traj_xnav'
+    ];
+    window.missionState = { source: 'none', ready: false, bootstrapAt: null, errors: [], modules: {}, badges: {}, data: null };
+
+    function __mstResetModules() {
+        Object.keys(MST_MODULES).forEach(id => { window.missionState.modules[id] = { name: MST_MODULES[id], status: 'pending', error: null }; });
+    }
+    __mstResetModules();
+    function __mstBegin(data) { __mstResetModules(); window.missionState.data = data || null; window.missionState.badges = {}; }
+    function __mstOk(id) { const mod = window.missionState.modules[id]; if (mod && mod.status !== 'error') mod.status = 'ok'; }
+    function __mstFail(id, label, err) {
+        console.error('[Module ' + id + ' ' + label + ']', err);
+        const mod = window.missionState.modules[id];
+        const msg = String((err && err.message) || err);
+        if (mod) { mod.status = 'error'; mod.error = msg; }
+        window.missionState.errors.push({ module: id, label: label, error: msg });
+    }
+    window.addEventListener('error', e => { window.missionState.errors.push({ module: 'window', label: 'uncaught', error: String(e.message) }); });
+    window.addEventListener('unhandledrejection', e => { window.missionState.errors.push({ module: 'promise', label: 'unhandledrejection', error: String((e.reason && e.reason.message) || e.reason) }); });
+
+    const mstFinite = v => v !== null && v !== undefined && v !== '' && v !== '---' && Number.isFinite(+v);
+    const MST_BADGE_COLORS = { green: 'var(--green)', amber: 'var(--amber)', red: 'var(--red)', cyan: 'var(--cyan)', purple: '#c084fc', grey: 'var(--text-muted)' };
+    const MST_NEUTRAL_BADGE = { level: 'standby', color: 'grey', html: '&#9203; STANDBY / AWAITING DATA' };
+
+    function applyBadge(el, st) {
+        if (!el || !st) return;
+        el.innerHTML = st.html;
+        el.style.color = MST_BADGE_COLORS[st.color] || MST_BADGE_COLORS.grey;
+        el.style.borderColor = MST_BADGE_COLORS[st.color] || MST_BADGE_COLORS.grey;
+        el.style.background = '';
+        if (el.id) window.missionState.badges[el.id] = { level: st.level, text: el.textContent };
+    }
+
+    // BUG-05: Pure function for Rendezvous CW Capture Verification (Module #6)
+    function computeRdvStatus(s) {
+        const dv = s && s.dv, fuel = s && s.fuel, range = s && s.range, rel_vel = s && s.rel_vel;
+        if (!(Number.isFinite(dv) && Number.isFinite(fuel) && Number.isFinite(range) && Number.isFinite(rel_vel))) {
+            return { level: 'pending', color: 'grey', html: '&#9203; DATA PENDING' };
+        }
+        if (range < 0.1 && rel_vel < 0.01) {
+            return {
+                level: 'verified', color: 'green',
+                html: `&#10004; SOFT-DOCKING CAPTURE VERIFIED ([${(s.end || [0, 0, 0]).join(', ')}] m | ${rel_vel.toFixed(2)} m/s)`
+            };
+        }
+        return {
+            level: 'approach', color: 'amber',
+            html: `&#9654; APPROACH IN PROGRESS (Range ${range.toFixed(1)} m | v<sub>rel</sub> ${rel_vel.toFixed(2)} m/s)`
+        };
+    }
+
+    // BUG-06: Pure function for SSA Conjunction Alert Level (Module #13)
+    function computeSsaStatus(cam) {
+        const secondary_target = cam && cam.debris_id;
+        const hasTarget = (typeof secondary_target === 'string') && secondary_target.trim() !== '' && secondary_target.trim() !== '---';
+        const Pc = cam ? +cam.pre_pc : NaN;
+        if (!hasTarget) return { level: 'none', color: 'grey', html: '&#9898; NO ACTIVE CONJUNCTION' };
+        if (!Number.isFinite(Pc)) return { level: 'pending', color: 'grey', html: '&#9203; DATA PENDING' };
+        const pcTxt = Pc.toExponential(2);
+        if (Pc > 1e-4) return { level: 'red', color: 'red', html: `&#9888; RED CONJUNCTION ALERT (P<sub>c</sub> = ${pcTxt} &gt; 10<sup>-4</sup> &mdash; CAM MANDATORY)` };
+        if (Pc > 1e-5) return { level: 'yellow', color: 'amber', html: `&#9888; YELLOW WATCH (P<sub>c</sub> = ${pcTxt} &le; 10<sup>-4</sup>)` };
+        return { level: 'green', color: 'green', html: `&#9989; GREEN / NOMINAL SEPARATION (P<sub>c</sub> = ${pcTxt} &le; 10<sup>-5</sup>)` };
+    }
+
+    // BUG-07: Pure function for Operations SSR & ECSS/NASA PDR Readiness (Module #20)
+    function computePdrStatus(data) {
+        const d = data || {};
+        const m = d.maneuver || {}, eps = d.eps_hifi_summary || {}, tcs = d.thermal_rad_summary || d.thermal_summary || {};
+        const rf = d.telecom_summary || {}, ops = d.ops_scheduler_summary || {}, eol = d.eol_reentry_summary || {};
+        const swx = d.space_weather_summary || {};
+        const metrics = {};
+
+        // 1. Delta-V validated
+        metrics.delta_v = mstFinite(m.total_dv_ms) ? (+m.total_dv_ms > 0 ? 'pass' : 'fail') : null;
+        // 2. Battery SoC validated
+        metrics.battery_soc = mstFinite(eps.min_soc_pct) ? (+eps.min_soc_pct >= 60 ? 'pass' : (+eps.min_soc_pct >= 40 ? 'warn' : 'fail')) : null;
+        // 3. Thermal operating envelope validated
+        if (mstFinite(tcs.min_temp_c) && mstFinite(tcs.max_temp_c) && mstFinite(tcs.t_min_op_c) && mstFinite(tcs.t_max_op_c)) {
+            const inside = (+tcs.min_temp_c >= +tcs.t_min_op_c) && (+tcs.max_temp_c <= +tcs.t_max_op_c);
+            const near = (+tcs.min_temp_c >= +tcs.t_min_op_c - 10) && (+tcs.max_temp_c <= +tcs.t_max_op_c + 10);
+            metrics.thermal = inside ? 'pass' : (near ? 'warn' : 'fail');
+        } else {
+            metrics.thermal = null;
+        }
+        // 4. RF Link Margin validated
+        metrics.rf_margin = mstFinite(rf.min_margin_db) ? (+rf.min_margin_db >= 3.0 ? 'pass' : (+rf.min_margin_db >= 0.0 ? 'warn' : 'fail')) : null;
+        // 5. SSR Fill < 95% validated
+        metrics.ssr_fill = mstFinite(ops.peak_ssr_fill_pct) ? (+ops.peak_ssr_fill_pct < 95.0 ? 'pass' : 'fail') : null;
+        // 6. EoL Compliance validated
+        if (typeof eol.compliance_status === 'string' && eol.compliance_status.trim() !== '') {
+            const s = eol.compliance_status.toUpperCase();
+            metrics.eol = /NON[- ]?COMPLIANT|FAIL|VIOLAT/.test(s) ? 'fail' : (/COMPLIANT|PASS|QUALIFIED/.test(s) ? 'pass' : 'warn');
+        } else if (mstFinite(swx.rule_25yr_compliant)) {
+            metrics.eol = (+swx.rule_25yr_compliant === 1) ? 'pass' : 'fail';
+        } else {
+            metrics.eol = null;
+        }
+
+        const vals = Object.values(metrics);
+        const hasNullMetrics = vals.some(v => v === null);
+        const pts = { pass: 100, warn: 65, fail: 20 };
+        const readinessScore = hasNullMetrics ? null : vals.reduce((acc, v) => acc + pts[v], 0) / vals.length;
+
+        let out;
+        if (hasNullMetrics || readinessScore < 60) {
+            out = {
+                level: 'notready', color: hasNullMetrics ? 'grey' : 'red',
+                verdict: 'PDR NOT READY', kpiLabel: 'PDR NOT READY',
+                html: `&#9940; PDR NOT READY${hasNullMetrics ? ' (METRICS PENDING)' : ' &bull; SCORE ' + readinessScore.toFixed(1) + '%'}`
+            };
+        } else if (readinessScore >= 85) {
+            out = {
+                level: 'approved', color: 'green',
+                verdict: 'ECSS / NASA PDR APPROVED', kpiLabel: 'PDR PASS',
+                html: `&#9989; ECSS / NASA PDR APPROVED &bull; SCORE ${readinessScore.toFixed(1)}%`
+            };
+        } else {
+            out = {
+                level: 'conditional', color: 'amber',
+                verdict: 'PDR CONDITIONAL / REVIEW REQUIRED', kpiLabel: 'PDR REVIEW',
+                html: `&#9888; PDR CONDITIONAL / REVIEW REQUIRED &bull; SCORE ${readinessScore.toFixed(1)}%`
+            };
+        }
+        out.score = readinessScore;
+        out.metrics = metrics;
+        out.hasNullMetrics = hasNullMetrics;
+        return out;
+    }
+
+    // Global Badge & Chip Audit: neutralizes any badge/chip whose underlying numerical data is unpopulated
+    function auditStatusBadges(data) {
+        const d = data || {};
+        const tcs = d.thermal_rad_summary || d.thermal_summary || {};
+        const g = k => d[k] || {};
+        const rules = {
+            mcStatusBadge:       () => mstFinite(g('monte_carlo').num_runs) && mstFinite(g('monte_carlo').cep_3sigma_km),
+            adcsStatusBadge:     () => mstFinite(g('adcs_summary').steady_point_err_deg),
+            tcsStatusBadge:      () => mstFinite(tcs.min_temp_c) && mstFinite(tcs.max_temp_c),
+            rfStatusBadge:       () => mstFinite(g('telecom_summary').peak_margin_db),
+            sysStatusBadge:      () => mstFinite(g('systems_engineering').total_mission_cost_meur),
+            ekfStatusBadge:      () => mstFinite(g('ekf_summary').steady_pos_rmse_m) || mstFinite(g('xnav_relativity_summary').ekf_xnav_pos_error_km),
+            eolStatusBadge:      () => mstFinite(g('eol_reentry_summary').deorbit_dv_ms) && typeof g('eol_reentry_summary').compliance_status === 'string',
+            cislunarStatusBadge: () => mstFinite(g('cislunar_summary').mu_em),
+            csiStatusBadge:      () => mstFinite(g('structural_csi_summary').launch_mos_pct) && mstFinite(g('structural_csi_summary').csi_gain_margin_db),
+            fdirStatusBadge:     () => mstFinite(g('fdir_summary').total_recovery_time_s),
+            iplStatusBadge:      () => mstFinite(g('interplanetary_summary').c3_opt),
+            formStatusBadge:     () => mstFinite(g('formation_summary').min_safe_rn_sep_m),
+            swxStatusBadge:      () => mstFinite(g('space_weather_summary').estimated_lifetime_yr) && mstFinite(g('space_weather_summary').rule_25yr_compliant),
+            islStatusBadge:      () => mstFinite(g('isl_network_summary').num_active_links),
+            gndStatusBadge:      () => mstFinite(g('ground_segment_summary').coverage_duty_pct),
+            epsStatusBadge:      () => mstFinite(g('eps_hifi_summary').min_soc_pct) && mstFinite(g('eps_hifi_summary').peak_dod_pct),
+            eoStatusBadge:       () => mstFinite(g('payload_mapping_summary').global_coverage_pct),
+            aeroStatusBadge:     () => mstFinite(g('aerocapture_summary').lift_to_drag) && mstFinite(g('aerocapture_summary').min_altitude_km),
+            sailStatusBadge:     () => mstFinite(g('solar_sail_summary').sail_area_m2)
+        };
+        Object.keys(rules).forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            let ok = false;
+            try { ok = !!rules[id](); } catch (e) { ok = false; }
+            if (!ok) {
+                applyBadge(el, MST_NEUTRAL_BADGE);
+            } else {
+                window.missionState.badges[id] = { level: 'computed', text: el.textContent };
+            }
+        });
+        // Re-evaluate pure-function badges from final state
+        try {
+            const rdv = d.rendezvous || {}, tr = d.traj_rendezvous || [];
+            const end = tr.length ? tr[tr.length - 1] : null;
+            const rdvEl = document.getElementById('rdvStatusBadge');
+            if (rdvEl) applyBadge(rdvEl, computeRdvStatus({
+                dv: end ? +rdv.total_dv_ms : NaN,
+                fuel: end ? +rdv.fuel_kg : NaN,
+                range: end ? Math.hypot(+end.rx_m, +end.ry_m, +end.rz_m) : NaN,
+                rel_vel: end ? Math.hypot(+end.vx_ms || 0, +end.vy_ms || 0, +end.vz_ms || 0) : NaN,
+                end: end ? [end.rx_m, end.ry_m, end.rz_m] : []
+            }));
+            const camEl = document.getElementById('camStatusBadge');
+            if (camEl) applyBadge(camEl, computeSsaStatus(d.ssa_cam_summary));
+            const opsEl = document.getElementById('opsStatusBadge');
+            if (opsEl) applyBadge(opsEl, computePdrStatus(d));
+        } catch (e) { console.error('[auditStatusBadges]', e); }
+    }
+
+    function __mstFinalize(data) {
+        try { auditStatusBadges(data); } catch (e) { console.error('[__mstFinalize]', e); }
+        window.missionState.data = data;
+        window.missionState.ready = true;
+        try { requestAnimationFrame(resizeVisiblePlots); setTimeout(resizeVisiblePlots, 120); } catch (e) { /* ignore */ }
+    }
+
+    // =========================================================================
+    // AUTOMATIC BOOTSTRAP ON DOMContentLoaded (BUG-01, BUG-02, BUG-08)
+    // =========================================================================
+    function mstIsEmpty(v) {
+        return v === undefined || v === null
+            || (Array.isArray(v) && v.length === 0)
+            || (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
+    }
+    function mstMissingKeys(d) {
+        if (!d || typeof d !== 'object') return ['*'];
+        const miss = MST_REQUIRED_KEYS.filter(k => mstIsEmpty(d[k]));
+        if (mstIsEmpty(d.thermal_rad_summary) && mstIsEmpty(d.thermal_summary)) miss.push('thermal_rad_summary');
+        if (d.maneuver && !Number.isFinite(+d.maneuver.total_dv_ms)) miss.push('maneuver');
+        return miss;
+    }
+    function mstRunSolver(usePreloadedTle) {
+        if (usePreloadedTle && typeof applyNoradTleToInitialOrbit === 'function') {
+            try {
+                const l1 = document.getElementById('tleLine1')?.value || '';
+                const l2 = document.getElementById('tleLine2')?.value || '';
+                if (l1.length >= 60 && l2.length >= 60) applyNoradTleToInitialOrbit();
+            } catch (e) { console.warn('[Bootstrap] TLE NORAD #25544 preload warning:', e); }
+        }
+        globalData = null;
+        const btn = document.getElementById('btnRunCustomMission');
+        if (btn) btn.click();
+        return globalData;
+    }
+    function mstIngest(json, label, syncFirst) {
+        const missing = mstMissingKeys(json);
+        const clone = o => JSON.parse(JSON.stringify(o));
+        if (missing.length === 0) {
+            defaultJsonBackup = clone(json);
+            if (syncFirst) { try { syncModalInputsFromData(json); } catch (e) { console.error('[Bootstrap] syncModalInputsFromData', e); } }
+            renderDashboard(json);
+            window.missionState.source = label;
+            return;
+        }
+        console.warn('[Bootstrap] ' + label + ' unavailable/incomplete (' + missing.join(', ') + ') -> triggering in-browser RK4/Lambert solver');
+        if (syncFirst && json && !mstIsEmpty(json.initial_report) && !mstIsEmpty(json.target_report)) {
+            try { syncModalInputsFromData(json); } catch (e) { console.error('[Bootstrap] syncModalInputsFromData', e); }
+        }
+        const solved = mstRunSolver(!json);
+        if (!solved) {
+            window.missionState.source = 'failed';
+            const bm = document.getElementById('bannerManeuverType');
+            if (bm) bm.textContent = 'OPTIMAL MANEUVER: DATA PENDING (SOLVER ERROR)';
+            return;
+        }
+        if (json && missing[0] !== '*') {
+            const merged = Object.assign({}, json);
+            Object.keys(solved).forEach(k => { if (mstIsEmpty(merged[k])) merged[k] = solved[k]; });
+            if (missing.indexOf('maneuver') !== -1) merged.maneuver = solved.maneuver;
+            renderDashboard(merged);
+            window.missionState.source = label + '+solver';
+        } else {
+            window.missionState.source = 'in-browser-solver(NORAD#25544)';
+        }
+        defaultJsonBackup = clone(globalData);
+    }
+
+    let __enterpriseBootStarted = false;
+    async function bootstrapMission() {
+        if (__enterpriseBootStarted) return;
+        __enterpriseBootStarted = true;
+        try { switchWorkspaceTab('overview'); switchModalCategory('orbit'); } catch (e) { console.error('[Bootstrap] UI shell init:', e); }
+        try { load3DContinents(); } catch (e) { console.warn('[Bootstrap] 3D continents fetch skipped:', e); }
+
+        let json = null;
+        try {
+            const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            const timer = ctrl ? setTimeout(() => ctrl.abort(), 4000) : null;
+            const resp = await fetch('mission_report.json', ctrl ? { cache: 'no-store', signal: ctrl.signal } : { cache: 'no-store' });
+            if (timer) clearTimeout(timer);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            json = await resp.json();
+        } catch (err) {
+            console.warn('[Bootstrap] mission_report.json unreachable (file:// or missing); falling back to ISS NORAD #25544 in-browser solver:', err);
+        }
+
+        try {
+            mstIngest(json, 'mission_report.json', true);
+        } catch (err) {
+            console.error('[Bootstrap] ingest failed, retrying pure in-browser solver:', err);
+            try { mstIngest(null, 'solver', false); } catch (err2) { console.error('[Bootstrap] fallback solver failed:', err2); }
+        }
+        window.missionState.bootstrapAt = new Date().toISOString();
+        window.missionState.ready = true;
+        try {
+            requestAnimationFrame(resizeVisiblePlots);
+            setTimeout(resizeVisiblePlots, 180);
+        } catch (e) { /* ignore */ }
+    }
+
+    // =========================================================================
     // RENDER DASHBOARD + ALL ENGINEERING SECTIONS
     // =========================================================================
     function renderDashboard(data) {
+        __mstBegin(data);
+        if (!data || !data.initial_report || !data.maneuver || !data.target_report) {
+            __mstFail('M02', 'Mission Data Sheet', new Error('Mission payload incomplete (initial_report / maneuver / target_report missing)'));
+            const bm = document.getElementById('bannerManeuverType');
+            if (bm) bm.textContent = 'OPTIMAL MANEUVER: DATA PENDING (SOLVER INCOMPLETE)';
+            return;
+        }
         globalData = data;
         const r1 = data.initial_report;
         const m  = data.maneuver;
         const r2 = data.target_report;
-        const st = data.station;
+        const st = data.station || { name: '---', lat: 0, lon: 0, min_el: 0 };
+        m.dir1 = Array.isArray(m.dir1) ? m.dir1 : [0, 0, 0];
+        m.dir2 = Array.isArray(m.dir2) ? m.dir2 : [0, 0, 0];
+        const __dvValid = Number.isFinite(+m.total_dv_ms) && Number.isFinite(+m.fuel_kg);
 
         const isLowThrust = (m.is_low_thrust === 1 || m.prop_cat === 'Electric');
         const maneuverTitle = m.type_name || '3D Optimal Split-Plane Transfer (2-Burn)';
@@ -3302,12 +3631,13 @@
             ? `${(m.transfer_min / 60).toFixed(1)} hours (${(m.transfer_min / 1440).toFixed(2)} days | ~${m.spiral_revs || 65} revs)`
             : `${m.transfer_min} min`;
 
-        document.getElementById('bannerManeuverType').textContent = `OPTIMAL STRATEGY: ${maneuverTitle}`;
+        try { // MODULE M02 Mission Data Sheet
+        document.getElementById('bannerManeuverType').textContent = __dvValid ? `OPTIMAL STRATEGY: ${maneuverTitle}` : 'OPTIMAL MANEUVER: DATA PENDING';
         document.getElementById('bannerPropellant').textContent = isLowThrust
             ? `Propulsion: ${propName} [${propCat}] • Isp: ${ispVal} s • Continuous Thrust: ${m.thrust_n || 0.5} N`
             : `Propellant: ${propName} [${propCat}] • Specific Impulse (Isp): ${ispVal} s`;
-        document.getElementById('bannerTotalDv').textContent = `Total ΔV: ${m.total_dv_ms} m/s`;
-        document.getElementById('bannerFuelMass').textContent = `Propellant Consumed: ${m.fuel_kg} kg • Final Mass: ${m.final_mass_kg} kg • Duration: ${tofDisplay}`;
+        document.getElementById('bannerTotalDv').textContent = Number.isFinite(+m.total_dv_ms) ? `Total ΔV: ${m.total_dv_ms} m/s` : 'Total ΔV: DATA PENDING';
+        document.getElementById('bannerFuelMass').textContent = __dvValid ? `Propellant Consumed: ${m.fuel_kg} kg • Final Mass: ${m.final_mass_kg} kg • Duration: ${tofDisplay}` : 'Propellant Consumed: DATA PENDING';
 
         document.getElementById('sheetBurnPoints').innerHTML = `
         <div class="row-item"><span class="row-label">${isLowThrust ? 'Spiral Ignition Start' : 'Burn 1 Location (Node 1)'}</span><span class="row-val" style="color:var(--amber)">${isLowThrust ? 'Continuous Thrust ON' : 'Perigee Departure'}</span></div>
@@ -3339,8 +3669,8 @@
         `;
         }
 
-        const raan1 = r1.raan_deg !== undefined ? r1.raan_deg : 30.0;
-        const raan2 = r2.raan_deg !== undefined ? r2.raan_deg : 30.0;
+        var raan1 = r1.raan_deg !== undefined ? r1.raan_deg : 30.0;
+        var raan2 = r2.raan_deg !== undefined ? r2.raan_deg : 30.0;
 
         document.getElementById('sheetOrbitCompare').innerHTML = `
         <div class="row-item"><span class="row-label">Mean Alt (Init &rarr; Target)</span><span class="row-val">${r1.alt_km} km &rarr; <span style="color:var(--green)">${r2.alt_km} km</span></span></div>
@@ -3351,16 +3681,18 @@
         <div class="row-item"><span class="row-label">Station-Keeping Fuel/Yr</span><span class="row-val">${r1.sk_fuel_yr} kg &rarr; <span style="color:var(--green)">${r2.sk_fuel_yr} kg/yr</span></span></div>
     `;
 
+        __mstOk('M02'); } catch (err) { __mstFail('M02', 'Mission Data Sheet', err); }
+        try { // MODULE M03 Lambert Trade-Off
         // ---------------------------------------------------------------------
         // PLOT 3: LAMBERT DELTA-V & FUEL TRADE-OFF PLOT
         // ---------------------------------------------------------------------
-        const mass0 = (m.final_mass_kg || 464) + (m.fuel_kg || 36);
-        const aHohRef = 0.5 * ((r1.alt_km + R_EQ) + (r2.alt_km + R_EQ));
-        const tofHohRefMin = +(Math.PI * Math.sqrt(aHohRef*aHohRef*aHohRef / MU) / 60.0).toFixed(2);
-        const lCurve = data.lambert_curve || buildLambertCurve(tofHohRefMin * 60.0, m.total_dv_ms, mass0, ispVal);
+        var mass0 = (m.final_mass_kg || 464) + (m.fuel_kg || 36);
+        var aHohRef = 0.5 * ((r1.alt_km + R_EQ) + (r2.alt_km + R_EQ));
+        var tofHohRefMin = +(Math.PI * Math.sqrt(aHohRef*aHohRef*aHohRef / MU) / 60.0).toFixed(2);
+        var lCurve = data.lambert_curve || buildLambertCurve(tofHohRefMin * 60.0, m.total_dv_ms, mass0, ispVal);
 
-        const selX = isLowThrust ? tofHohRefMin : m.transfer_min;
-        const selY = m.total_dv_ms;
+        var selX = isLowThrust ? tofHohRefMin : m.transfer_min;
+        var selY = m.total_dv_ms;
 
         Plotly.newPlot('plotLambert', [
             {
@@ -3406,6 +3738,8 @@
             document.getElementById('btnRunCustomMission').click();
         });
 
+        __mstOk('M03'); } catch (err) { __mstFail('M03', 'Lambert Trade-Off', err); }
+        try { // MODULE M00 Unified Timeline
         // ---------------------------------------------------------------------
         // BUILD UNIFIED TIMELINE & ENRICH SUBSYSTEM TELEMETRY
         // ---------------------------------------------------------------------
@@ -3438,9 +3772,9 @@
                 );
             }
         }
-        const trackMode = parseInt(document.getElementById('trackModeSelect').value, 10);
-        const initSlice = trackMode === 1 ? data.traj_initial.slice(0, Math.ceil(data.traj_initial.length / 2)) : data.traj_initial;
-        const targSlice = trackMode === 1 ? data.traj_target.slice(0, Math.ceil(data.traj_target.length / 2)) : data.traj_target;
+        var trackMode = parseInt(document.getElementById('trackModeSelect').value, 10);
+        var initSlice = trackMode === 1 ? data.traj_initial.slice(0, Math.ceil(data.traj_initial.length / 2)) : data.traj_initial;
+        var targSlice = trackMode === 1 ? data.traj_target.slice(0, Math.ceil(data.traj_target.length / 2)) : data.traj_target;
 
         animFrames = [];
         initSlice.forEach(p => animFrames.push({...p, phase: 'PHASE 1: INITIAL ORBIT', color: '#00e5ff'}));
@@ -3457,10 +3791,12 @@
         currentFrame = 0;
 
 
+        __mstOk('M00'); } catch (err) { __mstFail('M00', 'Unified Timeline', err); }
+        try { // MODULE M01 3D Globe
         // ---------------------------------------------------------------------
         // PLOT 1: 3D WGS84 EARTH ELLIPSOID
         // ---------------------------------------------------------------------
-        let sx = [], sy = [], sz = [];
+        var sx = [], sy = [], sz = [];
         for (let i = 0; i <= 36; i++) {
             let latDeg = (i / 36) * 180.0 - 90.0;
             let rowX = [], rowY = [], rowZ = [];
@@ -3472,24 +3808,24 @@
             sx.push(rowX); sy.push(rowY); sz.push(rowZ);
         }
 
-        const earthEllipsoid = {
+        var earthEllipsoid = {
             type: 'surface', x: sx, y: sy, z: sz,
             colorscale: [[0, '#071c38'], [0.5, '#0c3666'], [1, '#154c8a']],
             showscale: false, opacity: 0.94, hoverinfo: 'skip', name: 'WGS84 Earth'
         };
 
-        const traceContinents3D = {
+        var traceContinents3D = {
             type: 'scatter3d', mode: 'lines', name: 'Continents (WGS84)',
             x: continent3DCoords.x, y: continent3DCoords.y, z: continent3DCoords.z,
             line: { color: '#4ade80', width: 2.2 }, hoverinfo: 'skip'
         };
-        const traceInit3D = {
+        var traceInit3D = {
             type: 'scatter3d', mode: 'lines', name: `1. Initial Orbit (${r1.alt_km} km, i=${r1.inc_deg}°)`,
             x: initSlice.map(p => p.x), y: initSlice.map(p => p.y), z: initSlice.map(p => p.z),
             line: { color: '#00e5ff', width: 4.5 }, hoverinfo: 'name'
         };
 
-        const traceTrans3D = {
+        var traceTrans3D = {
             type: 'scatter3d', mode: 'lines',
             name: isLowThrust ? '2. Low-Thrust Multi-Rev Spiral' : '2. 3D Transfer Trajectory',
             x: data.traj_transfer.map(p => p.x), y: data.traj_transfer.map(p => p.y), z: data.traj_transfer.map(p => p.z),
@@ -3497,15 +3833,15 @@
             hoverinfo: 'name'
         };
 
-        const traceTarg3D = {
+        var traceTarg3D = {
             type: 'scatter3d', mode: 'lines', name: `3. Target Orbit (${r2.alt_km} km, i=${r2.inc_deg}°)`,
             x: targSlice.map(p => p.x), y: targSlice.map(p => p.y), z: targSlice.map(p => p.z),
             line: { color: '#00e676', width: 4.5 }, hoverinfo: 'name'
         };
 
-        const burnStart = data.traj_transfer[0];
-        const burnEnd   = data.traj_transfer[data.traj_transfer.length - 1];
-        const traceBurns3D = {
+        var burnStart = data.traj_transfer[0];
+        var burnEnd   = data.traj_transfer[data.traj_transfer.length - 1];
+        var traceBurns3D = {
             type: 'scatter3d', mode: 'markers+text', name: isLowThrust ? 'Spiral Start / Cutoff' : 'Maneuver Burn Points (ΔV)',
             x: [burnStart.x, burnEnd.x], y: [burnStart.y, burnEnd.y], z: [burnStart.z, burnEnd.z],
             text: isLowThrust
@@ -3517,8 +3853,8 @@
             hoverinfo: 'text'
         };
 
-        const p0 = animFrames[0];
-        const traceSat3D = {
+        var p0 = animFrames[0];
+        var traceSat3D = {
             type: 'scatter3d', mode: 'markers+text', name: 'Spacecraft (Live)',
             x: [p0.x], y: [p0.y], z: [p0.z],
             text: ['SAT'], textposition: 'bottom center',
@@ -3527,12 +3863,12 @@
             hoverinfo: 'name'
         };
 
-        const traces3D = [earthEllipsoid, traceContinents3D, traceInit3D, traceTrans3D, traceTarg3D, traceBurns3D, traceSat3D];
+        var traces3D = [earthEllipsoid, traceContinents3D, traceInit3D, traceTrans3D, traceTarg3D, traceBurns3D, traceSat3D];
         satTraceIndex3D = traces3D.length - 1;
 
-        const selectedDragMode3D = document.getElementById('dragMode3DSelect') ? document.getElementById('dragMode3DSelect').value : 'turntable';
-        const plot3DEl = document.getElementById('plot3D');
-        const currentCamera = (plot3DEl && plot3DEl._fullLayout && plot3DEl._fullLayout.scene && plot3DEl._fullLayout.scene._scene)
+        var selectedDragMode3D = document.getElementById('dragMode3DSelect') ? document.getElementById('dragMode3DSelect').value : 'turntable';
+        var plot3DEl = document.getElementById('plot3D');
+        var currentCamera = (plot3DEl && plot3DEl._fullLayout && plot3DEl._fullLayout.scene && plot3DEl._fullLayout.scene._scene)
             ? plot3DEl._fullLayout.scene._scene.getCamera()
             : { eye: { x: 1.45, y: 1.25, z: 0.90 }, up: { x: 0, y: 0, z: 1 }, center: { x: 0, y: 0, z: 0 } };
 
@@ -3554,10 +3890,12 @@
             legend: { font: { color: '#e2e8f0', size: 11.5 }, bgcolor: 'rgba(11,15,25,0.85)', x: 0.01, y: 0.98 }
         }, { responsive: true, displaylogo: false, scrollZoom: true });
 
+        __mstOk('M01'); } catch (err) { __mstFail('M01', '3D Globe', err); }
+        try { // MODULE M04 Ground Track
         // ---------------------------------------------------------------------
         // PLOT 4: 2D WORLD GROUND TRACK (SYNCHRONIZED WITH CONTINUOUS EARTH ROTATION)
         // ---------------------------------------------------------------------
-        const traces2D = [
+        var traces2D = [
             { type: 'scattergeo', mode: 'markers', name: `1. Initial Track (${r1.alt_km} km, ${r1.inc_deg}°)`, lat: initSlice.map(p => p.lat), lon: initSlice.map(p => p.lon), marker: { size: 4, color: '#00e5ff' } },
             { type: 'scattergeo', mode: 'markers', name: isLowThrust ? '2. Low-Thrust Spiral Track' : '2. Transfer Maneuver Track', lat: data.traj_transfer.map(p => p.lat), lon: data.traj_transfer.map(p => p.lon), marker: { size: 4.5, color: isLowThrust ? '#e040fb' : '#ffab00' } },
             { type: 'scattergeo', mode: 'markers', name: `3. Target Track (${r2.alt_km} km, ${r2.inc_deg}°)`, lat: targSlice.map(p => p.lat), lon: targSlice.map(p => p.lon), marker: { size: 4, color: '#00e676' } },
@@ -3580,10 +3918,12 @@
             legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M04'); } catch (err) { __mstFail('M04', 'Ground Track', err); }
+        try { // MODULE M05 Onboard Subsystems
         // ---------------------------------------------------------------------
         // SECTION 5: ONBOARD SUBSYSTEMS TIME-HISTORY PLOTS (5A, 5B, 5C)
         // ---------------------------------------------------------------------
-        const tAxis = animFrames.map(p => p.t_mission_min);
+        var tAxis = animFrames.map(p => p.t_mission_min);
 
         Plotly.newPlot('plotKinematics', [
             {
@@ -3653,11 +3993,13 @@
             legend: { font: { color: '#e2e8f0', size: 11 }, bgcolor: 'rgba(17,22,34,0.8)', x: 0.01, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M05'); } catch (err) { __mstFail('M05', 'Onboard Subsystems', err); }
+        try { // MODULE M06 Terminal Rendezvous
         // ---------------------------------------------------------------------
         // SECTION 6: TERMINAL RENDEZVOUS & PROXIMITY OPERATIONS (LVLH HILL)
         // ---------------------------------------------------------------------
-        const aTargKm = (r2.sma_km !== undefined) ? r2.sma_km : (R_EQ + r2.alt_km);
-        const fallbackRdv = computeCWRendezvousJS(
+        var aTargKm = (r2.sma_km !== undefined) ? r2.sma_km : (R_EQ + r2.alt_km);
+        var fallbackRdv = computeCWRendezvousJS(
             aTargKm,
             { x: -250.0, y: -2000.0, z: 100.0 },
             { x: 0.0, y: 0.0, z: 0.0 },
@@ -3665,19 +4007,27 @@
             m.final_mass_kg || 468.0,
             ispVal
         );
-        const rdvInfo = data.rendezvous || fallbackRdv.rendezvous;
-        const rdvTraj = (data.traj_rendezvous && data.traj_rendezvous.length) ? data.traj_rendezvous : fallbackRdv.traj_rendezvous;
+        var rdvInfo = data.rendezvous || fallbackRdv.rendezvous;
+        var rdvTraj = (data.traj_rendezvous && data.traj_rendezvous.length) ? data.traj_rendezvous : fallbackRdv.traj_rendezvous;
 
-        const r0Arr = rdvInfo.r0_m || [-250, -2000, 100];
-        const dx0 = r0Arr[0], dy0 = r0Arr[1], dz0 = r0Arr[2];
-        const rdvRange0 = (rdvInfo.initial_range_m !== undefined) ? rdvInfo.initial_range_m : +Math.hypot(dx0, dy0, dz0).toFixed(2);
-        const rdvTofMin = (rdvInfo.tof_min !== undefined) ? rdvInfo.tof_min : +((rdvInfo.tof_sec || 2700) / 60.0).toFixed(2);
+        var r0Arr = rdvInfo.r0_m || [-250, -2000, 100];
+        var dx0 = r0Arr[0], dy0 = r0Arr[1], dz0 = r0Arr[2];
+        var rdvRange0 = (rdvInfo.initial_range_m !== undefined) ? rdvInfo.initial_range_m : +Math.hypot(dx0, dy0, dz0).toFixed(2);
+        var rdvTofMin = (rdvInfo.tof_min !== undefined) ? rdvInfo.tof_min : +((rdvInfo.tof_sec || 2700) / 60.0).toFixed(2);
 
-        const rdvEndPt = rdvTraj[rdvTraj.length - 1] || { rx_m: 0, ry_m: 0, rz_m: 0, vx_ms: 0, vy_ms: 0, vz_ms: 0 };
-        const rdvEndVel = Math.hypot(rdvEndPt.vx_ms || 0, rdvEndPt.vy_ms || 0, rdvEndPt.vz_ms || 0);
-        const rdvBadgeEl = document.getElementById('rdvStatusBadge');
+        var rdvEndPt = rdvTraj[rdvTraj.length - 1] || { rx_m: 0, ry_m: 0, rz_m: 0, vx_ms: 0, vy_ms: 0, vz_ms: 0 };
+        var rdvEndVel = Math.hypot(rdvEndPt.vx_ms || 0, rdvEndPt.vy_ms || 0, rdvEndPt.vz_ms || 0);
+        var rdvBadgeEl = document.getElementById('rdvStatusBadge');
         if (rdvBadgeEl) {
-            rdvBadgeEl.innerHTML = `&#10004; SOFT-DOCKING CAPTURE VERIFIED ([${rdvEndPt.rx_m}, ${rdvEndPt.ry_m}, ${rdvEndPt.rz_m}] m | ${rdvEndVel.toFixed(2)} m/s)`;
+            // BUG-05: pure state function — SOFT-DOCKING is verified ONLY if dv, fuel, range, rel_vel are finite and within thresholds
+            const rdvState = computeRdvStatus({
+                dv: +rdvInfo.total_dv_ms,
+                fuel: +rdvInfo.fuel_kg,
+                range: Math.hypot(+rdvEndPt.rx_m, +rdvEndPt.ry_m, +rdvEndPt.rz_m),
+                rel_vel: rdvEndVel,
+                end: [rdvEndPt.rx_m, rdvEndPt.ry_m, rdvEndPt.rz_m]
+            });
+            applyBadge(rdvBadgeEl, rdvState);
         }
         document.getElementById('rdvBannerTitle').textContent =
             `TWO-IMPULSE CLOHESSY-WILTSHIRE RENDEZVOUS (TOF: ${rdvTofMin} min | n = ${(rdvInfo.mean_motion_rad_s * 1000).toFixed(4)} mrad/s)`;
@@ -3689,17 +4039,17 @@
             `Burn 1 (CW Inject): ${rdvInfo.dv_inject_ms} m/s • Burn 2 (Soft-Dock Brake): ${rdvInfo.dv_brake_ms} m/s • Propellant: ${rdvInfo.fuel_kg} kg`;
 
         // Approach Corridor Cone (±16° around approach axis into Target [0, 0])
-        const coneLen = Math.max(400.0, Math.hypot(dy0, dx0) * 1.06);
-        const baseAngle = (Math.hypot(dy0, dx0) > 1e-3) ? Math.atan2(dx0, dy0) : Math.PI;
-        const halfConeRad = 16.0 * DEG2RAD;
-        const c1x = coneLen * Math.cos(baseAngle - halfConeRad);
-        const c1y = coneLen * Math.sin(baseAngle - halfConeRad);
-        const c2x = coneLen * Math.cos(baseAngle + halfConeRad);
-        const c2y = coneLen * Math.sin(baseAngle + halfConeRad);
+        var coneLen = Math.max(400.0, Math.hypot(dy0, dx0) * 1.06);
+        var baseAngle = (Math.hypot(dy0, dx0) > 1e-3) ? Math.atan2(dx0, dy0) : Math.PI;
+        var halfConeRad = 16.0 * DEG2RAD;
+        var c1x = coneLen * Math.cos(baseAngle - halfConeRad);
+        var c1y = coneLen * Math.sin(baseAngle - halfConeRad);
+        var c2x = coneLen * Math.cos(baseAngle + halfConeRad);
+        var c2y = coneLen * Math.sin(baseAngle + halfConeRad);
 
         // Keep-Out Sphere (KOS = 200 m radius around Target)
-        const kosRadius = Math.min(200.0, Math.max(40.0, Math.hypot(dy0, dx0) * 0.12));
-        const kosX = [], kosY = [];
+        var kosRadius = Math.min(200.0, Math.max(40.0, Math.hypot(dy0, dx0) * 0.12));
+        var kosX = [], kosY = [];
         for (let k = 0; k <= 64; k++) {
             const ang = (k / 64) * 2.0 * Math.PI;
             kosX.push(+(kosRadius * Math.cos(ang)).toFixed(2));
@@ -3758,8 +4108,8 @@
             legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
-        const rdvTimeMin = rdvTraj.map(p => +(p.t / 60.0).toFixed(2));
-        const rdvVelMag  = rdvTraj.map(p => +Math.hypot(p.vx_ms, p.vy_ms, p.vz_ms).toFixed(4));
+        var rdvTimeMin = rdvTraj.map(p => +(p.t / 60.0).toFixed(2));
+        var rdvVelMag  = rdvTraj.map(p => +Math.hypot(p.vx_ms, p.vy_ms, p.vz_ms).toFixed(4));
 
         Plotly.newPlot('plotRdvProfile', [
             {
@@ -3790,11 +4140,13 @@
             legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.02, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M06'); } catch (err) { __mstFail('M06', 'Terminal Rendezvous', err); }
+        try { // MODULE M07 Monte Carlo
         // ---------------------------------------------------------------------
         // SECTION 7: MONTE CARLO DISPERSION, 3-SIGMA ELLIPSOID & TCM BUDGET
         // ---------------------------------------------------------------------
-        const aInitKm = (r1.sma_km !== undefined) ? r1.sma_km : (R_EQ + r1.alt_km);
-        const fallbackMc = runMonteCarloDispersionJS(
+        var aInitKm = (r1.sma_km !== undefined) ? r1.sma_km : (R_EQ + r1.alt_km);
+        var fallbackMc = runMonteCarloDispersionJS(
             aInitKm,
             aTargKm,
             (m.dv1_ms || 112.9) / 1000.0,
@@ -3805,11 +4157,11 @@
             0.5,
             100
         );
-        const mcInfo  = data.monte_carlo || fallbackMc.monte_carlo;
-        const mcCloud = (data.mc_cloud && data.mc_cloud.length) ? data.mc_cloud : fallbackMc.mc_cloud;
-        const ellRtn  = mcInfo.ellipsoid_3sigma_rtn_km || [8.5, 22.0, 5.2];
+        var mcInfo  = data.monte_carlo || fallbackMc.monte_carlo;
+        var mcCloud = (data.mc_cloud && data.mc_cloud.length) ? data.mc_cloud : fallbackMc.mc_cloud;
+        var ellRtn  = mcInfo.ellipsoid_3sigma_rtn_km || [8.5, 22.0, 5.2];
 
-        const mcBadgeEl = document.getElementById('mcStatusBadge');
+        var mcBadgeEl = document.getElementById('mcStatusBadge');
         if (mcBadgeEl) {
             mcBadgeEl.innerHTML = `&#127922; N = ${mcInfo.num_runs || 100} MONTE CARLO RUNS (99.7% 3&sigma; CONFIDENCE | &sigma;<sub>&Delta;V</sub>=${mcInfo.sigma_dv_pct}% / &sigma;<sub>pt</sub>=${mcInfo.sigma_point_deg}&deg;)`;
         }
@@ -3844,10 +4196,10 @@
         `;
 
         // Build 3D 3-Sigma Covariance Ellipsoid surface mesh centered at [0, 0, 0] in RTN (X = dT In-Track, Y = dR Radial, Z = dN Cross-Track)
-        const ex = [], ey = [], ez = [];
-        const aR = Math.max(0.5, ellRtn[0]);
-        const aT = Math.max(0.5, ellRtn[1]);
-        const aN = Math.max(0.5, ellRtn[2]);
+        var ex = [], ey = [], ez = [];
+        var aR = Math.max(0.5, ellRtn[0]);
+        var aT = Math.max(0.5, ellRtn[1]);
+        var aN = Math.max(0.5, ellRtn[2]);
         for (let i = 0; i <= 20; i++) {
             const u = (i / 20) * Math.PI;
             const rowX = [], rowY = [], rowZ = [];
@@ -3906,9 +4258,9 @@
         }, { responsive: true, displaylogo: false });
 
         // 7B: TCM Delta-V Probability Distribution Histogram + Empirical CDF + 99% (3-Sigma) Vertical Line
-        const tcmVals = mcCloud.map(p => p.tcm_dv_ms);
-        const sortedTcm = [...tcmVals].sort((a, b) => a - b);
-        const cdfPct = sortedTcm.map((_, idx) => +(((idx + 1) / sortedTcm.length) * 100.0).toFixed(1));
+        var tcmVals = mcCloud.map(p => p.tcm_dv_ms);
+        var sortedTcm = [...tcmVals].sort((a, b) => a - b);
+        var cdfPct = sortedTcm.map((_, idx) => +(((idx + 1) / sortedTcm.length) * 100.0).toFixed(1));
 
         Plotly.newPlot('plotMcHistogram', [
             {
@@ -3948,10 +4300,12 @@
             legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.02, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M07'); } catch (err) { __mstFail('M07', 'Monte Carlo', err); }
+        try { // MODULE M08 ADCS 6-DOF
         // ---------------------------------------------------------------------
         // SECTION 8: 6-DOF ATTITUDE DYNAMICS (ADCS), SLEW & REACTION WHEELS
         // ---------------------------------------------------------------------
-        const fallbackAdcs = simulateAdcsProfileJS(
+        var fallbackAdcs = simulateAdcsProfileJS(
             aInitKm,
             aTargKm,
             (m.transfer_min || 47.57) * 60.0,
@@ -3961,12 +4315,12 @@
             { x: 120.0, y: 110.0, z: 85.0 },
             10.0
         );
-        const adcsInfo = data.adcs_summary || fallbackAdcs.adcs_summary;
-        const adcsTraj = (data.traj_adcs && data.traj_adcs.length) ? data.traj_adcs : fallbackAdcs.traj_adcs;
-        const jArr = adcsInfo.inertia_kgm2 || [120.0, 110.0, 85.0];
-        const hMaxNms = adcsInfo.rw_h_max_nms || 10.0;
+        var adcsInfo = data.adcs_summary || fallbackAdcs.adcs_summary;
+        var adcsTraj = (data.traj_adcs && data.traj_adcs.length) ? data.traj_adcs : fallbackAdcs.traj_adcs;
+        var jArr = adcsInfo.inertia_kgm2 || [120.0, 110.0, 85.0];
+        var hMaxNms = adcsInfo.rw_h_max_nms || 10.0;
 
-        const adcsBadgeEl = document.getElementById('adcsStatusBadge');
+        var adcsBadgeEl = document.getElementById('adcsStatusBadge');
         if (adcsBadgeEl) {
             adcsBadgeEl.innerHTML = `&#128752; 6-DOF QUATERNION CONTROL LOCKED (RMS: ${adcsInfo.steady_point_err_deg}&deg; | RW Sat: ${adcsInfo.max_rw_sat_pct}% | MTQ Desats: ${adcsInfo.desat_cycles})`;
         }
@@ -4000,11 +4354,11 @@
             <div class="row-item"><span class="row-label">MTQ Momentum Dumping</span><span class="row-val">${adcsInfo.desat_cycles} Desat Cycle(s)</span></div>
         `;
 
-        const adcsTimeMin = adcsTraj.map(p => p.t_min);
-        const modeNames = ['NADIR POINTING', 'SUN POINTING', 'THRUST VECTOR ALIGN', 'TARGET TRACKING'];
-        const idxSlew1 = Math.min(adcsTraj.length - 1, Math.round(0.35 * (adcsTraj.length - 1)));
-        const idxSlew2 = Math.min(adcsTraj.length - 1, Math.round(0.57 * (adcsTraj.length - 1)));
-        const idxDesat = Math.min(adcsTraj.length - 1, Math.round(0.77 * (adcsTraj.length - 1)));
+        var adcsTimeMin = adcsTraj.map(p => p.t_min);
+        var modeNames = ['NADIR POINTING', 'SUN POINTING', 'THRUST VECTOR ALIGN', 'TARGET TRACKING'];
+        var idxSlew1 = Math.min(adcsTraj.length - 1, Math.round(0.35 * (adcsTraj.length - 1)));
+        var idxSlew2 = Math.min(adcsTraj.length - 1, Math.round(0.57 * (adcsTraj.length - 1)));
+        var idxDesat = Math.min(adcsTraj.length - 1, Math.round(0.77 * (adcsTraj.length - 1)));
 
         Plotly.newPlot('plotAdcsAngles', [
             {
@@ -4056,7 +4410,7 @@
             legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
-        const desatThresholdNms = +(0.78 * hMaxNms).toFixed(2);
+        var desatThresholdNms = +(0.78 * hMaxNms).toFixed(2);
         Plotly.newPlot('plotAdcsWheels', [
             {
                 type: 'scatter', mode: 'lines', name: 'RW Control Torque ||τ_rw(t)|| [mN·m]',
@@ -4094,10 +4448,12 @@
             legend: { font: { color: '#e2e8f0', size: 10.5 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M08'); } catch (err) { __mstFail('M08', 'ADCS 6-DOF', err); }
+        try { // MODULE M09 Thermal and Radiation
         // ---------------------------------------------------------------------
         // SECTION 9: SPACECRAFT THERMAL CONTROL (TCS) & IONIZING RADIATION ENVIRONMENT
         // ---------------------------------------------------------------------
-        const fallbackTcs = simulateThermalProfileJS(
+        var fallbackTcs = simulateThermalProfileJS(
             aInitKm,
             aTargKm,
             (m.transfer_min || 47.57) * 60.0,
@@ -4110,26 +4466,26 @@
             r1.inc_deg || 51.6,
             r2.inc_deg || 53.0
         );
-        const tcsInfo = data.thermal_rad_summary || data.thermal_summary || fallbackTcs.thermal_rad_summary;
-        const tcsTraj = (data.traj_thermal && data.traj_thermal.length) ? data.traj_thermal : fallbackTcs.traj_thermal;
-        const tMinOp = (tcsInfo.t_min_op_c !== undefined) ? tcsInfo.t_min_op_c : -10.0;
-        const tMaxOp = (tcsInfo.t_max_op_c !== undefined) ? tcsInfo.t_max_op_c : 45.0;
-        const busMinC = (tcsInfo.min_temp_c !== undefined) ? tcsInfo.min_temp_c : tcsInfo.t_min_c;
-        const busMaxC = (tcsInfo.max_temp_c !== undefined) ? tcsInfo.max_temp_c : tcsInfo.t_max_c;
-        const extMinC = (tcsInfo.ext_min_temp_c !== undefined) ? tcsInfo.ext_min_temp_c : (busMinC - 16.0);
-        const extMaxC = (tcsInfo.ext_max_temp_c !== undefined) ? tcsInfo.ext_max_temp_c : (busMaxC + 18.0);
-        const withinOp = (busMinC >= tMinOp - 1.5 && busMaxC <= tMaxOp + 1.5);
+        var tcsInfo = data.thermal_rad_summary || data.thermal_summary || fallbackTcs.thermal_rad_summary;
+        var tcsTraj = (data.traj_thermal && data.traj_thermal.length) ? data.traj_thermal : fallbackTcs.traj_thermal;
+        var tMinOp = (tcsInfo.t_min_op_c !== undefined) ? tcsInfo.t_min_op_c : -10.0;
+        var tMaxOp = (tcsInfo.t_max_op_c !== undefined) ? tcsInfo.t_max_op_c : 45.0;
+        var busMinC = (tcsInfo.min_temp_c !== undefined) ? tcsInfo.min_temp_c : tcsInfo.t_min_c;
+        var busMaxC = (tcsInfo.max_temp_c !== undefined) ? tcsInfo.max_temp_c : tcsInfo.t_max_c;
+        var extMinC = (tcsInfo.ext_min_temp_c !== undefined) ? tcsInfo.ext_min_temp_c : (busMinC - 16.0);
+        var extMaxC = (tcsInfo.ext_max_temp_c !== undefined) ? tcsInfo.ext_max_temp_c : (busMaxC + 18.0);
+        var withinOp = (busMinC >= tMinOp - 1.5 && busMaxC <= tMaxOp + 1.5);
 
-        const coatingName = tcsInfo.coating_name || 'White Paint SG121';
-        const shieldMm    = (tcsInfo.al_shield_mm !== undefined) ? tcsInfo.al_shield_mm : 4.0;
-        const tidKradYr   = (tcsInfo.tid_krad_yr !== undefined) ? tcsInfo.tid_krad_yr : 1.15;
-        const peakDoseUradH = (tcsInfo.peak_dose_urad_h !== undefined) ? tcsInfo.peak_dose_urad_h : 640.0;
-        const seuRateDay  = (tcsInfo.seu_rate_day !== undefined) ? tcsInfo.seu_rate_day : 1.12;
-        const avLifeYr    = (tcsInfo.avionics_life_yr !== undefined) ? tcsInfo.avionics_life_yr : 25.0;
-        const heaterWh    = (tcsInfo.heater_energy_wh !== undefined) ? tcsInfo.heater_energy_wh : 18.4;
-        const saaStatus   = tcsInfo.saa_status || 'SAA PROTON FLUX ENCOUNTER (-25°S, -45°W)';
+        var coatingName = tcsInfo.coating_name || 'White Paint SG121';
+        var shieldMm    = (tcsInfo.al_shield_mm !== undefined) ? tcsInfo.al_shield_mm : 4.0;
+        var tidKradYr   = (tcsInfo.tid_krad_yr !== undefined) ? tcsInfo.tid_krad_yr : 1.15;
+        var peakDoseUradH = (tcsInfo.peak_dose_urad_h !== undefined) ? tcsInfo.peak_dose_urad_h : 640.0;
+        var seuRateDay  = (tcsInfo.seu_rate_day !== undefined) ? tcsInfo.seu_rate_day : 1.12;
+        var avLifeYr    = (tcsInfo.avionics_life_yr !== undefined) ? tcsInfo.avionics_life_yr : 25.0;
+        var heaterWh    = (tcsInfo.heater_energy_wh !== undefined) ? tcsInfo.heater_energy_wh : 18.4;
+        var saaStatus   = tcsInfo.saa_status || 'SAA PROTON FLUX ENCOUNTER (-25°S, -45°W)';
 
-        const tcsBadgeEl = document.getElementById('tcsStatusBadge');
+        var tcsBadgeEl = document.getElementById('tcsStatusBadge');
         if (tcsBadgeEl) {
             tcsBadgeEl.innerHTML = withinOp
                 ? `&#127777; BUS THERMAL NOMINAL ([${busMinC}&deg;C, +${busMaxC}&deg;C]) &bull; TID: ${tidKradYr} krad/yr (${shieldMm}mm Al)`
@@ -4138,7 +4494,7 @@
             tcsBadgeEl.style.borderColor = withinOp ? 'var(--green)' : 'var(--amber)';
         }
 
-        const alphaEpsRatio = (tcsInfo.alpha_solar / Math.max(0.05, tcsInfo.eps_ir)).toFixed(2);
+        var alphaEpsRatio = (tcsInfo.alpha_solar / Math.max(0.05, tcsInfo.eps_ir)).toFixed(2);
         document.getElementById('tcsBannerTitle').textContent =
             `2-NODE THERMAL BALANCE (T_ext & T_bus) & VAN ALLEN / SAA IONIZING RADIATION ENVIRONMENT`;
         document.getElementById('tcsBannerSub').innerHTML =
@@ -4169,15 +4525,15 @@
             <div class="row-item"><span class="row-label">Est. Avionics Lifetime</span><span class="row-val" style="color:var(--cyan)">${avLifeYr} years (&alpha;/&epsilon;=${alphaEpsRatio})</span></div>
         `;
 
-        const tcsTimeMin = tcsTraj.map(p => p.t_min);
-        const tStart = tcsTimeMin[0], tEnd = tcsTimeMin[tcsTimeMin.length - 1];
-        const extSeries = tcsTraj.map(p => (p.t_ext_c !== undefined) ? p.t_ext_c : p.temp_c);
-        const busSeries = tcsTraj.map(p => (p.t_bus_c !== undefined) ? p.t_bus_c : p.temp_c);
-        const qSunSeries = tcsTraj.map(p => (p.q_sun_w !== undefined) ? p.q_sun_w : p.q_sol_w);
-        const qIrAlbSeries = tcsTraj.map(p => (p.q_ir_alb_w !== undefined) ? p.q_ir_alb_w : +(p.q_alb_w + p.q_ir_w).toFixed(1));
-        const doseSeries = tcsTraj.map(p => (p.inst_dose_urad_h !== undefined) ? p.inst_dose_urad_h : 120.0);
+        var tcsTimeMin = tcsTraj.map(p => p.t_min);
+        var tStart = tcsTimeMin[0], tEnd = tcsTimeMin[tcsTimeMin.length - 1];
+        var extSeries = tcsTraj.map(p => (p.t_ext_c !== undefined) ? p.t_ext_c : p.temp_c);
+        var busSeries = tcsTraj.map(p => (p.t_bus_c !== undefined) ? p.t_bus_c : p.temp_c);
+        var qSunSeries = tcsTraj.map(p => (p.q_sun_w !== undefined) ? p.q_sun_w : p.q_sol_w);
+        var qIrAlbSeries = tcsTraj.map(p => (p.q_ir_alb_w !== undefined) ? p.q_ir_alb_w : +(p.q_alb_w + p.q_ir_w).toFixed(1));
+        var doseSeries = tcsTraj.map(p => (p.inst_dose_urad_h !== undefined) ? p.inst_dose_urad_h : 120.0);
 
-        let maxDoseIdx = 0;
+        var maxDoseIdx = 0;
         for (let k = 1; k < doseSeries.length; k++) {
             if (doseSeries[k] > doseSeries[maxDoseIdx]) maxDoseIdx = k;
         }
@@ -4259,10 +4615,12 @@
             legend: { font: { color: '#e2e8f0', size: 10 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M09'); } catch (err) { __mstFail('M09', 'Thermal and Radiation', err); }
+        try { // MODULE M10 RF Link Budget
         // ---------------------------------------------------------------------
         // SECTION 10: RF TELECOMMUNICATION LINK BUDGET, Eb/N0 MARGIN & DATA DOWNLINK
         // ---------------------------------------------------------------------
-        const fallbackRf = evaluateRfLinkBudgetJS(
+        var fallbackRf = evaluateRfLinkBudgetJS(
             aInitKm,
             aTargKm,
             (m.transfer_min || 47.57) * 60.0,
@@ -4276,10 +4634,10 @@
             st.min_el || 10.0,
             st.lat || 45.502
         );
-        const rfInfo = data.telecom_summary || fallbackRf.telecom_summary;
-        const rfTraj = (data.traj_telecom && data.traj_telecom.length) ? data.traj_telecom : fallbackRf.traj_telecom;
+        var rfInfo = data.telecom_summary || fallbackRf.telecom_summary;
+        var rfTraj = (data.traj_telecom && data.traj_telecom.length) ? data.traj_telecom : fallbackRf.traj_telecom;
 
-        const rfBadgeEl = document.getElementById('rfStatusBadge');
+        var rfBadgeEl = document.getElementById('rfStatusBadge');
         if (rfBadgeEl) {
             const linkOk = rfInfo.peak_margin_db > 0.0;
             rfBadgeEl.innerHTML = linkOk
@@ -4319,12 +4677,12 @@
             <div class="row-item"><span class="row-label">Total 24h Downlink Volume</span><span class="row-val" style="color:var(--green)">${rfInfo.total_data_gb_24h} GB/24h</span></div>
         `;
 
-        const rfTimeMin = rfTraj.map(p => p.t_min);
-        const rfStart = rfTimeMin[0], rfEnd = rfTimeMin[rfTraj.length - 1];
-        const lockThreshDb = rfInfo.lock_threshold_db !== undefined ? rfInfo.lock_threshold_db : 4.5;
-        const reqEbn0Db    = rfInfo.req_ebn0_db !== undefined ? rfInfo.req_ebn0_db : 7.5;
+        var rfTimeMin = rfTraj.map(p => p.t_min);
+        var rfStart = rfTimeMin[0], rfEnd = rfTimeMin[rfTraj.length - 1];
+        var lockThreshDb = rfInfo.lock_threshold_db !== undefined ? rfInfo.lock_threshold_db : 4.5;
+        var reqEbn0Db    = rfInfo.req_ebn0_db !== undefined ? rfInfo.req_ebn0_db : 7.5;
 
-        let peakPassIdx = 0;
+        var peakPassIdx = 0;
         for (let k = 1; k < rfTraj.length; k++) {
             if (rfTraj[k].ebn0_db > rfTraj[peakPassIdx].ebn0_db) peakPassIdx = k;
         }
@@ -4401,10 +4759,12 @@
             legend: { font: { color: '#e2e8f0', size: 10 }, bgcolor: 'rgba(17,22,34,0.85)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M10'); } catch (err) { __mstFail('M10', 'RF Link Budget', err); }
+        try { // MODULE M11 Payload and Walker
         // ---------------------------------------------------------------------
         // SECTION 11: PAYLOAD SWATH COVERAGE, WALKER DELTA CONSTELLATION & MASS/COST BUDGET
         // ---------------------------------------------------------------------
-        const fallbackSys = evaluatePayloadConstellationAndCostJS(
+        var fallbackSys = evaluatePayloadConstellationAndCostJS(
             aTargKm,
             r2.inc_deg || 53.0,
             r2.raan_deg !== undefined ? r2.raan_deg : 30.0,
@@ -4423,15 +4783,15 @@
             st.min_el || 10.0,
             st.lat || 45.502
         );
-        const sysInfo = data.systems_engineering || fallbackSys.systems_engineering;
-        const wSubpts = (sysInfo.walker_subpoints && sysInfo.walker_subpoints.length)
+        var sysInfo = data.systems_engineering || fallbackSys.systems_engineering;
+        var wSubpts = (sysInfo.walker_subpoints && sysInfo.walker_subpoints.length)
             ? sysInfo.walker_subpoints
             : fallbackSys.systems_engineering.walker_subpoints;
-        const massBrk = (sysInfo.mass_breakdown && sysInfo.mass_breakdown.length)
+        var massBrk = (sysInfo.mass_breakdown && sysInfo.mass_breakdown.length)
             ? sysInfo.mass_breakdown
             : fallbackSys.systems_engineering.mass_breakdown;
 
-        const sysBadgeEl = document.getElementById('sysStatusBadge');
+        var sysBadgeEl = document.getElementById('sysStatusBadge');
         if (sysBadgeEl) {
             sysBadgeEl.innerHTML = `&#128752; WALKER DELTA ${sysInfo.inc_deg}&deg; : ${sysInfo.walker_total_sats}/${sysInfo.walker_planes}/${sysInfo.walker_phasing} (Revisit: ${sysInfo.mean_revisit_min} min &bull; Swath: ${sysInfo.swath_width_km} km &bull; Cost: ${sysInfo.total_mission_cost_meur} M&euro;)`;
         }
@@ -4467,11 +4827,11 @@
         `;
 
         // 11A. Walker Delta Constellation Global Coverage & Sensor Swath Footprint Circles
-        const planeColors = ['#00e5ff', '#00e676', '#ffab00', '#d500f9', '#ff1744', '#38bdf8', '#a3e635', '#fb923c'];
-        const lambdaDeg = Math.max(1.2, Math.min(28.0, sysInfo.earth_central_angle_deg || 4.0));
-        const lambdaRad = lambdaDeg * DEG2RAD;
-        const swathLatArr = [];
-        const swathLonArr = [];
+        var planeColors = ['#00e5ff', '#00e676', '#ffab00', '#d500f9', '#ff1744', '#38bdf8', '#a3e635', '#fb923c'];
+        var lambdaDeg = Math.max(1.2, Math.min(28.0, sysInfo.earth_central_angle_deg || 4.0));
+        var lambdaRad = lambdaDeg * DEG2RAD;
+        var swathLatArr = [];
+        var swathLonArr = [];
 
         wSubpts.forEach(sat => {
             const lat0 = sat.lat * DEG2RAD;
@@ -4498,7 +4858,7 @@
             swathLonArr.push(null);
         });
 
-        const walkerTraces = [
+        var walkerTraces = [
             {
                 type: 'scattergeo',
                 mode: 'lines',
@@ -4510,7 +4870,7 @@
             }
         ];
 
-        const numPlanes = Math.max(1, sysInfo.walker_planes || 3);
+        var numPlanes = Math.max(1, sysInfo.walker_planes || 3);
         for (let p = 0; p < numPlanes; p++) {
             const pSats = wSubpts.filter(s => s.plane_id === p);
             if (!pSats.length) continue;
@@ -4557,7 +4917,7 @@
         }, { responsive: true, displaylogo: false });
 
         // 11B. Spacecraft Mass Breakdown [kg] & Mission Lifecycle Cost Allocation [M€]
-        const subLabels = [
+        var subLabels = [
             'Payload (28%)',
             'Structure (22%)',
             'EPS Power (19%)',
@@ -4568,14 +4928,14 @@
             'Transfer Fuel',
             'GNC/SK Reserve'
         ];
-        const subMassKg = massBrk.map(item => item.mass_kg);
-        const subBarColors = [
+        var subMassKg = massBrk.map(item => item.mass_kg);
+        var subBarColors = [
             '#00e5ff', '#38bdf8', '#00e676', '#a3e635',
             '#d500f9', '#c084fc', '#fb923c', '#ffab00', '#ff1744'
         ];
 
-        const costLabels = ['Platform Bus', 'Optical Payload', 'Launch Vehicle', '5-Yr MO&DA Ops'];
-        const costValsMeur = [
+        var costLabels = ['Platform Bus', 'Optical Payload', 'Launch Vehicle', '5-Yr MO&DA Ops'];
+        var costValsMeur = [
             sysInfo.cost_platform_meur,
             sysInfo.cost_payload_meur,
             sysInfo.cost_launch_meur,
@@ -4624,11 +4984,13 @@
             legend: { font: { color: '#e2e8f0', size: 9.5 }, bgcolor: 'rgba(17,22,34,0.82)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M11'); } catch (err) { __mstFail('M11', 'Payload and Walker', err); }
+        try { // MODULE M12 Onboard EKF
         // =========================================================================
         // 12. AUTONOMOUS ONBOARD NAVIGATION & EXTENDED KALMAN FILTER (6-STATE EKF)
         // =========================================================================
-        let ekfInfo = data.ekf_summary;
-        let trajEkf = data.traj_ekf || [];
+        var ekfInfo = data.ekf_summary;
+        var trajEkf = data.traj_ekf || [];
         if (!ekfInfo || trajEkf.length === 0) {
             const fallbackEkf = runOnboardEkfNavigationJS(
                 data.initial_report.a, data.target_report.a,
@@ -4641,7 +5003,7 @@
             data.traj_ekf    = trajEkf;
         }
 
-        const ekfBadgeEl = document.getElementById('ekfStatusBadge');
+        var ekfBadgeEl = document.getElementById('ekfStatusBadge');
         if (ekfInfo.filter_converged) {
             ekfBadgeEl.textContent = '3σ COVARIANCE BOUNDED';
             ekfBadgeEl.style.background = 'rgba(0,230,118,0.12)';
@@ -4695,16 +5057,16 @@
             <div class="stat-line"><span class="stat-label">Filter Health Status:</span><span class="stat-val" style="color:${ekfInfo.filter_converged ? '#00e676' : '#ffab00'}">${ekfInfo.filter_converged ? 'NOMINAL LOCK' : 'CONVERGING'}</span></div>
         `;
 
-        const ekfTMin     = trajEkf.map(p => p.t_min);
-        const ekfRawErrM  = trajEkf.map(p => p.raw_err_m);
-        const ekfEstErrM  = trajEkf.map(p => p.ekf_err_m);
-        const ekfCov3PosM = trajEkf.map(p => p.cov_3sigma_m);
-        const ekfVelErrMs = trajEkf.map(p => p.vel_err_ms);
-        const ekfCov3Vel  = trajEkf.map(p => p.cov_vel_3sigma_ms);
-        const ekfGainNorm = trajEkf.map(p => p.kalman_gain !== undefined ? p.kalman_gain : ekfInfo.final_kalman_gain_norm);
+        var ekfTMin     = trajEkf.map(p => p.t_min);
+        var ekfRawErrM  = trajEkf.map(p => p.raw_err_m);
+        var ekfEstErrM  = trajEkf.map(p => p.ekf_err_m);
+        var ekfCov3PosM = trajEkf.map(p => p.cov_3sigma_m);
+        var ekfVelErrMs = trajEkf.map(p => p.vel_err_ms);
+        var ekfCov3Vel  = trajEkf.map(p => p.cov_vel_3sigma_ms);
+        var ekfGainNorm = trajEkf.map(p => p.kalman_gain !== undefined ? p.kalman_gain : ekfInfo.final_kalman_gain_norm);
 
         // Plot Sinistro (12A): Position Estimation Error vs. 3-Sigma Covariance Envelope [m]
-        const yMaxPosPlot = Math.min(
+        var yMaxPosPlot = Math.min(
             Math.max(ekfInfo.gps_sigma_pos_m * 6.5, ekfInfo.steady_pos_rmse_m * 9.0, 95.0),
             Math.max(...ekfCov3PosM, 120.0)
         );
@@ -4758,7 +5120,7 @@
         }, { responsive: true, displaylogo: false });
 
         // Plot Destro (12B): Velocity Estimation Error & Kalman Gain Evolution [m/s]
-        const yMaxVelPlot = Math.min(
+        var yMaxVelPlot = Math.min(
             Math.max(ekfInfo.gps_sigma_vel_ms * 4.2, ekfInfo.steady_vel_rmse_ms * 8.5, 0.35),
             Math.max(...ekfCov3Vel, 0.50)
         );
@@ -4798,11 +5160,13 @@
             legend: { font: { color: '#e2e8f0', size: 9.5 }, bgcolor: 'rgba(17,22,34,0.82)', x: 0.32, y: 0.98 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M12'); } catch (err) { __mstFail('M12', 'Onboard EKF', err); }
+        try { // MODULE M13 SSA and CAM
         // =========================================================================
         // 13. SPACE SITUATIONAL AWARENESS (SSA), B-PLANE CONJUNCTION & CAM
         // =========================================================================
-        let camInfo = data.ssa_cam_summary;
-        let camTradeoff = data.cam_tradeoff || [];
+        var camInfo = data.ssa_cam_summary;
+        var camTradeoff = data.cam_tradeoff || [];
         if (!camInfo || camTradeoff.length === 0) {
             const fallbackCam = evaluateDebrisConjunctionAndCamJS(
                 data.target_report.sma_km || (R_EQ + data.target_report.alt_km),
@@ -4817,19 +5181,15 @@
             data.cam_tradeoff    = camTradeoff;
         }
 
-        const isRedAlert    = camInfo.pre_pc >= 1e-4;
-        const isYellowAlert = !isRedAlert && camInfo.pre_pc >= 1e-5;
-        const alertColor    = isRedAlert ? '#ff5252' : (isYellowAlert ? '#ffab00' : '#00e676');
-        const camBadgeEl    = document.getElementById('camStatusBadge');
-        const camBannerBox  = document.getElementById('camBannerBox');
+        // BUG-06: pure state function — RED alert ONLY if secondary_target is valid and Pc > 1e-4
+        const camState      = computeSsaStatus(camInfo);
+        var isRedAlert      = camState.level === 'red';
+        var isYellowAlert   = camState.level === 'yellow';
+        var alertColor      = isRedAlert ? '#ff5252' : (isYellowAlert ? '#ffab00' : (camState.level === 'green' ? '#00e676' : '#94a3b8'));
+        var camBadgeEl      = document.getElementById('camStatusBadge');
+        var camBannerBox    = document.getElementById('camBannerBox');
 
-        camBadgeEl.innerHTML = isRedAlert
-            ? `&#9888; RED CONJUNCTION ALERT (P<sub>c</sub> = ${camInfo.pre_pc.toExponential(2)} &gt; 10<sup>-4</sup> &mdash; CAM MANDATORY)`
-            : (isYellowAlert
-                ? `&#9888; YELLOW CONJUNCTION ADVISORY (P<sub>c</sub> = ${camInfo.pre_pc.toExponential(2)} &gt; 10<sup>-5</sup>)`
-                : `&#9989; GREEN SAFE CONJUNCTION (P<sub>c</sub> = ${camInfo.pre_pc.toExponential(2)} &lt; 10<sup>-5</sup>)`);
-        camBadgeEl.style.color       = alertColor;
-        camBadgeEl.style.borderColor = alertColor;
+        applyBadge(camBadgeEl, camState);
         camBannerBox.style.borderColor = alertColor;
 
         document.getElementById('camBannerTitle').style.color = alertColor;
@@ -4876,7 +5236,7 @@
         `;
 
         // Generazione ellissi 1-sigma, 2-sigma, 3-sigma nel B-Plane attorno all'origine (Detrito in [0, 0])
-        const makeEllipseTrace = (scaleSigma, name, color, dashStyle, fillCol) => {
+        var makeEllipseTrace = (scaleSigma, name, color, dashStyle, fillCol) => {
             const xs = [], zs = [];
             for (let deg = 0; deg <= 360; deg += 4) {
                 const rad = deg * DEG2RAD;
@@ -4894,9 +5254,9 @@
             };
         };
 
-        const ell1 = makeEllipseTrace(1.0, '1σ Combined Covariance Ellipse', '#ff5252', 'solid', 'rgba(255, 82, 82, 0.14)');
-        const ell2 = makeEllipseTrace(2.0, '2σ Combined Covariance Ellipse', '#ffab00', 'dash',  'rgba(255, 171, 0, 0.06)');
-        const ell3 = makeEllipseTrace(3.0, '3σ Combined Covariance Shell (99.7%)', '#eab308', 'dot', null);
+        var ell1 = makeEllipseTrace(1.0, '1σ Combined Covariance Ellipse', '#ff5252', 'solid', 'rgba(255, 82, 82, 0.14)');
+        var ell2 = makeEllipseTrace(2.0, '2σ Combined Covariance Ellipse', '#ffab00', 'dash',  'rgba(255, 171, 0, 0.06)');
+        var ell3 = makeEllipseTrace(3.0, '3σ Combined Covariance Shell (99.7%)', '#eab308', 'dot', null);
 
         // Plot Sinistro (13A): 2D Encounter B-Plane Projection (xi vs. zeta [m])
         Plotly.react('plotBPlane2D', [
@@ -4950,10 +5310,10 @@
         }, { responsive: true, displaylogo: false });
 
         // Plot Destro (13B): Collision Probability log10(Pc) & Miss Distance vs. CAM Delta-V [cm/s]
-        const camDvCms  = camTradeoff.map(s => s.dv_cam_cms);
-        const camLogPc  = camTradeoff.map(s => s.log10_pc);
-        const camMissM  = camTradeoff.map(s => s.miss_dist_m);
-        const maxDvPlot = camDvCms.length ? camDvCms[camDvCms.length - 1] : 25.0;
+        var camDvCms  = camTradeoff.map(s => s.dv_cam_cms);
+        var camLogPc  = camTradeoff.map(s => s.log10_pc);
+        var camMissM  = camTradeoff.map(s => s.miss_dist_m);
+        var maxDvPlot = camDvCms.length ? camDvCms[camDvCms.length - 1] : 25.0;
 
         Plotly.react('plotCamTradeoff', [
             {
@@ -5009,12 +5369,14 @@
             legend: { font: { color: '#e2e8f0', size: 9.2 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.02, y: 0.52 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M13'); } catch (err) { __mstFail('M13', 'SSA and CAM', err); }
+        try { // MODULE M14 EoL and EDL
         // =========================================================================
         // 14. END-OF-LIFE (EoL) DEORBITING, 3-PHASE EDL SEQUENCE, PARACHUTE & POWERED DESCENT
         // =========================================================================
-        let eolInfo = data.eol_reentry_summary;
-        let edlInfo = data.edl_summary;
-        let trajReentry = data.traj_reentry || [];
+        var eolInfo = data.eol_reentry_summary;
+        var edlInfo = data.edl_summary;
+        var trajReentry = data.traj_reentry || [];
         if (!eolInfo || !edlInfo || trajReentry.length === 0 || trajReentry[0].edl_phase === undefined) {
             const fallbackEol = simulateEolDeorbitAndReentryJS(
                 data.target_report.sma_km || (R_EQ + data.target_report.alt_km),
@@ -5034,12 +5396,17 @@
             data.traj_reentry        = trajReentry;
         }
 
-        const eolBadgeEl = document.getElementById('eolStatusBadge');
+        var eolBadgeEl = document.getElementById('eolStatusBadge');
         eolBadgeEl.innerHTML = `&#9851; ${edlInfo.edl_status || eolInfo.compliance_status}`;
 
         // Populate Section 14 KPI Cards
         document.getElementById('edlKpiTouchdownVel').textContent = Number(edlInfo.touchdown_vel_ms).toFixed(2);
-        document.getElementById('edlKpiTouchdownBadge').textContent = edlInfo.soft_landing_achieved ? 'SOFT < 2.5 m/s' : 'HIGH V_td';
+        const edlTdBadge = document.getElementById('edlKpiTouchdownBadge');
+        if (edlTdBadge) {
+            edlTdBadge.textContent = edlInfo.soft_landing_achieved ? 'SOFT < 2.5 m/s' : 'HIGH V_td';
+            edlTdBadge.style.color = edlInfo.soft_landing_achieved ? 'var(--green)' : 'var(--amber)';
+            edlTdBadge.style.borderColor = edlInfo.soft_landing_achieved ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)';
+        }
         document.getElementById('edlKpiTouchdownSub').textContent = `Landed Mass ${Number(edlInfo.landed_mass_kg).toFixed(1)} kg @ h = 0 m`;
 
         document.getElementById('edlKpiChuteShock').textContent = Number(edlInfo.chute_snatch_g).toFixed(2);
@@ -5096,14 +5463,14 @@
             <div class="stat-line"><span class="stat-label">Final Landed Mass:</span><span class="stat-val" style="color:#00e5ff">${edlInfo.landed_mass_kg} kg (t = ${eolInfo.total_entry_time_sec} s)</span></div>
         `;
 
-        const reTSec  = trajReentry.map(p => p.t_sec);
-        const reAltKm = trajReentry.map(p => p.alt_km);
-        const reVel   = trajReentry.map(p => p.vel_kms);
-        const reHeat  = trajReentry.map(p => p.heat_flux_wcm2);
-        const reDecel = trajReentry.map(p => p.decel_g);
+        var reTSec  = trajReentry.map(p => p.t_sec);
+        var reAltKm = trajReentry.map(p => p.alt_km);
+        var reVel   = trajReentry.map(p => p.vel_kms);
+        var reHeat  = trajReentry.map(p => p.heat_flux_wcm2);
+        var reDecel = trajReentry.map(p => p.decel_g);
 
         // Segment trajectory into the 3 EDL Phases ("AERO", "CHUTE", "POWERED") with connecting boundary points
-        const aeroPts = [], chutePts = [], pdPts = [];
+        var aeroPts = [], chutePts = [], pdPts = [];
         for (let i = 0; i < trajReentry.length; i++) {
             const p = trajReentry[i];
             const ph = p.edl_phase || 'AERO';
@@ -5118,18 +5485,18 @@
             }
         }
 
-        let pkHeatSample = trajReentry[0] || { vel_kms: 6.5, alt_km: eolInfo.peak_heat_alt_km };
-        let pkChuteShockSample = chutePts.length > 0 ? chutePts[0] : (trajReentry[0] || { t_sec: 320, decel_g: edlInfo.chute_snatch_g, alt_km: edlInfo.chute_deploy_alt_km, vel_kms: edlInfo.chute_deploy_vel_ms / 1000.0 });
+        var pkHeatSample = trajReentry[0] || { vel_kms: 6.5, alt_km: eolInfo.peak_heat_alt_km };
+        var pkChuteShockSample = chutePts.length > 0 ? chutePts[0] : (trajReentry[0] || { t_sec: 320, decel_g: edlInfo.chute_snatch_g, alt_km: edlInfo.chute_deploy_alt_km, vel_kms: edlInfo.chute_deploy_vel_ms / 1000.0 });
         trajReentry.forEach(p => {
             if (Math.abs(p.alt_km - eolInfo.peak_heat_alt_km) < Math.abs(pkHeatSample.alt_km - eolInfo.peak_heat_alt_km)) pkHeatSample = p;
             if (p.edl_phase === 'CHUTE' && p.decel_g > pkChuteShockSample.decel_g) pkChuteShockSample = p;
         });
 
-        const hChuteKm = Number(edlInfo.chute_deploy_alt_km || 9.8);
-        const vChuteKms = Number(edlInfo.chute_deploy_vel_ms || 610.0) / 1000.0;
-        const hPdKm = Number(edlInfo.pd_start_alt_m || 2000.0) / 1000.0;
-        const vPdKms = Number(edlInfo.pd_start_vel_ms || 85.0) / 1000.0;
-        const vTdKms = Number(edlInfo.touchdown_vel_ms || 1.80) / 1000.0;
+        var hChuteKm = Number(edlInfo.chute_deploy_alt_km || 9.8);
+        var vChuteKms = Number(edlInfo.chute_deploy_vel_ms || 610.0) / 1000.0;
+        var hPdKm = Number(edlInfo.pd_start_alt_m || 2000.0) / 1000.0;
+        var vPdKms = Number(edlInfo.pd_start_vel_ms || 85.0) / 1000.0;
+        var vTdKms = Number(edlInfo.touchdown_vel_ms || 1.80) / 1000.0;
 
         // Plot Sinistro (14A): Altitude-Velocity Phase Space h(V) with 3-Phase Color Coding, Background Shaded Bands & Terminal EDL Inset
         Plotly.react('plotReentryCorridor', [
@@ -5219,7 +5586,7 @@
         }, { responsive: true, displaylogo: false });
 
         // Plot Destro (14B): Sutton-Graves Heat Flux [W/cm^2] & Axial G-Load [g] (capturing Parachute Opening Snatch Shock)
-        const maxG = Math.max(...reDecel, edlInfo.chute_snatch_g || 5.8, 5.0);
+        var maxG = Math.max(...reDecel, edlInfo.chute_snatch_g || 5.8, 5.0);
         Plotly.react('plotReentryHeating', [
             {
                 x: reTSec, y: reHeat,
@@ -5265,12 +5632,14 @@
             legend: { font: { color: '#e2e8f0', size: 9.0 }, bgcolor: 'rgba(17,22,34,0.86)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M14'); } catch (err) { __mstFail('M14', 'EoL and EDL', err); }
+        try { // MODULE M15 Cislunar CR3BP
         // =========================================================================
         // 15. CISLUNAR CR3BP ASTRODYNAMICS, LAGRANGE POINTS & ZERO-VELOCITY CURVES
         // =========================================================================
-        let cisInfo   = data.cislunar_summary;
-        let trajCisTr = data.traj_cislunar_transfer || [];
-        let trajHalo  = data.traj_halo_orbit || [];
+        var cisInfo   = data.cislunar_summary;
+        var trajCisTr = data.traj_cislunar_transfer || [];
+        var trajHalo  = data.traj_halo_orbit || [];
         if (!cisInfo || trajCisTr.length === 0 || trajHalo.length === 0) {
             const fallbackCis = simulateCislunarCr3bpJS(
                 data.initial_report.sma_km || (R_EQ + data.initial_report.alt_km),
@@ -5287,8 +5656,8 @@
             data.traj_halo_orbit        = trajHalo;
         }
 
-        const cisBadgeEl = document.getElementById('cislunarStatusBadge');
-        const cjConserved = (cisInfo.delta_cj_rel !== undefined && cisInfo.delta_cj_rel < 1e-8);
+        var cisBadgeEl = document.getElementById('cislunarStatusBadge');
+        var cjConserved = (cisInfo.delta_cj_rel !== undefined && cisInfo.delta_cj_rel < 1e-8);
         cisBadgeEl.innerHTML = cjConserved
             ? `&#127769; JACOBI INTEGRAL CONSERVED (|&Delta;C<sub>J</sub>/C<sub>J,0</sub>| = ${Number(cisInfo.delta_cj_rel).toExponential(2)} &lt; 10<sup>-8</sup>)`
             : `&#127769; CISLUNAR CR3BP SYNODIC ENGINE (|&Delta;C<sub>J</sub>/C<sub>J,0</sub>| = ${Number(cisInfo.delta_cj_rel || 1e-9).toExponential(2)})`;
@@ -5335,13 +5704,13 @@
         `;
 
         // 15A. Plot Sinistro: Earth-Moon Synodic Frame Trajectory, Lagrange Points L1-L5 & Zero-Velocity Contours
-        const muEm   = cisInfo.mu_em || 0.0121505856;
-        const lStar  = cisInfo.l_star_km || 384400.0;
-        const cjOp   = cisInfo.jacobi_c || 3.159986;
-        const xGridKm = [];
-        const yGridKm = [];
-        const zvcGrid = [];
-        const nxZvc = 92, nyZvc = 74;
+        var muEm   = cisInfo.mu_em || 0.0121505856;
+        var lStar  = cisInfo.l_star_km || 384400.0;
+        var cjOp   = cisInfo.jacobi_c || 3.159986;
+        var xGridKm = [];
+        var yGridKm = [];
+        var zvcGrid = [];
+        var nxZvc = 92, nyZvc = 74;
         for (let ix = 0; ix < nxZvc; ix++) {
             xGridKm.push(-435000.0 + (ix / (nxZvc - 1)) * 930000.0);
         }
@@ -5360,12 +5729,12 @@
             zvcGrid.push(row);
         }
 
-        const cisTrX  = trajCisTr.map(p => p.x_syn_km);
-        const cisTrY  = trajCisTr.map(p => p.y_syn_km);
-        const cisTrZ  = trajCisTr.map(p => p.z_syn_km);
-        const haloX   = trajHalo.map(p => p.x_syn_km);
-        const haloY   = trajHalo.map(p => p.y_syn_km);
-        const haloZ   = trajHalo.map(p => p.z_syn_km);
+        var cisTrX  = trajCisTr.map(p => p.x_syn_km);
+        var cisTrY  = trajCisTr.map(p => p.y_syn_km);
+        var cisTrZ  = trajCisTr.map(p => p.z_syn_km);
+        var haloX   = trajHalo.map(p => p.x_syn_km);
+        var haloY   = trajHalo.map(p => p.y_syn_km);
+        var haloZ   = trajHalo.map(p => p.z_syn_km);
 
         Plotly.react('plotCislunarSynodic', [
             {
@@ -5470,10 +5839,10 @@
         }, { responsive: true, displaylogo: false });
 
         // 15B. Plot Destro: 3D Halo Orbit around L2/L1 & Jacobi Integral / Lunar Distance Profile
-        const tCombinedDays = [];
-        const dMoonCombinedKm = [];
-        const cjCombined = [];
-        const tofOff = cisInfo.tof_days || (trajCisTr.length ? trajCisTr[trajCisTr.length - 1].t_days : 5.0);
+        var tCombinedDays = [];
+        var dMoonCombinedKm = [];
+        var cjCombined = [];
+        var tofOff = cisInfo.tof_days || (trajCisTr.length ? trajCisTr[trajCisTr.length - 1].t_days : 5.0);
         trajCisTr.forEach(p => {
             tCombinedDays.push(p.t_days);
             dMoonCombinedKm.push(p.dist_moon_km);
@@ -5485,8 +5854,8 @@
             cjCombined.push(p.jacobi_c);
         });
 
-        const nApproach = Math.max(2, Math.floor(trajCisTr.length * 0.40));
-        const trAppSlice = trajCisTr.slice(trajCisTr.length - nApproach);
+        var nApproach = Math.max(2, Math.floor(trajCisTr.length * 0.40));
+        var trAppSlice = trajCisTr.slice(trajCisTr.length - nApproach);
 
         Plotly.react('plotCislunarHalo', [
             {
@@ -5600,11 +5969,13 @@
             legend: { font: { color: '#e2e8f0', size: 8.8 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.01, y: 0.99 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M15'); } catch (err) { __mstFail('M15', 'Cislunar CR3BP', err); }
+        try { // MODULE M16 Flex and Slosh CSI
         // =========================================================================
         // 16. FLEXIBLE SOLAR ARRAY MODES, PROPELLANT SLOSHING & CSI (SPRINT 22)
         // =========================================================================
-        let csiInfo = data.structural_csi_summary;
-        let trajCsi = data.traj_csi || [];
+        var csiInfo = data.structural_csi_summary;
+        var trajCsi = data.traj_csi || [];
         if (!csiInfo || trajCsi.length === 0) {
             const fallbackCsi = simulateStructuralSloshAndCsiJS(
                 (data.maneuver.final_mass_kg || 464.0) + (data.maneuver.fuel_kg || 36.0),
@@ -5620,7 +5991,7 @@
             data.traj_csi               = trajCsi;
         }
 
-        const csiBadgeEl = document.getElementById('csiStatusBadge');
+        var csiBadgeEl = document.getElementById('csiStatusBadge');
         csiBadgeEl.innerHTML = `&#9881; ${csiInfo.notch_status} &bull; MoS +${csiInfo.launch_mos_pct}%`;
 
         document.getElementById('csiBannerTitle').innerHTML =
@@ -5664,17 +6035,17 @@
             <div class="stat-line"><span class="stat-label">Launch Margin of Safety:</span><span class="stat-val" style="color:#00e676">+${csiInfo.launch_mos_pct}% (FoS=1.25)</span></div>
         `;
 
-        const csiTSec       = trajCsi.map(p => p.t_sec);
-        const csiTipMm      = trajCsi.map(p => p.tip_defl_mm);
-        const csiTorqueMnm  = trajCsi.map(p => p.slosh_torque_mnm !== undefined ? p.slosh_torque_mnm : (p.slosh_force_n * 650.0));
-        const csiJitterArc  = trajCsi.map(p => p.jitter_arcsec);
-        const csiFreqHz     = trajCsi.map(p => p.bode_freq_hz);
-        const csiBodeFilt   = trajCsi.map(p => p.bode_mag_db);
-        const csiBodeUnfilt = trajCsi.map(p => p.bode_unfilt_db !== undefined ? p.bode_unfilt_db : (p.bode_mag_db + 16.0));
+        var csiTSec       = trajCsi.map(p => p.t_sec);
+        var csiTipMm      = trajCsi.map(p => p.tip_defl_mm);
+        var csiTorqueMnm  = trajCsi.map(p => p.slosh_torque_mnm !== undefined ? p.slosh_torque_mnm : (p.slosh_force_n * 650.0));
+        var csiJitterArc  = trajCsi.map(p => p.jitter_arcsec);
+        var csiFreqHz     = trajCsi.map(p => p.bode_freq_hz);
+        var csiBodeFilt   = trajCsi.map(p => p.bode_mag_db);
+        var csiBodeUnfilt = trajCsi.map(p => p.bode_unfilt_db !== undefined ? p.bode_unfilt_db : (p.bode_mag_db + 16.0));
 
         // 16A. Plot Sinistro: Solar Array Tip Vibration [mm] & Propellant Slosh Disturbance Torque during Burn/Slew
-        const maxTipAxis = Math.max(30.0, csiInfo.peak_tip_defl_mm * 1.25);
-        const maxTrqAxis = Math.max(250.0, csiInfo.peak_slosh_torque_mnm * 1.28);
+        var maxTipAxis = Math.max(30.0, csiInfo.peak_tip_defl_mm * 1.25);
+        var maxTrqAxis = Math.max(250.0, csiInfo.peak_slosh_torque_mnm * 1.28);
 
         Plotly.react('plotCsiTimeResponse', [
             {
@@ -5805,71 +6176,97 @@
             legend: { font: { color: '#e2e8f0', size: 9.0 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.02, y: 0.24 }
         }, { responsive: true, displaylogo: false });
 
+        __mstOk('M16'); } catch (err) { __mstFail('M16', 'Flex and Slosh CSI', err); }
+        try { // MODULE M18 Interplanetary
         // =====================================================================
         // 18. INTERPLANETARY PATCHED CONICS, PORKCHOP CONTOUR (C3) & HYPERBOLIC ESCAPE
         // =====================================================================
         renderInterplanetarySection(data);
 
+        __mstOk('M18'); } catch (err) { __mstFail('M18', 'Interplanetary', err); }
+        try { // MODULE M19 Formation Flying
         // =====================================================================
         // 19. MULTI-SATELLITE FORMATION FLYING, D'AMICO ROEs & PASSIVE E/I SAFETY
         // =====================================================================
         renderFormationSection(data);
 
+        __mstOk('M19'); } catch (err) { __mstFail('M19', 'Formation Flying', err); }
+        try { // MODULE M20 Ops Scheduler and SSR
         // =====================================================================
         // 20. AUTONOMOUS OPERATIONS TIMELINE SCHEDULER, SSR BUFFER & ECSS COMPLIANCE
         // =====================================================================
         renderOpsAndSsrSection(data);
 
+        __mstOk('M20'); } catch (err) { __mstFail('M20', 'Ops Scheduler and SSR', err); }
+        try { // MODULE M21 Space Weather
         // =====================================================================
         // 21. SPACE WEATHER, ATMOSPHERIC DIURNAL BULGE & LONG-TERM ORBIT DECAY
         // =====================================================================
         renderSpaceWeatherSection(data);
 
+        __mstOk('M21'); } catch (err) { __mstFail('M21', 'Space Weather', err); }
+        try { // MODULE M22 Optical ISL
         // =====================================================================
         // 22. OPTICAL INTER-SATELLITE LINKS (ISL) & CONSTELLATION MESH NETWORK
         // =====================================================================
         renderOpticalIslSection(data);
 
+        __mstOk('M22'); } catch (err) { __mstFail('M22', 'Optical ISL', err); }
+        try { // MODULE M23 Ground Network
         // =====================================================================
         // 23. MULTI-STATION GROUND NETWORK, DSN/ESTRACK GEOMETRY & TRACKING
         // =====================================================================
         renderGroundSegmentSection(data);
 
+        __mstOk('M23'); } catch (err) { __mstFail('M23', 'Ground Network', err); }
+        try { // MODULE M24 Hi-Fi EPS
         // =====================================================================
         // 24. HIGH-FIDELITY EPS, PENUMBRA TRANSIT & LI-ION BATTERY HEALTH
         // =====================================================================
         renderEpsHiFiSection(data);
 
+        __mstOk('M24'); } catch (err) { __mstFail('M24', 'Hi-Fi EPS', err); }
+        try { // MODULE M25 EO Raycasting
         // =====================================================================
         // 25 (23). EARTH OBSERVATION RAYCASTING, SYNTHETIC CAMERA & COVERAGE HEATMAP
         // =====================================================================
         renderEoRaycastingSection(data);
 
+        __mstOk('M25'); } catch (err) { __mstFail('M25', 'EO Raycasting', err); }
+        try { // MODULE M26 Aerocapture
         // =====================================================================
         // 26 (25). PLANETARY AEROCAPTURE, AEROBRAKING & MARTIAN ATMOSPHERIC PASS
         // =====================================================================
         renderAerocaptureSection(data);
 
+        __mstOk('M26'); } catch (err) { __mstFail('M26', 'Aerocapture', err); }
+        try { // MODULE M27 Solar Sail
         // =====================================================================
         // 27 (26). SOLAR SAIL CONTINUOUS THRUST, SRP DYNAMICS & 3D HELIOCENTRIC SPIRAL
         // =====================================================================
         renderSolarSailSection(data);
 
+        __mstOk('M27'); } catch (err) { __mstFail('M27', 'Solar Sail', err); }
+        try { // MODULE M15 BLT WSB 4-Body
         // =====================================================================
         // 28 (15C). BALLISTIC LUNAR TRANSFER (BLT), WSB & 4-BODY SUN-EARTH-MOON FRAME
         // =====================================================================
         renderBltWsbSection(data);
 
+        __mstOk('M15'); } catch (err) { __mstFail('M15', 'BLT WSB 4-Body', err); }
+        try { // MODULE M12 XNAV Relativity
         // =====================================================================
         // 29 (12C). GENERAL RELATIVITY (1PN) & X-RAY PULSAR NAVIGATION (XNAV 8-STATE EKF)
         // =====================================================================
         renderXnavRelativitySection(data);
 
+        __mstOk('M12'); } catch (err) { __mstFail('M12', 'XNAV Relativity', err); }
+        try { // MODULE M17 FDIR
         // =====================================================================
         // 17. ONBOARD FDIR AUTONOMY, REDUNDANCY SWITCHOVER & SAFE-MODE RECOVERY
         // =====================================================================
-        let fdirInfo = data.fdir_summary;
-        let trajFdir = data.traj_fdir;
+        var fdirInfo = data.fdir_summary;
+        var trajFdir = data.traj_fdir;
         if (!fdirInfo || !trajFdir || !trajFdir.length) {
             const jPitch = (data.adcs_summary && data.adcs_summary.inertia_kgm2) ? data.adcs_summary.inertia_kgm2[1] : 110.0;
             const steadyDeg = (data.adcs_summary && data.adcs_summary.steady_point_err_deg) ? data.adcs_summary.steady_point_err_deg : 0.0666;
@@ -5880,8 +6277,8 @@
             data.traj_fdir    = trajFdir;
         }
 
-        const detPlusSwSec = +(fdirInfo.detection_latency_s + fdirInfo.isolation_switchover_s).toFixed(2);
-        const fdirBadge = document.getElementById('fdirStatusBadge');
+        var detPlusSwSec = +(fdirInfo.detection_latency_s + fdirInfo.isolation_switchover_s).toFixed(2);
+        var fdirBadge = document.getElementById('fdirStatusBadge');
         fdirBadge.style.color = 'var(--green)';
         fdirBadge.style.borderColor = 'var(--green)';
         fdirBadge.innerHTML = `&#128737; ${fdirInfo.redundancy_status} &bull; ${fdirInfo.ccsds_oem_status}`;
@@ -5923,16 +6320,16 @@
             metricRow('NORAD TLE Parser Check', fdirInfo.tle_sat_name || 'ISS (ZARYA) [NORAD #25544]', 'var(--amber)') +
             metricRow('Ground Segment Compatibility', 'NASA GMAT / Ansys STK / ESOC Ready', 'var(--green)');
 
-        const tFdir      = trajFdir.map(p => p.t_sec);
-        const attErrFdir = trajFdir.map(p => p.att_err_deg);
-        const busVolt    = trajFdir.map(p => p.bus_voltage_v);
-        const stateId    = trajFdir.map(p => p.fdir_state_id);
-        const primPct    = trajFdir.map(p => p.primary_unit_pct !== undefined ? p.primary_unit_pct : 0);
-        const redPct     = trajFdir.map(p => p.redundant_unit_pct !== undefined ? p.redundant_unit_pct : 100);
+        var tFdir      = trajFdir.map(p => p.t_sec);
+        var attErrFdir = trajFdir.map(p => p.att_err_deg);
+        var busVolt    = trajFdir.map(p => p.bus_voltage_v);
+        var stateId    = trajFdir.map(p => p.fdir_state_id);
+        var primPct    = trajFdir.map(p => p.primary_unit_pct !== undefined ? p.primary_unit_pct : 0);
+        var redPct     = trajFdir.map(p => p.redundant_unit_pct !== undefined ? p.redundant_unit_pct : 100);
 
-        const tInj = fdirInfo.fault_inject_time_s;
-        const tSwDone = tInj + fdirInfo.detection_latency_s + fdirInfo.isolation_switchover_s;
-        const tRecDone = tInj + fdirInfo.total_recovery_time_s;
+        var tInj = fdirInfo.fault_inject_time_s;
+        var tSwDone = tInj + fdirInfo.detection_latency_s + fdirInfo.isolation_switchover_s;
+        var tRecDone = tInj + fdirInfo.total_recovery_time_s;
 
         // Plot 17A: FDIR Fault Injection, Attitude Recovery Transient & Redundant Actuator Takeover
         Plotly.react('plotFdirAttitude', [
@@ -6002,8 +6399,8 @@
         }, { responsive: true, displaylogo: false });
 
         // Plot 17B: Unregulated 28V Power Bus Voltage Stability & OBDH FDIR State Machine Timeline
-        const stateLabels = ['0: NOMINAL', '1: FAULT_DET', '2: ISOLATION', '3: B-SWITCH', '4: SUN_SAFE', '5: RECOVERED'];
-        const stateText = trajFdir.map(p => stateLabels[p.fdir_state_id] || 'NOMINAL');
+        var stateLabels = ['0: NOMINAL', '1: FAULT_DET', '2: ISOLATION', '3: B-SWITCH', '4: SUN_SAFE', '5: RECOVERED'];
+        var stateText = trajFdir.map(p => stateLabels[p.fdir_state_id] || 'NOMINAL');
 
         Plotly.react('plotFdirBusState', [
             {
@@ -6052,9 +6449,11 @@
             legend: { font: { color: '#e2e8f0', size: 9.0 }, bgcolor: 'rgba(17,22,34,0.84)', x: 0.02, y: 0.24 }
         }, { responsive: true, displaylogo: false });
 
-        updateKpiCards(data);
-        updateSatellitePosition(0, true);
-        setSimulationPlaying(false);
+        __mstOk('M17'); } catch (err) { __mstFail('M17', 'FDIR', err); }
+        try { updateKpiCards(data); } catch (err) { __mstFail('M00', 'KPI Cards', err); }
+        try { updateSatellitePosition(0, true); } catch (err) { __mstFail('M00', '3D Satellite Position', err); }
+        try { setSimulationPlaying(false); } catch (err) { __mstFail('M00', 'Playback', err); }
+        __mstFinalize(data);
     }
 
     // Pause 3D WebGL restyle updates while user is rotating/zooming #plot3D so rotation is 100% smooth
@@ -10636,11 +11035,14 @@
         }
         if (!ops || !tr || !tr.length) return;
 
+        // BUG-07: pure PDR readiness function from validated metrics (Delta-V, Battery SoC, Thermal, RF, SSR < 95%, EoL)
         const badge = document.getElementById('opsStatusBadge');
-        const isPass = (ops.readiness_score_pct >= 88.0 && ops.overflow_prevented_events === 0);
-        badge.style.color = isPass ? 'var(--green)' : 'var(--amber)';
-        badge.style.borderColor = isPass ? 'var(--green)' : 'var(--amber)';
-        badge.innerHTML = `&#9989; ${ops.pdr_compliance_verdict} &bull; SCORE ${Number(ops.readiness_score_pct).toFixed(2)}%`;
+        const pdrState = computePdrStatus(data);
+        applyBadge(badge, pdrState);
+        if (Number.isFinite(pdrState.score)) {
+            ops.readiness_score_pct = +pdrState.score.toFixed(2);
+        }
+        ops.pdr_compliance_verdict = pdrState.verdict;
 
         document.getElementById('opsKpiCapBadge').textContent = `${Number(ops.ssr_capacity_gb).toFixed(0)} GB NAND`;
         document.getElementById('opsKpiPeakFill').textContent = Number(ops.peak_ssr_fill_pct).toFixed(1);
@@ -10655,8 +11057,14 @@
         document.getElementById('opsKpiDownlinked').textContent = Number(ops.total_downlinked_gb).toFixed(1);
         document.getElementById('opsKpiDownlinkedSub').textContent = `${ops.downlink_dump_events} GS passes (${Number(ops.duty_downlink_pct).toFixed(1)}% Downlink duty)`;
 
-        document.getElementById('opsKpiReadiness').textContent = Number(ops.readiness_score_pct).toFixed(2);
-        document.getElementById('opsKpiVerdictBadge').textContent = ops.readiness_score_pct >= 88.0 ? 'PDR PASS' : 'PDR REVIEW';
+        document.getElementById('opsKpiReadiness').textContent = Number.isFinite(pdrState.score) ? Number(pdrState.score).toFixed(2) : '---';
+        const opsVerdictBadgeEl = document.getElementById('opsKpiVerdictBadge');
+        if (opsVerdictBadgeEl) {
+            opsVerdictBadgeEl.textContent = pdrState.kpiLabel;
+            const vc = pdrState.level === 'approved' ? 'var(--green)' : (pdrState.level === 'conditional' ? 'var(--amber)' : (pdrState.hasNullMetrics ? 'var(--text-muted)' : 'var(--red)'));
+            opsVerdictBadgeEl.style.color = vc;
+            opsVerdictBadgeEl.style.borderColor = vc;
+        }
         document.getElementById('opsKpiReadinessSub').textContent = `Eclipse ${Number(ops.duty_eclipse_pct).toFixed(1)}% \u2022 Slew ${Number(ops.duty_maneuver_pct).toFixed(1)}% \u2022 Charge ${Number(ops.duty_sun_charge_pct).toFixed(1)}%`;
 
         // ---- Left Plot: SSR Memory Buffer Fill Level [GB & %] vs. Downlink Dump Events ----
@@ -12953,7 +13361,7 @@
                 hoverinfo: 'name'
             }
         ], {
-            title: { text: `23A. Synthetic Onboard Boresight Camera View (Curved WGS84 Disk & Trapezoidal FOV Pyramid)`, font: { color: '#e2e8f0', size: 12.0 } },
+            title: { text: `25A. Synthetic Onboard Boresight Camera View (Curved WGS84 Disk & Trapezoidal FOV Pyramid)`, font: { color: '#e2e8f0', size: 12.0 } },
             margin: { l: 8, r: 8, b: 8, t: 38 },
             scene: {
                 domain: { x: [0.0, 1.0], y: [0.0, 1.0] },
@@ -13049,7 +13457,7 @@
         eoBoreTraceIdx = 4;
 
         Plotly.react('plotEoCoverageHeatmap', heatmapTraces, {
-            title: { text: `23B. Cumulative Global Coverage Heatmap (${Number(pm.global_coverage_pct).toFixed(1)}%) & Trapezoidal FOV Polygon`, font: { color: '#e2e8f0', size: 12.0 } },
+            title: { text: `25B. Cumulative Global Coverage Heatmap (${Number(pm.global_coverage_pct).toFixed(1)}%) & Trapezoidal FOV Polygon`, font: { color: '#e2e8f0', size: 12.0 } },
             margin: { l: 52, r: 42, b: 46, t: 38 },
             xaxis: { title: 'Geodetic Longitude \u03bb [deg]', color: '#e2e8f0', gridcolor: '#1e293b', range: [-180, 180], dtick: 60 },
             yaxis: { title: 'Geodetic Latitude \u03c6 [deg]', color: '#e2e8f0', gridcolor: '#1e293b', range: [-90, 90], dtick: 30 },
@@ -13439,7 +13847,7 @@
             }
         ], {
             title: {
-                text: `25A. ${ac.planet_name} Atmospheric Pass: Altitude Corridor, Kinetic Velocity Bleed & Peak Heat Flux`,
+                text: `26A. ${ac.planet_name} Atmospheric Pass: Altitude Corridor, Kinetic Velocity Bleed & Peak Heat Flux`,
                 font: { color: '#e2e8f0', size: 12.2 }
             },
             margin: { l: 56, r: 62, b: 48, t: 40 },
@@ -13595,7 +14003,7 @@
             }
         ], {
             title: {
-                text: `25B. Hyperbolic-to-Elliptical Capture Orbit (e = ${f1(ac.initial_hyp_ecc, 2)} \u2192 ${f1(ac.final_eccentricity, 3)}) & Propellant Saved (${Math.round(ac.fuel_saved_heavy_stack_kg).toLocaleString()} kg)`,
+                text: `26B. Hyperbolic-to-Elliptical Capture Orbit (e = ${f1(ac.initial_hyp_ecc, 2)} \u2192 ${f1(ac.final_eccentricity, 3)}) & Propellant Saved (${Math.round(ac.fuel_saved_heavy_stack_kg).toLocaleString()} kg)`,
                 font: { color: '#e2e8f0', size: 12.2 }
             },
             margin: { l: 52, r: 18, b: 46, t: 40 },
@@ -13905,7 +14313,7 @@
             }
         ], {
             title: {
-                text: `26A. 3D Heliocentric Solar Sail Spiral (Earth \u2192 ${ss.target_planet_name}) & ADCS Sail Normal Vectors n\u0302`,
+                text: `27A. 3D Heliocentric Solar Sail Spiral (Earth \u2192 ${ss.target_planet_name}) & ADCS Sail Normal Vectors n\u0302`,
                 font: { color: '#e2e8f0', size: 12.2 }
             },
             margin: { l: 8, r: 8, b: 8, t: 38 },
@@ -13965,7 +14373,7 @@
             }
         ], {
             title: {
-                text: `26B. ADCS Sail Pitch \u03b1(t) Profile, Inverse-Square SRP Accel & Cumulative Sunlight \u0394V`,
+                text: `27B. ADCS Sail Pitch \u03b1(t) Profile, Inverse-Square SRP Accel & Cumulative Sunlight \u0394V`,
                 font: { color: '#e2e8f0', size: 12.2 }
             },
             margin: { l: 56, r: 62, b: 48, t: 40 },
@@ -14936,7 +15344,7 @@
                 <div>
                     <h3>PROJECT ENTERPRISE // PRELIMINARY DESIGN REVIEW (PDR) TECHNICAL DOSSIER</h3>
                     <p>Standard: <b>ECSS-E-ST-10C / ECSS-E-ST-60-30C / NASA GSFC-STD-7000</b> &bull; Reference Frame: <b>EME2000 / WGS84 / LVLH</b> &bull; Ground Segment: <b>${d.station ? d.station.name : 'Milano-Bovisa'}</b></p>
-                    <p style="margin-top:4px;">Verdict: <b>${ops.pdr_compliance_verdict || 'ECSS-E-ST-10C / NASA PDR APPROVED'}</b></p>
+                    <p style="margin-top:4px;">Verdict: <b>${ops.pdr_compliance_verdict || computePdrStatus(d).verdict}</b></p>
                 </div>
                 <div class="pdr-score-box">
                     <div class="score-val">${Number(ops.readiness_score_pct || 95.9).toFixed(2)}%</div>
@@ -15877,28 +16285,24 @@
     document.getElementById('trackModeSelect').addEventListener('change', () => { if (globalData) renderDashboard(globalData); });
     document.getElementById('timelineSlider').addEventListener('input', function() { currentFrame = parseInt(this.value, 10); updateSatellitePosition(currentFrame); });
 
-    load3DContinents();
-    fetch('mission_report.json')
-        .then(r => r.json())
-        .then(data => {
-            defaultJsonBackup = JSON.parse(JSON.stringify(data));
-            syncModalInputsFromData(data);
-            renderDashboard(data);
-        })
-        .catch(() => {
-            document.getElementById('btnRunCustomMission').click();
-            if (globalData) defaultJsonBackup = JSON.parse(JSON.stringify(globalData));
-        });
+    // BUG-02 & BUG-08: Automatic resilient bootstrap on DOMContentLoaded (JSON -> validate -> ISS NORAD #25544 JS solver fallback)
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootstrapMission);
+    } else {
+        bootstrapMission();
+    }
 
     document.getElementById('jsonInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = evt => {
-            const parsed = JSON.parse(evt.target.result);
-            defaultJsonBackup = JSON.parse(JSON.stringify(parsed));
-            syncModalInputsFromData(parsed);
-            renderDashboard(parsed);
+            try {
+                const parsed = JSON.parse(evt.target.result);
+                mstIngest(parsed, 'uploaded:' + file.name, true);
+            } catch (err) {
+                console.error('[JSON Upload] Parse failed:', err);
+            }
         };
         reader.readAsText(file);
     });
