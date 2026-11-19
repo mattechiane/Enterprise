@@ -651,7 +651,7 @@
             <h2>6. Terminal Rendezvous &amp; Proximity Operations &mdash; LVLH Hill Frame</h2>
             <span>Clohessy-Wiltshire (CW) Two-Impulse Targeting &bull; V-Bar / R-Bar Relative Trajectory, Safety Approach Corridor &amp; Soft-Docking Profile</span>
         </div>
-        <span class="badge" id="rdvStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
+        <span class="badge" id="rdvStatusBadge" style="display: none; color:var(--text-muted); border-color:var(--text-muted);">&#9203; AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.12), rgba(0,230,118,0.10)); border-color: var(--cyan);">
@@ -994,7 +994,7 @@
             <h2>13. Space Situational Awareness (SSA), B-Plane Conjunction &amp; Collision Avoidance (CAM)</h2>
             <span>2D Encounter B-Plane (&xi;, &zeta;) Projection &bull; Foster/Alfriend 2D Collision Probability P<sub>c</sub> &bull; In-Track Phasing Burn &Delta;V<sub>CAM</sub> &bull; ESA Space Debris Office Standard</span>
         </div>
-        <span class="badge" id="camStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
+        <span class="badge" id="camStatusBadge" style="display: none; color:var(--text-muted); border-color:var(--text-muted);">&#9203; AWAITING DATA</span>
     </div>
 
     <div class="maneuver-banner" id="camBannerBox" style="background: linear-gradient(90deg, rgba(255,82,82,0.14), rgba(0,229,255,0.11)); border-color: var(--red);">
@@ -1386,7 +1386,7 @@
             <span>Onboard Activity Scheduler (Science / Downlink / Slew / Sun-Charge / Eclipse) &bull; Solid-State Recorder (SSR) Buffer &bull; 95% Overflow Protection &bull; ECSS-E-ST-10C / NASA PDR Readiness</span>
         </div>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <span class="badge" id="opsStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
+            <span class="badge" id="opsStatusBadge" style="display: none; color:var(--text-muted); border-color:var(--text-muted);">&#9203; AWAITING DATA</span>
             <button type="button" class="btn-sim" style="border-color:var(--cyan); color:var(--cyan-bright);" onclick="openPdrReportModal()">&#128196; Open ECSS/NASA PDR Report</button>
         </div>
     </div>
@@ -1557,55 +1557,11 @@
     </div>
 </section>
 
-<!-- 24. HIGH-FIDELITY EPS, PENUMBRA TRANSIT & BATTERY HEALTH -->
-<section class="section-block" id="sec-24" data-tab="subsystems" style="--sec-order: 24;">
+<!-- 24. EARTH OBSERVATION COVERAGE HEATMAP & DYNAMIC SENSOR FOOTPRINT (SPRINT 32) -->
+<section class="section-block" id="sec-eo-raycast" data-tab="overview" style="--sec-order: 24;">
     <div class="section-header">
         <div>
-            <h2>24. High-Fidelity EPS, Penumbra Transit &amp; Battery Health</h2>
-            <span>Conical Umbra/Penumbra Eclipse Model &bull; Solar Array &eta;<sub>T</sub> = &eta;<sub>0</sub>[1 &minus; &beta;(T &minus; T<sub>ref</sub>)] &amp; TID MPPT &bull; Nonlinear Li-Ion V<sub>batt</sub>(SoC) Discharge &amp; Cyclic DoD SoH Fade</span>
-        </div>
-        <span class="badge" id="epsStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
-    </div>
-
-    <div class="ipl-kpi-grid">
-        <div class="kpi-card" style="--kpi-accent: var(--amber);">
-            <div class="kpi-top"><span class="kpi-label">Peak DoD [%]</span><span class="kpi-micro-badge" id="epsKpiDodBadge">CYCLIC</span></div>
-            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiPeakDod">---</span><span class="kpi-unit">%</span></div>
-            <div class="kpi-sub" id="epsKpiPeakDodSub">---</div>
-        </div>
-        <div class="kpi-card" style="--kpi-accent: var(--green);">
-            <div class="kpi-top"><span class="kpi-label">End-of-Life Battery Health (SoH) [%]</span><span class="kpi-micro-badge" id="epsKpiSohBadge" style="color:var(--green);border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.14);">5-YR EOL</span></div>
-            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiEolSoh">---</span><span class="kpi-unit">%</span></div>
-            <div class="kpi-sub" id="epsKpiEolSohSub">---</div>
-        </div>
-        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
-            <div class="kpi-top"><span class="kpi-label">Minimum Bus Voltage [V]</span><span class="kpi-micro-badge" id="epsKpiConfigBadge">8S4P</span></div>
-            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiMinBusV">---</span><span class="kpi-unit">V</span></div>
-            <div class="kpi-sub" id="epsKpiMinBusVSub">---</div>
-        </div>
-        <div class="kpi-card" style="--kpi-accent: var(--purple);">
-            <div class="kpi-top"><span class="kpi-label">MPPT &amp; Array Efficiency</span><span class="kpi-micro-badge" id="epsKpiCellBadge">GaAs 3J</span></div>
-            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiMpptEff">---</span><span class="kpi-unit">%</span></div>
-            <div class="kpi-sub" id="epsKpiMpptEffSub">---</div>
-        </div>
-        <div class="kpi-card" style="--kpi-accent: var(--cyan-bright);">
-            <div class="kpi-top"><span class="kpi-label">Peak Solar Generation</span></div>
-            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiPeakSolar">---</span><span class="kpi-unit">W</span></div>
-            <div class="kpi-sub" id="epsKpiPeakSolarSub">---</div>
-        </div>
-    </div>
-
-    <div class="rdv-grid-2">
-        <div id="plotEpsPenumbraSolar" class="plot-container-rdv"></div>
-        <div id="plotEpsBatteryDischarge" class="plot-container-rdv"></div>
-    </div>
-</section>
-
-<!-- 23 / 25. EARTH OBSERVATION COVERAGE HEATMAP & DYNAMIC SENSOR FOOTPRINT (SPRINT 32) -->
-<section class="section-block" id="sec-eo-raycast" data-tab="overview" style="--sec-order: 25;">
-    <div class="section-header">
-        <div>
-            <h2>25. Earth Observation Coverage Heatmap &amp; Dynamic Sensor Footprint</h2>
+            <h2>24. Earth Observation Coverage Heatmap &amp; Dynamic Sensor Footprint</h2>
             <span>6-DOF Quaternion Boresight (+Z<sub>body</sub>) WGS84 Ellipsoid Raycasting &bull; Trapezoidal Swath Polygon &amp; Off-Nadir Pixel Smearing &bull; Synthetic Onboard Camera &amp; Cumulative Global Heatmap</span>
         </div>
         <span class="badge" id="eoStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
@@ -1642,6 +1598,50 @@
     <div class="rdv-grid-2">
         <div id="plotEoSyntheticCamera" class="plot-container-rdv"></div>
         <div id="plotEoCoverageHeatmap" class="plot-container-rdv"></div>
+    </div>
+</section>
+
+<!-- 25. HIGH-FIDELITY EPS, PENUMBRA TRANSIT & BATTERY HEALTH -->
+<section class="section-block" id="sec-24" data-tab="subsystems" style="--sec-order: 25;">
+    <div class="section-header">
+        <div>
+            <h2>25. High-Fidelity EPS, Penumbra Transit &amp; Battery Health</h2>
+            <span>Conical Umbra/Penumbra Eclipse Model &bull; Solar Array &eta;<sub>T</sub> = &eta;<sub>0</sub>[1 &minus; &beta;(T &minus; T<sub>ref</sub>)] &amp; TID MPPT &bull; Nonlinear Li-Ion V<sub>batt</sub>(SoC) Discharge &amp; Cyclic DoD SoH Fade</span>
+        </div>
+        <span class="badge" id="epsStatusBadge" style="color:var(--text-muted); border-color:var(--text-muted);">&#9203; STANDBY / AWAITING DATA</span>
+    </div>
+
+    <div class="ipl-kpi-grid">
+        <div class="kpi-card" style="--kpi-accent: var(--amber);">
+            <div class="kpi-top"><span class="kpi-label">Peak DoD [%]</span><span class="kpi-micro-badge" id="epsKpiDodBadge">CYCLIC</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiPeakDod">---</span><span class="kpi-unit">%</span></div>
+            <div class="kpi-sub" id="epsKpiPeakDodSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--green);">
+            <div class="kpi-top"><span class="kpi-label">End-of-Life Battery Health (SoH) [%]</span><span class="kpi-micro-badge" id="epsKpiSohBadge" style="color:var(--green);border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.14);">5-YR EOL</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiEolSoh">---</span><span class="kpi-unit">%</span></div>
+            <div class="kpi-sub" id="epsKpiEolSohSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Minimum Bus Voltage [V]</span><span class="kpi-micro-badge" id="epsKpiConfigBadge">8S4P</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiMinBusV">---</span><span class="kpi-unit">V</span></div>
+            <div class="kpi-sub" id="epsKpiMinBusVSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--purple);">
+            <div class="kpi-top"><span class="kpi-label">MPPT &amp; Array Efficiency</span><span class="kpi-micro-badge" id="epsKpiCellBadge">GaAs 3J</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiMpptEff">---</span><span class="kpi-unit">%</span></div>
+            <div class="kpi-sub" id="epsKpiMpptEffSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--cyan-bright);">
+            <div class="kpi-top"><span class="kpi-label">Peak Solar Generation</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="epsKpiPeakSolar">---</span><span class="kpi-unit">W</span></div>
+            <div class="kpi-sub" id="epsKpiPeakSolarSub">---</div>
+        </div>
+    </div>
+
+    <div class="rdv-grid-2">
+        <div id="plotEpsPenumbraSolar" class="plot-container-rdv"></div>
+        <div id="plotEpsBatteryDischarge" class="plot-container-rdv"></div>
     </div>
 </section>
 
@@ -2511,6 +2511,20 @@
     // UI SHELL: PLOTLY THEME (transparent + Inter), TAB NAVIGATION, KPI CARDS
     // =========================================================================
     (function installPlotlyTheme() {
+        // BUG-01 offline resilience: never crash the script if Plotly CDN is blocked/offline
+        if (typeof window.Plotly === 'undefined') {
+            console.warn('[Bootstrap] Plotly CDN unavailable; installing safe offline stub so solver & telemetry still run.');
+            const stubPlot = (gd) => {
+                const el = (typeof gd === 'string') ? document.getElementById(gd) : gd;
+                if (el && !el.dataset.offlineStub) {
+                    el.dataset.offlineStub = '1';
+                    el.innerHTML = '<div style="padding:18px;color:#94a3b8;font-size:12px;">[Offline Mode] Telemetry computed; Plotly CDN unavailable for chart canvas.</div>';
+                }
+                return Promise.resolve(el);
+            };
+            window.Plotly = { newPlot: stubPlot, react: stubPlot, restyle: () => Promise.resolve(), relayout: () => Promise.resolve(), Plots: { resize: () => {} } };
+            return;
+        }
         const themeLayout = (l) => {
             l = l || {};
             l.paper_bgcolor = 'rgba(0,0,0,0)';
@@ -2522,25 +2536,27 @@
         };
         ['newPlot', 'react'].forEach(fn => {
             const orig = Plotly[fn];
-            Plotly[fn] = function(gd, data, layout, config) {
-                return orig.call(Plotly, gd, data, themeLayout(layout), config);
-            };
+            if (typeof orig === 'function') {
+                Plotly[fn] = function(gd, data, layout, config) {
+                    return orig.call(Plotly, gd, data, themeLayout(layout), config);
+                };
+            }
         });
     })();
 
     const TAB_META = {
         overview:   { title: '\u{1F30D} Overview & 3D Astrodynamics', sub: 'Executive KPIs, 3D WGS84 inertial trajectory, 2D ground track, EO WGS84 raycasting heatmap & maneuver data sheet',
-                      jumps: [['sec-1', '3D Globe'], ['sec-4', 'Ground Track'], ['sec-eo-raycast', '25. EO Coverage & Camera'], ['sec-2', 'Data Sheet']] },
+                      jumps: [['sec-1', '3D Globe'], ['sec-4', 'Ground Track'], ['sec-eo-raycast', '24. EO Coverage & Camera'], ['sec-2', 'Data Sheet']] },
         transfer:   { title: '\u{1F680} Transfer, Lambert & Cislunar', sub: 'Lambert \u0394V trade-off, Monte Carlo 3\u03C3 & TCM, CR3BP Lagrange points / Halo orbit, interplanetary porkchop (C\u2083), gravity assist, aerocapture & solar sail',
                       jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary & Flyby'], ['sec-25', '26. Aerocapture'], ['sec-26', '27. Solar Sail SRP']] },
         gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, multi-satellite formation flying (ROEs), reaction wheels, GNSS/XNAV Pulsar EKF (1PN GR), structure/slosh CSI',
                       jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF & XNAV (1PN GR)'], ['sec-16', 'Flex/Slosh CSI'], ['sec-19', 'Formation ROEs']] },
         subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF & Payload)', sub: 'High-fidelity EPS & conical penumbra, kinematics/radar, thermal & radiation, RF link budget, Walker constellation, SSR buffer, optical ISL & DSN tracking',
-                      jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops'], ['sec-22', 'Optical ISL'], ['sec-23', 'Ground Network'], ['sec-24', 'Hi-Fi EPS']] },
+                      jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops'], ['sec-22', 'Optical ISL'], ['sec-23', '23. Ground Network'], ['sec-24', '25. Hi-Fi EPS']] },
         safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL, FDIR & Space Weather)', sub: 'B-Plane collision avoidance, 3-phase EDL re-entry, Martian aerocapture corridor, autonomous FDIR & space weather orbital decay',
                       jumps: [['sec-13', 'SSA / CAM'], ['sec-14', 'EoL & EDL'], ['sec-17', 'FDIR'], ['sec-21', 'Space Weather'], ['sec-25', '26. Aerocapture']] },
         all:        { title: '\u{1F4D6} Full Report View', sub: 'Complete engineering dossier \u2014 Sections 1 to 27',
-                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22'], ['sec-23', '23'], ['sec-24', '24'], ['sec-eo-raycast', '25. EO Raycast'], ['sec-25', '26. Aerocapture'], ['sec-26', '27. Solar Sail']] }
+                      jumps: [['sec-1', '1'], ['sec-3', '3'], ['sec-6', '6'], ['sec-9', '9'], ['sec-12', '12'], ['sec-15', '15'], ['sec-17', '17'], ['sec-18', '18'], ['sec-19', '19'], ['sec-20', '20'], ['sec-21', '21'], ['sec-22', '22'], ['sec-23', '23'], ['sec-eo-raycast', '24. EO Raycast'], ['sec-24', '25. Hi-Fi EPS'], ['sec-25', '26. Aerocapture'], ['sec-26', '27. Solar Sail']] }
     };
 
     function resizeVisiblePlots() {
@@ -3338,41 +3354,44 @@
     function applyBadge(el, st) {
         if (!el || !st) return;
         el.innerHTML = st.html;
+        el.style.display = st.hidden ? 'none' : '';
         el.style.color = MST_BADGE_COLORS[st.color] || MST_BADGE_COLORS.grey;
         el.style.borderColor = MST_BADGE_COLORS[st.color] || MST_BADGE_COLORS.grey;
         el.style.background = '';
         if (el.id) window.missionState.badges[el.id] = { level: st.level, text: el.textContent };
     }
 
-    // BUG-05: Pure function for Rendezvous CW Capture Verification (Module #6)
+    // BUG-04/05: Pure function for Rendezvous CW Capture Verification (Module #6)
+    // Visible & verified ONLY if relDist !== null && Number.isFinite(relDist) && relDist < 0.05 && Number.isFinite(dv)
     function computeRdvStatus(s) {
-        const dv = s && s.dv, fuel = s && s.fuel, range = s && s.range, rel_vel = s && s.rel_vel;
-        if (!(Number.isFinite(dv) && Number.isFinite(fuel) && Number.isFinite(range) && Number.isFinite(rel_vel))) {
-            return { level: 'pending', color: 'grey', html: '&#9203; DATA PENDING' };
+        const dv = s ? s.dv : null, fuel = s ? s.fuel : null, relDist = s ? s.range : null, rel_vel = s ? s.rel_vel : null;
+        if (relDist === null || !Number.isFinite(relDist) || !Number.isFinite(dv) || !Number.isFinite(fuel) || !Number.isFinite(rel_vel)) {
+            return { level: 'pending', color: 'grey', hidden: false, html: '&#9203; DATA PENDING' };
         }
-        if (range < 0.1 && rel_vel < 0.01) {
+        if (relDist < 0.05 && rel_vel < 0.01) {
             return {
-                level: 'verified', color: 'green',
+                level: 'verified', color: 'green', hidden: false,
                 html: `&#10004; SOFT-DOCKING CAPTURE VERIFIED ([${(s.end || [0, 0, 0]).join(', ')}] m | ${rel_vel.toFixed(2)} m/s)`
             };
         }
         return {
-            level: 'approach', color: 'amber',
-            html: `&#9654; APPROACH IN PROGRESS (Range ${range.toFixed(1)} m | v<sub>rel</sub> ${rel_vel.toFixed(2)} m/s)`
+            level: 'approach', color: 'amber', hidden: false,
+            html: `&#9654; APPROACH IN PROGRESS (Range ${relDist.toFixed(2)} m | v<sub>rel</sub> ${rel_vel.toFixed(2)} m/s)`
         };
     }
 
-    // BUG-06: Pure function for SSA Conjunction Alert Level (Module #13)
+    // BUG-04/06: Pure function for SSA Conjunction Alert Level (Module #13)
+    // Red alert ONLY if secondaryTarget && collisionProb !== null && Number.isFinite(collisionProb) && collisionProb > 1e-4
     function computeSsaStatus(cam) {
-        const secondary_target = cam && cam.debris_id;
-        const hasTarget = (typeof secondary_target === 'string') && secondary_target.trim() !== '' && secondary_target.trim() !== '---';
-        const Pc = cam ? +cam.pre_pc : NaN;
-        if (!hasTarget) return { level: 'none', color: 'grey', html: '&#9898; NO ACTIVE CONJUNCTION' };
-        if (!Number.isFinite(Pc)) return { level: 'pending', color: 'grey', html: '&#9203; DATA PENDING' };
-        const pcTxt = Pc.toExponential(2);
-        if (Pc > 1e-4) return { level: 'red', color: 'red', html: `&#9888; RED CONJUNCTION ALERT (P<sub>c</sub> = ${pcTxt} &gt; 10<sup>-4</sup> &mdash; CAM MANDATORY)` };
-        if (Pc > 1e-5) return { level: 'yellow', color: 'amber', html: `&#9888; YELLOW WATCH (P<sub>c</sub> = ${pcTxt} &le; 10<sup>-4</sup>)` };
-        return { level: 'green', color: 'green', html: `&#9989; GREEN / NOMINAL SEPARATION (P<sub>c</sub> = ${pcTxt} &le; 10<sup>-5</sup>)` };
+        const secondaryTarget = cam && cam.debris_id;
+        const hasTarget = (typeof secondaryTarget === 'string') && secondaryTarget.trim() !== '' && secondaryTarget.trim() !== '---';
+        const collisionProb = (cam && cam.pre_pc !== null && cam.pre_pc !== undefined) ? +cam.pre_pc : null;
+        if (!hasTarget) return { level: 'none', color: 'grey', hidden: false, html: '&#9898; NO ACTIVE CONJUNCTION' };
+        if (collisionProb === null || !Number.isFinite(collisionProb)) return { level: 'pending', color: 'grey', hidden: false, html: '&#9203; DATA PENDING' };
+        const pcTxt = collisionProb.toExponential(2);
+        if (collisionProb > 1e-4) return { level: 'red', color: 'red', hidden: false, html: `&#9888; RED CONJUNCTION ALERT (P<sub>c</sub> = ${pcTxt} &gt; 10<sup>-4</sup> &mdash; CAM MANDATORY)` };
+        if (collisionProb > 1e-5) return { level: 'yellow', color: 'amber', hidden: false, html: `&#9888; YELLOW WATCH (P<sub>c</sub> = ${pcTxt} &le; 10<sup>-4</sup>)` };
+        return { level: 'green', color: 'green', hidden: false, html: `&#9989; GREEN / NOMINAL SEPARATION (P<sub>c</sub> = ${pcTxt} &le; 10<sup>-5</sup>)` };
     }
 
     // BUG-07: Pure function for Operations SSR & ECSS/NASA PDR Readiness (Module #20)
@@ -12828,7 +12847,7 @@
                 hovertemplate: 't = %{x:.1f} min<br>Conical Shadow Occultation = %{y:.1f}%<extra></extra>'
             }
         ], {
-            title: { text: `24A. Solar Power Generation [W], Subsystem Load & Conical Penumbra/Umbra Transit`, font: { color: '#e2e8f0', size: 12.2 } },
+            title: { text: `25A. Solar Power Generation [W], Subsystem Load & Conical Penumbra/Umbra Transit`, font: { color: '#e2e8f0', size: 12.2 } },
             margin: { l: 58, r: 58, b: 48, t: 40 },
             hovermode: 'x unified',
             xaxis: { title: 'Mission Timeline t [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
@@ -12872,7 +12891,7 @@
                 hovertemplate: 't = %{x:.1f} min<br>Projected Lifecycle SoH = %{y:.2f}%<extra></extra>'
             }
         ], {
-            title: { text: `24B. Li-Ion Nonlinear Bus Voltage Curve V_bus [V], Cyclic SoC/DoD & 5-Yr SoH Degradation`, font: { color: '#e2e8f0', size: 12.2 } },
+            title: { text: `25B. Li-Ion Nonlinear Bus Voltage Curve V_bus [V], Cyclic SoC/DoD & 5-Yr SoH Degradation`, font: { color: '#e2e8f0', size: 12.2 } },
             margin: { l: 58, r: 58, b: 48, t: 40 },
             hovermode: 'x unified',
             xaxis: { title: 'Mission Timeline t [minutes]', color: '#e2e8f0', gridcolor: '#222d42' },
@@ -13361,7 +13380,7 @@
                 hoverinfo: 'name'
             }
         ], {
-            title: { text: `25A. Synthetic Onboard Boresight Camera View (Curved WGS84 Disk & Trapezoidal FOV Pyramid)`, font: { color: '#e2e8f0', size: 12.0 } },
+            title: { text: `24A. Synthetic Onboard Boresight Camera View (Curved WGS84 Disk & Trapezoidal FOV Pyramid)`, font: { color: '#e2e8f0', size: 12.0 } },
             margin: { l: 8, r: 8, b: 8, t: 38 },
             scene: {
                 domain: { x: [0.0, 1.0], y: [0.0, 1.0] },
@@ -13457,7 +13476,7 @@
         eoBoreTraceIdx = 4;
 
         Plotly.react('plotEoCoverageHeatmap', heatmapTraces, {
-            title: { text: `25B. Cumulative Global Coverage Heatmap (${Number(pm.global_coverage_pct).toFixed(1)}%) & Trapezoidal FOV Polygon`, font: { color: '#e2e8f0', size: 12.0 } },
+            title: { text: `24B. Cumulative Global Coverage Heatmap (${Number(pm.global_coverage_pct).toFixed(1)}%) & Trapezoidal FOV Polygon`, font: { color: '#e2e8f0', size: 12.0 } },
             margin: { l: 52, r: 42, b: 46, t: 38 },
             xaxis: { title: 'Geodetic Longitude \u03bb [deg]', color: '#e2e8f0', gridcolor: '#1e293b', range: [-180, 180], dtick: 60 },
             yaxis: { title: 'Geodetic Latitude \u03c6 [deg]', color: '#e2e8f0', gridcolor: '#1e293b', range: [-90, 90], dtick: 30 },
