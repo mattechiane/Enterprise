@@ -5782,12 +5782,19 @@
             <div class="stat-line"><span class="stat-label">L<sub>4</sub> / L<sub>5</sub> Trojan:</span><span class="stat-val" style="color:#d500f9">[+${cisInfo.l4_x_km}, &plusmn;${cisInfo.l4_y_km}] km</span></div>
         `;
 
+        var cisParkAltKm = [
+            cisInfo.leo_parking_alt_km,
+            data.initial_report?.alt_km,
+            (Number(data.initial_report?.sma_km) > R_EQ) ? (Number(data.initial_report.sma_km) - R_EQ) : NaN,
+            parseFloat(document.getElementById('initAlt')?.value)
+        ].map(v => (v === null || v === undefined || v === '') ? NaN : Number(v)).find(Number.isFinite) ?? 400.0;
+
         document.getElementById('cislunarCardBurns').innerHTML = `
             <h3>Cislunar &Delta;V &amp; TOF</h3>
             <div class="stat-line"><span class="stat-label">TLI Injection &Delta;V<sub>TLI</sub>:</span><span class="stat-val" style="color:#00e5ff">${cisInfo.dv_tli_ms} m/s</span></div>
             <div class="stat-line"><span class="stat-label">Halo / LOI Insertion &Delta;V:</span><span class="stat-val" style="color:#00e676">${cisInfo.dv_loi_ms} m/s</span></div>
             <div class="stat-line"><span class="stat-label">Total Cislunar &Delta;V:</span><span class="stat-val" style="color:#ffab00">${cisInfo.total_cislunar_dv_ms} m/s</span></div>
-            <div class="stat-line"><span class="stat-label">Cislunar Transfer TOF:</span><span class="stat-val">${cisInfo.tof_days} days (h<sub>0</sub>=${cisInfo.leo_parking_alt_km} km)</span></div>
+            <div class="stat-line"><span class="stat-label">Cislunar Transfer TOF:</span><span class="stat-val">${cisInfo.tof_days} days (h<sub>0</sub>=${cisParkAltKm.toFixed(1)} km)</span></div>
         `;
 
         document.getElementById('cislunarCardHalo').innerHTML = `
