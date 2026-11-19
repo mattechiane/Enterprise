@@ -12,6 +12,8 @@
 #define EARTH_J2 0.00108262668                  // Coefficiente armonico zonale J2
 #define EARTH_OMEGA 7.2921158553e-5             // Velocità angolare di rotazione terrestre (rad/s)
 #define G0 9.80665                              // Accelerazione di gravità standard (m/s^2)
+#define SPEED_OF_LIGHT_KMS 299792.458           // Velocità della luce nel vuoto c [km/s]
+#define SPEED_OF_LIGHT_MS  299792458.0          // Velocità della luce nel vuoto c [m/s]
 
 // ==========================================
 // 2. MATEMATICA E GEOMETRIA
@@ -875,6 +877,7 @@ typedef struct {
     bool enable_j2;
     bool enable_drag;
     Vector3D sun_dir;
+    bool enable_gr_1pn; // Sprint 37: Correzione accelerativa Relatività Generale Post-Newtoniana (1PN)
 } ForceModelConfig;
 
 typedef struct {
@@ -1684,5 +1687,92 @@ typedef struct {
     int    num_samples;
     BLTWSBSample samples[MAX_BLT_WSB_SAMPLES];
 } BLTWSBReport;
+
+// ==========================================
+// 5Y. SPRINT 37: GENERAL RELATIVITY (1PN POST-NEWTONIAN) & X-RAY PULSAR NAVIGATION (XNAV)
+// ==========================================
+#define MAX_XNAV_SAMPLES  151   // Campioni temporali dell'arco di navigazione autonoma XNAV Deep Space
+#define NUM_XNAV_PULSARS  3     // Numero di Pulsar a Raggi X di riferimento (Crab, Vela, PSR J0030+0451)
+
+typedef enum {
+    NAV_SOURCE_GNSS_LEO        = 0, // Ricevitore GNSS multi-costellazione (LEO / MEO)
+    NAV_SOURCE_XNAV_DEEP_SPACE = 1  // Navigazione Autonoma a Pulsar a Raggi X (XNAV Deep Space + 1PN GR)
+} AutonomousNavSource;
+
+typedef enum {
+    ATOMIC_CLOCK_DSAC = 0, // Deep Space Atomic Clock (Hg+ Trapped-Ion, stabilità Allan ~ 1e-14)
+    ATOMIC_CLOCK_CSAC = 1  // Chip-Scale Atomic Clock (Rubidio/Cesio compatto, stabilità Allan ~ 1e-11)
+} AtomicClockClass;
+
+typedef struct {
+    char     name[48];         // Nome della Pulsar (es. "Crab Pulsar", "Vela Pulsar", "PSR J0030+0451")
+    char     catalog_id[32];   // Identificativo catalogo astronomico (es. "PSR B0531+21")
+    double   ra_deg;           // Ascensione Retta J2000 ICRF [deg]
+    double   dec_deg;          // Declinazione J2000 ICRF [deg]
+    double   period_ms;        // Periodo di rotazione della stella di neutroni [ms]
+    double   sigma_toa_us;     // Incertezza 1-sigma del Time-Of-Arrival (TOA) dei fotoni X [microsecondi]
+    double   dist_kpc;         // Distanza galattica stimata dal Sistema Solare [kpc]
+    Vector3D unit_vec;         // Versore di linea di vista ICRF n_hat = [cos(d)cos(a), cos(d)sin(a), sin(d)]
+} XRayPulsarRef;
+
+typedef struct {
+    AutonomousNavSource nav_source;          // Sorgente di navigazione autonoma (0=GNSS LEO, 1=XNAV Deep Space)
+    AtomicClockClass    clock_class;         // Classe orologio atomico di bordo (0=DSAC, 1=CSAC)
+    double              deep_space_dist_mkm; // Distanza nominale Deep Space dalla Terra [milioni di km] (default 45.0 Mkm)
+    double              nav_arc_days;        // Durata dell'arco di navigazione XNAV [giorni] (default 30.0 d)
+    double              init_pos_sigma_km;   // Incertezza iniziale 1-sigma a priori in Deep Space [km] (default 250.0 km)
+    double              init_vel_sigma_ms;   // Incertezza iniziale 1-sigma sulla velocità [m/s] (default 15.0 m/s)
+    double              init_clock_bias_us;  // Bias iniziale dell'orologio atomico di bordo [us] (default 50.0 us)
+} XNAVRelativitySpec;
+
+typedef struct {
+    double t_days;              // Tempo trascorso dall'inizio dell'arco di navigazione [giorni]
+    double earth_dist_mkm;      // Distanza istantanea dalla Terra [milioni di km]
+    double r_sun_au;            // Distanza eliocentrica istantanea dal Sole [AU]
+    double raw_toa_err_km;      // Errore equivalente di singola epoca TOA pulsar non filtrato [km]
+    double ekf_pos_err_km;      // Errore 3D di posizione stimata dall'EKF XNAV a 8 stati ||r_hat - r_true|| [km]
+    double cov_3sigma_km;       // Inviluppo teorico 3-sigma di posizione EKF XNAV [km]
+    double vel_err_ms;          // Errore 3D di velocità stimata dall'EKF XNAV [m/s]
+    double clock_err_us;        // Errore residuo di stima del bias dell'orologio atomico di bordo [microsecondi]
+    double dilation_offset_ns;  // Offset cumulativo di dilatazione temporale relativistica (Proper vs Coord) [ns]
+    double gr_accel_nms2;       // Modulo dell'accelerazione Post-Newtoniana 1PN ||a_GR|| [nm/s^2]
+    double shapiro_ns;          // Ritardo gravitazionale relativistico di Shapiro medio sui fotoni X [ns]
+} XNAVSample;
+
+typedef struct {
+    XNAVRelativitySpec spec;
+    char   nav_source_name[80];          // Descrizione sorgente attiva
+    char   atomic_clock_model[64];       // Modello orologio atomico di bordo nel vettore di stato EKF (8 stati)
+    XRayPulsarRef pulsars[NUM_XNAV_PULSARS]; // Catalogo 3 Pulsar X-Ray di riferimento (Crab, Vela, J0030+0451)
+
+    // Metriche Relatività Generale (1PN Post-Newtoniana & Dilatazione Temporale)
+    double clock_drift_ns_day;           // Deriva orologio relativistica netta (Proper vs TT/Coord) [ns/day]
+    double grav_drift_ns_day;            // Contributo gravitazionale (Redshift/Blueshift Einstein) [ns/day]
+    double vel_drift_ns_day;             // Contributo cinematico (Relatività Ristretta -v^2/2c^2) [ns/day]
+    double leo_clock_drift_ns_day;       // Riferimento deriva orologio relativistica in orbita LEO target [ns/day]
+    double cumulative_dilation_ns;       // Offset cumulativo dilatazione temporale sull'arco [ns]
+    double precession_arcsec_century;    // Precessione relativistica del pericentro (1PN) [arcsec/century]
+    double leo_precession_arcsec_century;// Precessione relativistica 1PN in orbita LEO target [arcsec/century]
+    double gr_accel_peak_ms2;            // Accelerazione Post-Newtoniana 1PN di picco ||a_GR|| [m/s^2]
+    double gr_pos_deviation_m;           // Scostamento posizionale cumulato 1PN vs Newtoniano puro sull'arco [m]
+    double mean_shapiro_delay_ns;        // Ritardo medio di Shapiro (curvatura solare sui raggi X) [ns]
+
+    // Metriche Filtro EKF XNAV a 8 Stati [r(3), v(3), b_clk, d_clk]
+    double ekf_xnav_pos_error_km;        // Errore di posizione RMSE a regime dell'EKF XNAV [km]
+    double ekf_xnav_final_err_km;        // Errore di posizione 3D finale a fine arco [km]
+    double ekf_xnav_cov_3sigma_km;       // Inviluppo teorico 3-sigma finale dell'EKF XNAV [km]
+    double ekf_xnav_vel_error_ms;        // Errore di velocità RMSE a regime dell'EKF XNAV [m/s]
+    double ekf_xnav_clock_err_us;        // Errore residuo finale del bias orologio atomico [us]
+    double ekf_xnav_clock_err_ns;        // Errore residuo finale del bias orologio atomico [ns]
+    double convergence_days;             // Tempo di convergenza EKF XNAV sotto soglia 10 km [giorni]
+    double consistency_3sigma_pct;       // Percentuale campioni entro l'inviluppo 3-sigma [%]
+    double pulsar_gdop;                  // Geometric Dilution of Precision (GDOP) della triade di Pulsar
+    double earth_dist_start_mkm;         // Distanza iniziale dalla Terra [milioni di km]
+    double earth_dist_end_mkm;           // Distanza finale dalla Terra [milioni di km]
+    double earth_dist_mean_mkm;          // Distanza media dalla Terra [milioni di km]
+
+    int        num_samples;
+    XNAVSample samples[MAX_XNAV_SAMPLES];
+} XNAVRelativityReport;
 
 #endif // ORBIT_TYPES_H

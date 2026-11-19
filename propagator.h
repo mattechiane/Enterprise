@@ -19,6 +19,10 @@ Vector3D accel_j2(Vector3D pos);
 // Calcola l'accelerazione di frenamento aerodinamico - Drag (km/s^2)
 Vector3D accel_drag(CartesianState state, const SpacecraftConfig *sc, double density);
 
+// Sprint 37: Calcola la correzione accelerativa Post-Newtoniana (1PN) di Relatività Generale (km/s^2)
+// a_GR = (mu / (c^2 * r^3)) * [ (4*mu/r - v^2)*r + 4*(r.v)*v ]
+Vector3D accel_gr_1pn(Vector3D pos, Vector3D vel, double mu);
+
 // Equazione differenziale completa del moto: calcola derivate di posizione, velocità e massa
 StateDerivative compute_derivatives(CartesianState state, const SpacecraftConfig *sc, const ForceModelConfig *forces);
 

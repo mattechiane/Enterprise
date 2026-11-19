@@ -70,6 +70,32 @@ Vector3D accel_drag(CartesianState state, const SpacecraftConfig *sc, double den
     return vec_scale(state.velocity, coeff);
 }
 
+// Sprint 37: Correzione accelerativa Post-Newtoniana (1PN) di Relatività Generale (Schwarzschild Isotropo)
+// a_GR = (mu / (c^2 * r^3)) * [ (4*mu/r - v^2)*r + 4*(r.v)*v ]   [km/s^2]
+Vector3D accel_gr_1pn(Vector3D pos, Vector3D vel, double mu) {
+    double r2 = vec_dot(pos, pos);
+    if (r2 < 1e-6) {
+        Vector3D zero = {0.0, 0.0, 0.0};
+        return zero;
+    }
+    double r    = sqrt(r2);
+    double r3   = r2 * r;
+    double v2   = vec_dot(vel, vel);
+    double rdv  = vec_dot(pos, vel);
+    double c2   = SPEED_OF_LIGHT_KMS * SPEED_OF_LIGHT_KMS;
+    double pref = mu / (c2 * r3);
+
+    double radial_coeff = (4.0 * mu / r) - v2;
+    double vel_coeff    = 4.0 * rdv;
+
+    Vector3D a_gr = {
+        pref * (radial_coeff * pos.x + vel_coeff * vel.x),
+        pref * (radial_coeff * pos.y + vel_coeff * vel.y),
+        pref * (radial_coeff * pos.z + vel_coeff * vel.z)
+    };
+    return a_gr;
+}
+
 StateDerivative compute_derivatives(CartesianState state, const SpacecraftConfig *sc, const ForceModelConfig *forces) {
     StateDerivative deriv = {0};
     deriv.d_position = state.velocity;
@@ -90,6 +116,11 @@ StateDerivative compute_derivatives(CartesianState state, const SpacecraftConfig
     if (forces->enable_drag) {
         SpaceEnvironment env = evaluate_environment(state.position, forces->sun_dir);
         a_total = vec_add(a_total, accel_drag(state, sc, env.air_density));
+    }
+
+    // 3B. Sprint 37: Perturbazione Relatività Generale Post-Newtoniana (1PN)
+    if (forces->enable_gr_1pn) {
+        a_total = vec_add(a_total, accel_gr_1pn(state.position, state.velocity, EARTH_MU));
     }
 
     // 4. Propulsione (Spinta finita e consumo massa)

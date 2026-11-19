@@ -272,6 +272,18 @@ int main(void) {
         .target_apogee_mkm = 1.512                   // Apogeo a 1.512 milioni di km verso L1 Sole-Terra
     };
     BLTWSBReport blt = simulate_blt_wsb_transfer(orb_initial, plan, cislunar, blt_spec);
+
+    // 28. SPRINT 37: GENERAL RELATIVITY (1PN POST-NEWTONIAN) & X-RAY PULSAR NAVIGATION (XNAV)
+    XNAVRelativitySpec xnav_spec = {
+        .nav_source          = NAV_SOURCE_XNAV_DEEP_SPACE, // X-Ray Pulsar Timing autonomo in Deep Space
+        .clock_class         = ATOMIC_CLOCK_DSAC,          // Deep Space Atomic Clock (Hg+ Trapped-Ion)
+        .deep_space_dist_mkm = 45.0,                       // Distanza iniziale Deep Space dalla Terra [Mkm]
+        .nav_arc_days        = 30.0,                       // Arco di navigazione autonoma XNAV [giorni]
+        .init_pos_sigma_km   = 250.0,                      // Incertezza iniziale 1-sigma a priori [km]
+        .init_vel_sigma_ms   = 15.0,                       // Incertezza iniziale 1-sigma sulla velocità [m/s]
+        .init_clock_bias_us  = 5.0                         // Bias iniziale orologio atomico DSAC di bordo [us]
+    };
+    XNAVRelativityReport xnav = simulate_xnav_relativity_ekf(orb_target, nav, xnav_spec, EARTH_MU);
     printf("[OPTIMAL MANEUVER SELECTED]: %s\n", plan.maneuver_name);
     printf("  * Propellant            : %s [%s] (Isp = %.1f s)\n", plan.prop_info.name, plan.prop_info.category, plan.prop_info.isp);
     printf("  * Burn 1 Point (ECI)    : [ %+9.2f, %+9.2f, %+9.2f ] km (Lat %.1f deg, Lon %.1f deg)\n",
@@ -566,15 +578,26 @@ int main(void) {
     printf("  * Lunar LOI dV Savings  : Direct LOI = %.1f m/s -> BLT/WSB LOI = %.1f m/s (Saved = +%.1f m/s | %.1f kg Fuel!)\n\n",
            blt.loi_dv_direct_ms, blt.loi_dv_blt_ms, blt.loi_dv_saved_ms, blt.fuel_saved_kg);
 
+    printf("[GENERAL RELATIVITY (1PN POST-NEWTONIAN) & X-RAY PULSAR NAVIGATION (XNAV 8-STATE EKF)]\n");
+    printf("  * Active Nav Source     : %s\n", xnav.nav_source_name);
+    printf("  * Onboard Atomic Clock  : %s | 3 Pulsars: %s, %s, %s (GDOP = %.2f)\n",
+           xnav.atomic_clock_model, xnav.pulsars[0].name, xnav.pulsars[1].name, xnav.pulsars[2].name, xnav.pulsar_gdop);
+    printf("  * 1PN Time Dilation     : Drift = %+.2f ns/day (Grav: %+.1f | SR Vel: %+.1f) | Cum. Offset = %+.1f ns\n",
+           xnav.clock_drift_ns_day, xnav.grav_drift_ns_day, xnav.vel_drift_ns_day, xnav.cumulative_dilation_ns);
+    printf("  * 1PN Orbital Effects   : Precession = %.4f arcsec/century (LEO Ref: %.1f \"/c) | 1PN Trajectory Drift = %.2f m\n",
+           xnav.precession_arcsec_century, xnav.leo_precession_arcsec_century, xnav.gr_pos_deviation_m);
+    printf("  * Deep Space XNAV EKF   : Range = %.1f -> %.1f Mkm | Steady RMSE = %.3f km (3-Sigma = %.3f km) | Clock Err = %.2f us\n\n",
+           xnav.earth_dist_start_mkm, xnav.earth_dist_end_mkm, xnav.ekf_xnav_pos_error_km, xnav.ekf_xnav_cov_3sigma_km, xnav.ekf_xnav_clock_err_us);
+
     if (export_ccsds_oem_file("../enterprise_mission.oem", rep_init, plan, rep_target, &sc)) {
         printf("[SUCCESS] 'enterprise_mission.oem' exported (CCSDS 502.0-B-2 OEM v2.0 Standard)!\n");
     }
     export_ccsds_oem_file("enterprise_mission.oem", rep_init, plan, rep_target, &sc);
 
-    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, sail, blt, &milano, &sc)) {
-        printf("[SUCCESS] 'mission_report.json' updated with 4-Body BLT/WSB, Solar Sail SRP, Martian Aerocapture & All Subsystems!\n");
+    if (export_web_mission_json("../mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, sail, blt, xnav, &milano, &sc)) {
+        printf("[SUCCESS] 'mission_report.json' updated with 1PN General Relativity, XNAV 8-State EKF & All Subsystems!\n");
     }
-    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, sail, blt, &milano, &sc);
+    export_web_mission_json("mission_report.json", rep_init, plan, rep_target, rdv, mc, adcs, tcs, telecom, sys, nav, cam, eol, cislunar, csi, fdir, &ipl, form, ops, swx, isl, gnd, eps, &eo, flyby, aero, sail, blt, xnav, &milano, &sc);
 
     printf("======================================================================\n");
     return 0;

@@ -901,24 +901,58 @@
     </div>
 </section>
 
-<!-- 12. TWELFTH OUTPUT BLOCK: AUTONOMOUS ONBOARD NAVIGATION & EXTENDED KALMAN FILTER (EKF) CONVERGENCE -->
+<!-- 12. TWELFTH OUTPUT BLOCK: AUTONOMOUS ONBOARD NAVIGATION, GENERAL RELATIVITY (1PN) & X-RAY PULSAR NAVIGATION (XNAV) -->
 <section class="section-block" id="sec-12" data-tab="gnc" style="--sec-order: 12;">
     <div class="section-header">
         <div>
-            <h2>12. Autonomous Onboard Navigation &amp; Extended Kalman Filter (EKF) Convergence</h2>
-            <span>Sequential 6-State EKF Orbit Determination &bull; Two-Body + J<sub>2</sub> Jacobian STM &Phi;<sub>k</sub> &bull; Joseph-Form Covariance P<sub>k|k</sub> &bull; GNSS Noise Attenuation</span>
+            <h2>12. Autonomous Onboard Navigation, General Relativity (1PN) &amp; X-Ray Pulsar Timing (XNAV)</h2>
+            <span>6-State GNSS EKF (LEO) &bull; 8-State Deep-Space XNAV EKF with Onboard Atomic Clock (Crab, Vela, PSR J0030+0451) &bull; 1PN Post-Newtonian Dynamics &amp; Proper Time Dilation</span>
         </div>
-        <span class="badge" id="ekfStatusBadge" style="color:var(--green); border-color:var(--green);">&#128752; 6-STATE EKF CONVERGED (3&sigma; COVARIANCE BOUND NOMINAL)</span>
+        <span class="badge" id="ekfStatusBadge" style="color:var(--green); border-color:var(--green);">&#128752; XNAV PULSAR EKF &amp; 1PN GR ACTIVE</span>
     </div>
 
     <div class="maneuver-banner" style="background: linear-gradient(90deg, rgba(0,229,255,0.13), rgba(0,230,118,0.11)); border-color: var(--cyan);">
         <div class="title-group">
-            <h3 id="ekfBannerTitle" style="color:var(--cyan);">SEQUENTIAL 6-STATE EXTENDED KALMAN FILTER (EKF) &amp; REAL-TIME ORBIT DETERMINATION</h3>
+            <h3 id="ekfBannerTitle" style="color:var(--cyan);">SEQUENTIAL EXTENDED KALMAN FILTER (EKF) &amp; AUTONOMOUS DEEP-SPACE XNAV</h3>
             <p id="ekfBannerSub">GNSS Sensor 1&sigma;: --- m / --- m/s &bull; Initial Uncertainty &sigma;<sub>r,0</sub>: --- m &bull; 3&sigma; Covariance Bound Status: NOMINAL</p>
         </div>
         <div class="cost-highlight">
             <div class="big-dv" id="ekfBannerRmse" style="color:var(--green);">Steady-State EKF RMSE: --- m | --- cm/s</div>
             <div class="sub-fuel" id="ekfBannerSubMetrics">GNSS Noise Attenuation: ---% | Convergence Time: --- min | 3&sigma; Bound Consistency: ---%</div>
+        </div>
+    </div>
+
+    <!-- Sprint 37 KPI Cards: General Relativity (1PN) & X-Ray Pulsar Navigation (XNAV) -->
+    <div class="ipl-kpi-grid" style="margin-bottom: 16px;">
+        <div class="kpi-card" style="--kpi-accent: var(--purple); border-color: rgba(192,132,252,0.42); background: linear-gradient(135deg, rgba(168,85,247,0.12), rgba(15,23,42,0.90));">
+            <div class="kpi-top"><span class="kpi-label">Relativistic Time Dilation Offset</span><span class="kpi-micro-badge" id="xnavKpiModeBadge" style="color:#d8b4fe; border-color:rgba(192,132,252,0.45);">1PN GR</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="xnavKpiDilation" style="color:#e9d5ff;">---</span><span class="kpi-unit">ns</span></div>
+            <div class="kpi-sub" id="xnavKpiDilationSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--green); border-color: rgba(0,230,118,0.45); background: linear-gradient(135deg, rgba(0,230,118,0.11), rgba(15,23,42,0.90));">
+            <div class="kpi-top"><span class="kpi-label">Pulsar EKF Convergence</span><span class="kpi-micro-badge" id="xnavKpiSourceBadge" style="color:#00e676; border-color:rgba(0,230,118,0.45);">XNAV 8-STATE</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="xnavKpiPosErr" style="color:#00e676;">---</span><span class="kpi-unit">km</span></div>
+            <div class="kpi-sub" id="xnavKpiPosErrSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--cyan);">
+            <div class="kpi-top"><span class="kpi-label">Relativistic Clock Drift</span><span class="kpi-micro-badge">PROPER vs TT</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="xnavKpiClockDrift">---</span><span class="kpi-unit">ns/day</span></div>
+            <div class="kpi-sub" id="xnavKpiClockDriftSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--amber);">
+            <div class="kpi-top"><span class="kpi-label">1PN Periapsis Precession</span><span class="kpi-micro-badge">EINSTEIN 1PN</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="xnavKpiPrecession">---</span><span class="kpi-unit">&Prime;/century</span></div>
+            <div class="kpi-sub" id="xnavKpiPrecessionSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: #38bdf8;">
+            <div class="kpi-top"><span class="kpi-label">Deep Space Earth Range</span><span class="kpi-micro-badge">ZERO DSN</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="xnavKpiEarthRange">---</span><span class="kpi-unit">Mkm</span></div>
+            <div class="kpi-sub" id="xnavKpiEarthRangeSub">---</div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent: var(--red);">
+            <div class="kpi-top"><span class="kpi-label">Atomic Clock Bias Error</span><span class="kpi-micro-badge" id="xnavKpiClockBadge">DSAC</span></div>
+            <div class="kpi-main-row"><span class="kpi-value" id="xnavKpiClockErr">---</span><span class="kpi-unit">&mu;s</span></div>
+            <div class="kpi-sub" id="xnavKpiClockErrSub">---</div>
         </div>
     </div>
 
@@ -944,6 +978,12 @@
     <div class="rdv-grid-2">
         <div id="plotEkfPosition" class="plot-container-rdv"></div>
         <div id="plotEkfVelocity" class="plot-container-rdv"></div>
+    </div>
+
+    <!-- Sprint 37 Plot 12C: Autonomous Deep-Space XNAV EKF Convergence & Relativistic Time Dilation -->
+    <div style="margin-top: 16px; position: relative;">
+        <div id="xnavPulsarRibbon" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; margin-bottom:10px; border-radius:10px; background:linear-gradient(90deg, rgba(15,23,42,0.92), rgba(88,28,135,0.22)); border:1px solid rgba(192,132,252,0.32); font-size:12px; color:#e2e8f0;"></div>
+        <div id="plotXnavEkfConvergence" class="plot-container-rdv" style="height: 465px; min-height: 465px;"></div>
     </div>
 </section>
 
@@ -2163,8 +2203,32 @@
 
         <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
             <div class="form-section-header">
-                <h3 style="color:var(--cyan)">10. Onboard GNSS / Extended Kalman Filter (EKF) Autonomous Navigation</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">6-State Sequential EKF (Two-Body + J<sub>2</sub> STM &Phi;<sub>k</sub> &amp; Joseph Covariance Update)</span>
+                <h3 style="color:var(--cyan)">10. Autonomous Onboard Navigation: GNSS (LEO) vs. X-Ray Pulsar Timing (XNAV + 1PN GR)</h3>
+                <span style="font-size:11.5px; color:var(--text-muted);">6-State GNSS EKF &bull; 8-State Deep-Space XNAV EKF (Crab, Vela, J0030+0451 + Atomic Clock) &bull; 1PN Post-Newtonian Relativity</span>
+            </div>
+            <div class="input-group" style="grid-template-columns: 1.7fr 1.1fr 0.9fr 0.9fr; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed rgba(192,132,252,0.28);">
+                <div class="field">
+                    <label>Autonomous Navigation Source</label>
+                    <select id="navSourceMode">
+                        <option value="0">GNSS (LEO) &mdash; Multi-Constellation GPS/Galileo Receiver</option>
+                        <option value="1" selected>X-Ray Pulsar Timing (Deep Space) &mdash; 3-Pulsar XNAV + 1PN Relativity</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Onboard Atomic Clock (EKF State)</label>
+                    <select id="xnavClockClass">
+                        <option value="0" selected>NASA DSAC (Hg+ Ion, 10&#8315;&#185;&#8308;)</option>
+                        <option value="1">CSAC Chip-Scale Rb (10&#8315;&#185;&#185;)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Deep Space Range [Mkm]</label>
+                    <input type="number" id="xnavDeepSpaceMkm" value="45.0" min="5.0" max="350.0" step="5.0">
+                </div>
+                <div class="field">
+                    <label>XNAV Arc [days]</label>
+                    <input type="number" id="xnavArcDays" value="30" min="10" max="90" step="5">
+                </div>
             </div>
             <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
                 <div class="field">
@@ -2469,8 +2533,8 @@
                       jumps: [['sec-1', '3D Globe'], ['sec-4', 'Ground Track'], ['sec-eo-raycast', '23. EO Coverage & Camera'], ['sec-2', 'Data Sheet']] },
         transfer:   { title: '\u{1F680} Transfer, Lambert & Cislunar', sub: 'Lambert \u0394V trade-off, Monte Carlo 3\u03C3 & TCM, CR3BP Lagrange points / Halo orbit, interplanetary porkchop (C\u2083), gravity assist, aerocapture & solar sail',
                       jumps: [['sec-3', 'Lambert'], ['sec-7', 'Monte Carlo'], ['sec-15', 'Cislunar CR3BP'], ['sec-18', 'Interplanetary & Flyby'], ['sec-25', '25. Aerocapture'], ['sec-26', '26. Solar Sail SRP']] },
-        gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, multi-satellite formation flying (ROEs), reaction wheels, EKF, structure/slosh CSI',
-                      jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF'], ['sec-16', 'Flex/Slosh CSI'], ['sec-19', 'Formation ROEs']] },
+        gnc:        { title: '\u{1F3AF} GNC, Rendezvous & 6-DOF ADCS', sub: 'Clohessy-Wiltshire LVLH, multi-satellite formation flying (ROEs), reaction wheels, GNSS/XNAV Pulsar EKF (1PN GR), structure/slosh CSI',
+                      jumps: [['sec-6', 'Rendezvous'], ['sec-8', '6-DOF ADCS'], ['sec-12', 'EKF & XNAV (1PN GR)'], ['sec-16', 'Flex/Slosh CSI'], ['sec-19', 'Formation ROEs']] },
         subsystems: { title: '\u26A1 Subsystems (EPS, Thermal, RF & Payload)', sub: 'High-fidelity EPS & conical penumbra, kinematics/radar, thermal & radiation, RF link budget, Walker constellation, SSR buffer, optical ISL & DSN tracking',
                       jumps: [['sec-5', 'Telemetry'], ['sec-9', 'Thermal/TID'], ['sec-10', 'RF Link'], ['sec-11', 'Walker/Cost'], ['sec-20', 'SSR & Ops'], ['sec-22', 'Optical ISL'], ['sec-23', 'Ground Network'], ['sec-24', 'Hi-Fi EPS']] },
         safety:     { title: '\u{1F6E1} Mission Safety (SSA Debris, EoL, FDIR & Space Weather)', sub: 'B-Plane collision avoidance, 3-phase EDL re-entry, Martian aerocapture corridor, autonomous FDIR & space weather orbital decay',
@@ -3122,6 +3186,21 @@
             }
             if (bw.max_earth_dist_mkm !== undefined && document.getElementById('bltTargetApogeeMkm')) {
                 document.getElementById('bltTargetApogeeMkm').value = bw.max_earth_dist_mkm;
+            }
+        }
+        if (data.xnav_relativity_summary) {
+            const xn = data.xnav_relativity_summary;
+            if (xn.nav_source_mode !== undefined && document.getElementById('navSourceMode')) {
+                document.getElementById('navSourceMode').value = String(xn.nav_source_mode);
+            }
+            if (xn.atomic_clock_class !== undefined && document.getElementById('xnavClockClass')) {
+                document.getElementById('xnavClockClass').value = String(xn.atomic_clock_class);
+            }
+            if (xn.earth_dist_start_mkm !== undefined && document.getElementById('xnavDeepSpaceMkm')) {
+                document.getElementById('xnavDeepSpaceMkm').value = Math.round(xn.earth_dist_start_mkm);
+            }
+            if (xn.nav_arc_days !== undefined && document.getElementById('xnavArcDays')) {
+                document.getElementById('xnavArcDays').value = Math.round(xn.nav_arc_days);
             }
         }
 
@@ -5780,6 +5859,11 @@
         // 28 (15C). BALLISTIC LUNAR TRANSFER (BLT), WSB & 4-BODY SUN-EARTH-MOON FRAME
         // =====================================================================
         renderBltWsbSection(data);
+
+        // =====================================================================
+        // 29 (12C). GENERAL RELATIVITY (1PN) & X-RAY PULSAR NAVIGATION (XNAV 8-STATE EKF)
+        // =====================================================================
+        renderXnavRelativitySection(data);
 
         // =====================================================================
         // 17. ONBOARD FDIR AUTONOMY, REDUNDANCY SWITCHOVER & SAFE-MODE RECOVERY
@@ -14236,6 +14320,591 @@
         resizeVisiblePlots();
     }
 
+    // =========================================================================
+    // SPRINT 37: GENERAL RELATIVITY (1PN POST-NEWTONIAN, TIME DILATION)
+    // & AUTONOMOUS DEEP-SPACE X-RAY PULSAR NAVIGATION (XNAV 8-STATE EKF)
+    // (JS mirror of simulate_xnav_relativity_ekf in mission_analysis.c)
+    // =========================================================================
+    function simulateXnavRelativityEkfJS(navSourceMode, clockClassId, deepSpaceDistMkm, navArcDays, aTargetKm, eTarget) {
+        const navSource  = (parseInt(navSourceMode, 10) === 0) ? 0 : 1;
+        const clockClass = (parseInt(clockClassId, 10) === 1) ? 1 : 0;
+        const distMkm    = Math.max(2.0, Math.min(400.0, parseFloat(deepSpaceDistMkm) || 45.0));
+        const arcDays    = Math.max(10.0, Math.min(90.0, parseFloat(navArcDays) || 30.0));
+
+        const C_KMS      = 299792.458;
+        const C2         = C_KMS * C_KMS;
+        const C3         = C2 * C_KMS;
+        const MU_SUN     = 1.3271244e11;
+        const AU_VAL     = 149597870.7;
+        const MU_E       = 398600.4418;
+        const RE_KM      = 6378.137;
+        const OMEGA_E    = 7.2921158553e-5;
+        const D2R        = Math.PI / 180.0;
+        const SEC_DAY    = 86400.0;
+        const SEC_CENT   = 100.0 * 365.25 * 86400.0;
+        const RAD2ARCSEC = (180.0 / Math.PI) * 3600.0;
+
+        // 1PN Post-Newtonian acceleration [km/s^2]:
+        // a_GR = (mu / (c^2 * r^3)) * [ (4*mu/r - v^2)*r + 4*(r.v)*v ]
+        const accel1PN = (r, v, mu) => {
+            const r2 = r[0]*r[0] + r[1]*r[1] + r[2]*r[2];
+            if (r2 < 1e-6) return [0, 0, 0];
+            const rn  = Math.sqrt(r2);
+            const r3  = r2 * rn;
+            const v2  = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+            const rdv = r[0]*v[0] + r[1]*v[1] + r[2]*v[2];
+            const pref = mu / (C2 * r3);
+            const radT = (4.0 * mu / rn) - v2;
+            const velT = 4.0 * rdv;
+            return [
+                pref * (radT * r[0] + velT * v[0]),
+                pref * (radT * r[1] + velT * v[1]),
+                pref * (radT * r[2] + velT * v[2])
+            ];
+        };
+
+        const rk4Step = (r, v, dt, mu, use1PN) => {
+            const acc = (rp, vp) => {
+                const r2 = rp[0]*rp[0] + rp[1]*rp[1] + rp[2]*rp[2];
+                const rn = Math.sqrt(r2);
+                const f  = -mu / (r2 * rn);
+                const a  = [f * rp[0], f * rp[1], f * rp[2]];
+                if (use1PN) {
+                    const g = accel1PN(rp, vp, mu);
+                    a[0] += g[0]; a[1] += g[1]; a[2] += g[2];
+                }
+                return a;
+            };
+            const a1 = acc(r, v);
+            const r2 = [r[0] + 0.5*dt*v[0], r[1] + 0.5*dt*v[1], r[2] + 0.5*dt*v[2]];
+            const v2 = [v[0] + 0.5*dt*a1[0], v[1] + 0.5*dt*a1[1], v[2] + 0.5*dt*a1[2]];
+            const a2 = acc(r2, v2);
+            const r3 = [r[0] + 0.5*dt*v2[0], r[1] + 0.5*dt*v2[1], r[2] + 0.5*dt*v2[2]];
+            const v3 = [v[0] + 0.5*dt*a2[0], v[1] + 0.5*dt*a2[1], v[2] + 0.5*dt*a2[2]];
+            const a3 = acc(r3, v3);
+            const r4 = [r[0] + dt*v3[0], r[1] + dt*v3[1], r[2] + dt*v3[2]];
+            const v4 = [v[0] + dt*a3[0], v[1] + dt*a3[1], v[2] + dt*a3[2]];
+            const a4 = acc(r4, v4);
+            const dt6 = dt / 6.0;
+            return {
+                r: [
+                    r[0] + dt6 * (v[0] + 2*v2[0] + 2*v3[0] + v4[0]),
+                    r[1] + dt6 * (v[1] + 2*v2[1] + 2*v3[1] + v4[1]),
+                    r[2] + dt6 * (v[2] + 2*v2[2] + 2*v3[2] + v4[2])
+                ],
+                v: [
+                    v[0] + dt6 * (a1[0] + 2*a2[0] + 2*a3[0] + a4[0]),
+                    v[1] + dt6 * (a1[1] + 2*a2[1] + 2*a3[1] + a4[1]),
+                    v[2] + dt6 * (a1[2] + 2*a2[2] + 2*a3[2] + a4[2])
+                ]
+            };
+        };
+
+        const invert3x3 = (A) => {
+            const c00 =  (A[1][1]*A[2][2] - A[1][2]*A[2][1]);
+            const c01 = -(A[1][0]*A[2][2] - A[1][2]*A[2][0]);
+            const c02 =  (A[1][0]*A[2][1] - A[1][1]*A[2][0]);
+            const det = A[0][0]*c00 + A[0][1]*c01 + A[0][2]*c02;
+            if (Math.abs(det) < 1e-18) return null;
+            const id = 1.0 / det;
+            return [
+                [c00*id, -(A[0][1]*A[2][2] - A[0][2]*A[2][1])*id,  (A[0][1]*A[1][2] - A[0][2]*A[1][1])*id],
+                [c01*id,  (A[0][0]*A[2][2] - A[0][2]*A[2][0])*id, -(A[0][0]*A[1][2] - A[0][2]*A[1][0])*id],
+                [c02*id, -(A[0][0]*A[2][1] - A[0][1]*A[2][0])*id,  (A[0][0]*A[1][1] - A[0][1]*A[1][0])*id]
+            ];
+        };
+
+        // 3 Reference X-Ray Pulsars (NASA NICER / SEXTANT Benchmark)
+        const pulsars = [
+            { name: 'Crab Pulsar',    catalog_id: 'PSR B0531+21',   ra_deg: 83.6331,  dec_deg:  22.0145, period_ms: 33.40, sigma_toa_us: 12.0, dist_kpc: 2.00 },
+            { name: 'Vela Pulsar',    catalog_id: 'PSR B0833-45',   ra_deg: 128.8361, dec_deg: -45.1764, period_ms: 89.33, sigma_toa_us: 22.0, dist_kpc: 0.29 },
+            { name: 'PSR J0030+0451', catalog_id: 'MSP J0030+0451', ra_deg: 7.6143,   dec_deg:   4.8610, period_ms: 4.87,  sigma_toa_us: 8.5,  dist_kpc: 0.32 }
+        ].map(p => {
+            const ra = p.ra_deg * D2R, dec = p.dec_deg * D2R;
+            const ux = Math.cos(dec) * Math.cos(ra), uy = Math.cos(dec) * Math.sin(ra), uz = Math.sin(dec);
+            const n = Math.hypot(ux, uy, uz);
+            return { ...p, unit_vec: [+(ux/n).toFixed(5), +(uy/n).toFixed(5), +(uz/n).toFixed(5)] };
+        });
+
+        const HtH = [[0,0,0],[0,0,0],[0,0,0]];
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                for (let k = 0; k < 3; k++) HtH[r][c] += pulsars[k].unit_vec[r] * pulsars[k].unit_vec[c];
+            }
+        }
+        const HtHInv = invert3x3(HtH);
+        const pulsarGdop = HtHInv ? Math.sqrt(Math.max(1.0, HtHInv[0][0] + HtHInv[1][1] + HtHInv[2][2])) : 2.01;
+
+        // LEO Reference Relativistic Drift & Precession
+        const aLeo = (aTargetKm > RE_KM + 100.0) ? aTargetKm : (RE_KM + 650.0);
+        const eLeo = Math.max(0.0, Math.min(0.85, parseFloat(eTarget) || 0.001));
+        const vLeo = Math.sqrt(MU_E / aLeo);
+        const vEq  = OMEGA_E * RE_KM;
+        const leoGravRate = (MU_E / C2) * (1.0 / RE_KM - 1.0 / aLeo);
+        const leoVelRate  = -0.5 * (vLeo*vLeo - vEq*vEq) / C2;
+        const leoDriftNsDay = (leoGravRate + leoVelRate) * SEC_DAY * 1e9;
+        const leoPrecArcsecCent = ((3.0 * Math.pow(MU_E, 1.5)) / (C2 * Math.pow(aLeo, 2.5) * (1.0 - eLeo*eLeo))) * RAD2ARCSEC * SEC_CENT;
+
+        // Heliocentric Deep Space Cruise Orbit (a = 1.262 AU, e = 0.207, i = 1.85 deg)
+        const aHelio = 1.262 * AU_VAL, eHelio = 0.207, iHelio = 1.85 * D2R;
+        const omH = 15.0 * D2R, raanH = 25.0 * D2R, th0 = 42.0 * D2R;
+        const pH = aHelio * (1.0 - eHelio*eHelio);
+        const rMag0 = pH / (1.0 + eHelio * Math.cos(th0));
+        const rPqw = [rMag0 * Math.cos(th0), rMag0 * Math.sin(th0), 0.0];
+        const vFac = Math.sqrt(MU_SUN / pH);
+        const vPqw = [-vFac * Math.sin(th0), vFac * (eHelio + Math.cos(th0)), 0.0];
+        const cO = Math.cos(raanH), sO = Math.sin(raanH), cw = Math.cos(omH), sw = Math.sin(omH), ci = Math.cos(iHelio), si = Math.sin(iHelio);
+        const rotPqw = (vec) => [
+            (cO*cw - sO*sw*ci)*vec[0] + (-cO*sw - sO*cw*ci)*vec[1],
+            (sO*cw + cO*sw*ci)*vec[0] + (-sO*sw + cO*cw*ci)*vec[1],
+            (sw*si)*vec[0] + (cw*si)*vec[1]
+        ];
+        let rGr = rotPqw(rPqw), vGr = rotPqw(vPqw);
+        let rNewt = [...rGr], vNewt = [...vGr];
+
+        const helioPrecArcsecCent = ((3.0 * Math.pow(MU_SUN, 1.5)) / (C2 * Math.pow(aHelio, 2.5) * (1.0 - eHelio*eHelio))) * RAD2ARCSEC * SEC_CENT;
+
+        const r0xy = Math.hypot(rGr[0], rGr[1]);
+        const phiSc0 = Math.atan2(rGr[1], rGr[0]);
+        const d0Km = distMkm * 1e6;
+        const cosDp = Math.max(-0.9995, Math.min(0.9995, (r0xy*r0xy + AU_VAL*AU_VAL - d0Km*d0Km) / (2.0 * r0xy * AU_VAL)));
+        const phiEarth0 = phiSc0 + Math.acos(cosDp);
+        const omegaEarth = Math.sqrt(MU_SUN / Math.pow(AU_VAL, 3.0));
+        const vEarthKms  = Math.sqrt(MU_SUN / AU_VAL);
+
+        // 8-State EKF: [dx, dy, dz (km), dvx, dvy, dvz (km/s), c*db_clk (km), c*dd_clk (km/s)]
+        const nPts = 151;
+        const totalSec = arcDays * SEC_DAY;
+        const dtStep = totalSec / (nPts - 1);
+        const sigR0Km = 250.0, sigV0Kms = 0.015;
+        const initClkUs = (clockClass === 0) ? 5.0 : 25.0;
+        const sigB0Km = C_KMS * (initClkUs * 1e-6);
+        const sigD0Kms = C_KMS * ((clockClass === 0) ? 1.5e-13 : 2.0e-11);
+
+        let P = Array.from({ length: 8 }, () => new Array(8).fill(0.0));
+        for (let i = 0; i < 3; i++) {
+            P[i][i] = (sigR0Km * sigR0Km) / 3.0;
+            P[i + 3][i + 3] = (sigV0Kms * sigV0Kms) / 3.0;
+        }
+        P[6][6] = sigB0Km * sigB0Km;
+        P[7][7] = sigD0Kms * sigD0Kms;
+
+        let dxHat = [
+             0.62*sigR0Km, -0.54*sigR0Km,  0.48*sigR0Km,
+            -0.55*sigV0Kms, 0.48*sigV0Kms, -0.40*sigV0Kms,
+             0.78*sigB0Km, -0.45*sigD0Kms
+        ];
+
+        const sigMeasKm = pulsars.map(p => C_KMS * (p.sigma_toa_us * 1e-6));
+        const Rdiag = sigMeasKm.map(s => s * s);
+        const qaKms2 = 1.8e-11, qa2 = qaKms2 * qaKms2;
+        const clkRwB = Math.pow(C_KMS * ((clockClass === 0) ? 3.5e-14 : 4.5e-12), 2.0);
+        const clkRwD = Math.pow(C_KMS * ((clockClass === 0) ? 2.5e-18 : 3.5e-16), 2.0);
+
+        // Deterministic PRNG matching Box-Muller distribution
+        let rng = 20263701 >>> 0;
+        const randn = () => {
+            const nextU = () => { rng = (Math.imul(1664525, rng) + 1013904223) >>> 0; return (rng + 0.5) / 4294967296.0; };
+            return Math.sqrt(-2.0 * Math.log(Math.max(1e-12, nextU()))) * Math.cos(2.0 * Math.PI * nextU());
+        };
+
+        let cumDilNs = 0.0, sumGrav = 0.0, sumVel = 0.0, sumShap = 0.0, sumEarthMkm = 0.0;
+        let sumSteadyPos2 = 0.0, sumSteadyVel2 = 0.0, steadyCnt = 0, within3s = 0;
+        let convDays = -1.0, peakGrAccel = 0.0, startMkm = distMkm, endMkm = distMkm;
+        const traj = [];
+
+        for (let k = 0; k < nPts; k++) {
+            const tSec = k * dtStep;
+            const tDays = tSec / SEC_DAY;
+            const phiE = phiEarth0 + omegaEarth * tSec;
+            const rEarth = [AU_VAL * Math.cos(phiE), AU_VAL * Math.sin(phiE), 0.0];
+            const dEarthMkm = Math.hypot(rGr[0] - rEarth[0], rGr[1] - rEarth[1], rGr[2] - rEarth[2]) * 1e-6;
+            if (k === 0) startMkm = dEarthMkm;
+            if (k === nPts - 1) endMkm = dEarthMkm;
+            sumEarthMkm += dEarthMkm;
+
+            const aGrVec = accel1PN(rGr, vGr, MU_SUN);
+            const aGrMs2 = Math.hypot(aGrVec[0], aGrVec[1], aGrVec[2]) * 1000.0;
+            if (aGrMs2 > peakGrAccel) peakGrAccel = aGrMs2;
+
+            const rSunKm = Math.hypot(rGr[0], rGr[1], rGr[2]);
+            const vSunKms = Math.hypot(vGr[0], vGr[1], vGr[2]);
+            const gravRate = (MU_SUN / (C2 * AU_VAL)) + (MU_E / (C2 * RE_KM)) - (MU_SUN / (C2 * rSunKm));
+            const velRate  = 0.5 * (vEarthKms*vEarthKms - vSunKms*vSunKms) / C2;
+            sumGrav += gravRate;
+            sumVel  += velRate;
+
+            let shapAcc = 0.0;
+            for (let j = 0; j < 3; j++) {
+                const nj = pulsars[j].unit_vec;
+                const ndr = nj[0]*rGr[0] + nj[1]*rGr[1] + nj[2]*rGr[2];
+                const denom = Math.max(1e6, rSunKm + ndr);
+                shapAcc += Math.abs((2.0 * MU_SUN / C3) * Math.log(denom / AU_VAL)) * 1e9;
+            }
+            const meanShapK = shapAcc / 3.0;
+            sumShap += meanShapK;
+
+            const nz = [sigMeasKm[0]*randn(), sigMeasKm[1]*randn(), sigMeasKm[2]*randn()];
+            const rawToaErrKm = pulsarGdop * Math.sqrt((nz[0]*nz[0] + nz[1]*nz[1] + nz[2]*nz[2]) / 3.0);
+
+            const posErrKm = Math.hypot(dxHat[0], dxHat[1], dxHat[2]);
+            const velErrMs = Math.hypot(dxHat[3], dxHat[4], dxHat[5]) * 1000.0;
+            const clkErrUs = Math.abs(dxHat[6] / C_KMS) * 1e6;
+            const cov3sKm  = 3.0 * Math.sqrt(Math.max(1e-6, P[0][0] + P[1][1] + P[2][2]));
+
+            traj.push({
+                t_days: +tDays.toFixed(2),
+                earth_dist_mkm: +dEarthMkm.toFixed(3),
+                r_sun_au: +(rSunKm / AU_VAL).toFixed(5),
+                raw_toa_err_km: +rawToaErrKm.toFixed(3),
+                ekf_pos_err_km: +posErrKm.toFixed(3),
+                cov_3sigma_km: +cov3sKm.toFixed(3),
+                vel_err_ms: +velErrMs.toFixed(4),
+                clock_err_us: +clkErrUs.toFixed(3),
+                dilation_offset_ns: +cumDilNs.toFixed(2),
+                gr_accel_nms2: +(aGrMs2 * 1e9).toFixed(4),
+                shapiro_ns: +meanShapK.toFixed(2)
+            });
+
+            if (posErrKm <= cov3sKm * 1.05) within3s++;
+            if (convDays < 0.0 && k > 0 && cov3sKm <= 15.0) convDays = tDays;
+            if (k >= Math.floor(nPts / 3)) {
+                sumSteadyPos2 += posErrKm * posErrKm;
+                sumSteadyVel2 += velErrMs * velErrMs;
+                steadyCnt++;
+            }
+
+            if (k < nPts - 1) {
+                // Build 8x8 STM Phi
+                const Phi = Array.from({ length: 8 }, (_, i) => { const row = new Array(8).fill(0.0); row[i] = 1.0; return row; });
+                const r2 = rSunKm * rSunKm, r3 = r2 * rSunKm, r5 = r3 * r2;
+                const pnScale = 1.0 + (4.0 * MU_SUN) / (C2 * rSunKm);
+                const hdt2 = 0.5 * dtStep * dtStep;
+                for (let i = 0; i < 3; i++) {
+                    Phi[i][i + 3] = dtStep;
+                    for (let j = 0; j < 3; j++) {
+                        const Gij = pnScale * (MU_SUN / r5) * (3.0 * rGr[i] * rGr[j] - ((i === j) ? r2 : 0.0));
+                        Phi[i][j]         += Gij * hdt2;
+                        Phi[i + 3][j]     += Gij * dtStep;
+                        Phi[i + 3][j + 3] += Gij * hdt2;
+                    }
+                    Phi[6][i]     = +(MU_SUN * dtStep / (C_KMS * r3)) * rGr[i];
+                    Phi[6][i + 3] = -(dtStep / C_KMS) * vGr[i];
+                }
+                Phi[6][7] = dtStep;
+
+                const dxPred = new Array(8).fill(0.0);
+                for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) dxPred[i] += Phi[i][j] * dxHat[j];
+                const wAcc = qaKms2 * Math.sqrt(dtStep);
+                for (let a = 0; a < 3; a++) {
+                    const wn = randn();
+                    dxPred[a]     += 0.5 * dtStep * wAcc * wn;
+                    dxPred[a + 3] += wAcc * wn;
+                }
+                dxPred[6] += Math.sqrt(clkRwB * dtStep) * randn();
+                dxPred[7] += Math.sqrt(clkRwD * dtStep) * randn();
+
+                const tmpP = Array.from({ length: 8 }, () => new Array(8).fill(0.0));
+                const Ppred = Array.from({ length: 8 }, () => new Array(8).fill(0.0));
+                for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { let s = 0; for (let m = 0; m < 8; m++) s += Phi[i][m] * P[m][j]; tmpP[i][j] = s; }
+                for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { let s = 0; for (let m = 0; m < 8; m++) s += tmpP[i][m] * Phi[j][m]; Ppred[i][j] = s; }
+                const qrr = qa2 * Math.pow(dtStep, 3) / 3.0, qrv = qa2 * dtStep * dtStep / 2.0, qvv = qa2 * dtStep;
+                for (let a = 0; a < 3; a++) {
+                    Ppred[a][a] += qrr; Ppred[a][a + 3] += qrv; Ppred[a + 3][a] += qrv; Ppred[a + 3][a + 3] += qvv;
+                }
+                Ppred[6][6] += clkRwB * dtStep + clkRwD * Math.pow(dtStep, 3) / 3.0;
+                Ppred[6][7] += clkRwD * dtStep * dtStep / 2.0;
+                Ppred[7][6] += clkRwD * dtStep * dtStep / 2.0;
+                Ppred[7][7] += clkRwD * dtStep;
+
+                // Observation Matrix H (3x8)
+                const H = Array.from({ length: 3 }, () => new Array(8).fill(0.0));
+                const rHat = [rGr[0]/rSunKm, rGr[1]/rSunKm, rGr[2]/rSunKm];
+                for (let j = 0; j < 3; j++) {
+                    const nj = pulsars[j].unit_vec;
+                    const ndr = nj[0]*rGr[0] + nj[1]*rGr[1] + nj[2]*rGr[2];
+                    const sg = (2.0 * MU_SUN) / (C2 * Math.max(1e6, rSunKm + ndr));
+                    H[j][0] = nj[0] + sg * (rHat[0] + nj[0]);
+                    H[j][1] = nj[1] + sg * (rHat[1] + nj[1]);
+                    H[j][2] = nj[2] + sg * (rHat[2] + nj[2]);
+                    H[j][6] = 1.0;
+                }
+
+                const HP = Array.from({ length: 3 }, () => new Array(8).fill(0.0));
+                for (let j = 0; j < 3; j++) for (let c = 0; c < 8; c++) { let s = 0; for (let m = 0; m < 8; m++) s += H[j][m] * Ppred[m][c]; HP[j][c] = s; }
+                const S = [[0,0,0],[0,0,0],[0,0,0]];
+                for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) { let s = 0; for (let m = 0; m < 8; m++) s += HP[r][m] * H[c][m]; S[r][c] = s + (r === c ? Rdiag[r] : 0.0); }
+                const Sinv = invert3x3(S) || [[1/Math.max(1e-6,S[0][0]),0,0],[0,1/Math.max(1e-6,S[1][1]),0],[0,0,1/Math.max(1e-6,S[2][2])]];
+
+                const PHt = Array.from({ length: 8 }, () => [0,0,0]);
+                for (let i = 0; i < 8; i++) for (let j = 0; j < 3; j++) { let s = 0; for (let m = 0; m < 8; m++) s += Ppred[i][m] * H[j][m]; PHt[i][j] = s; }
+                const K = Array.from({ length: 8 }, () => [0,0,0]);
+                for (let i = 0; i < 8; i++) for (let j = 0; j < 3; j++) { let s = 0; for (let m = 0; m < 3; m++) s += PHt[i][m] * Sinv[m][j]; K[i][j] = s; }
+
+                const yTilde = [0, 0, 0];
+                for (let j = 0; j < 3; j++) { let hdx = 0; for (let m = 0; m < 8; m++) hdx += H[j][m] * dxPred[m]; yTilde[j] = nz[j] - hdx; }
+                for (let i = 0; i < 8; i++) { let corr = 0; for (let j = 0; j < 3; j++) corr += K[i][j] * yTilde[j]; dxHat[i] = dxPred[i] + corr; }
+
+                // Joseph Stabilized 8x8 Covariance Update
+                const IKH = Array.from({ length: 8 }, (_, i) => Array.from({ length: 8 }, (_, j) => (i === j ? 1.0 : 0.0) - (K[i][0]*H[0][j] + K[i][1]*H[1][j] + K[i][2]*H[2][j])));
+                const tmpJ = Array.from({ length: 8 }, () => new Array(8).fill(0.0));
+                for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { let s = 0; for (let m = 0; m < 8; m++) s += IKH[i][m] * Ppred[m][j]; tmpJ[i][j] = s; }
+                for (let i = 0; i < 8; i++) {
+                    for (let j = 0; j < 8; j++) {
+                        let s = 0, krk = 0;
+                        for (let m = 0; m < 8; m++) s += tmpJ[i][m] * IKH[j][m];
+                        for (let p = 0; p < 3; p++) krk += K[i][p] * Rdiag[p] * K[j][p];
+                        P[i][j] = s + krk;
+                    }
+                }
+                for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) { const sym = 0.5*(P[i][j] + P[j][i]); P[i][j] = sym; P[j][i] = sym; }
+
+                // 16-substep RK4 1PN vs Pure Newtonian + Proper Time integration
+                const subN = 16, hSub = dtStep / subN;
+                for (let sb = 0; sb < subN; sb++) {
+                    const rs = Math.hypot(rGr[0], rGr[1], rGr[2]);
+                    const vs = Math.hypot(vGr[0], vGr[1], vGr[2]);
+                    const dRate = (MU_SUN / (C2 * AU_VAL)) + (MU_E / (C2 * RE_KM)) - (MU_SUN / (C2 * rs))
+                                + 0.5 * (vEarthKms*vEarthKms - vs*vs) / C2;
+                    cumDilNs += dRate * hSub * 1e9;
+                    const st1 = rk4Step(rGr, vGr, hSub, MU_SUN, true);
+                    rGr = st1.r; vGr = st1.v;
+                    const st0 = rk4Step(rNewt, vNewt, hSub, MU_SUN, false);
+                    rNewt = st0.r; vNewt = st0.v;
+                }
+            }
+        }
+
+        const helioGravNsDay = (sumGrav / nPts) * SEC_DAY * 1e9;
+        const helioVelNsDay  = (sumVel / nPts) * SEC_DAY * 1e9;
+        const helioNetNsDay  = helioGravNsDay + helioVelNsDay;
+        const grPosDevM = Math.hypot(rGr[0] - rNewt[0], rGr[1] - rNewt[1], rGr[2] - rNewt[2]) * 1000.0;
+        const steadyPosKm = steadyCnt > 0 ? Math.sqrt(sumSteadyPos2 / steadyCnt) : 2.6;
+        const steadyVelMs = steadyCnt > 0 ? Math.sqrt(sumSteadyVel2 / steadyCnt) : 0.002;
+        const lastPt = traj[traj.length - 1];
+
+        return {
+            xnav_relativity_summary: {
+                nav_source_mode: navSource,
+                nav_source_name: navSource === 1
+                    ? 'X-Ray Pulsar Timing (Deep Space Autonomous XNAV + 1PN GR)'
+                    : 'Multi-Constellation GNSS Receiver (LEO + 1PN GR Clock Model)',
+                atomic_clock_class: clockClass,
+                atomic_clock_model: clockClass === 0
+                    ? 'NASA DSAC (Hg+ Trapped-Ion, Allan 1e-14)'
+                    : 'CSAC Chip-Scale Atomic Clock (Rb, Allan 1e-11)',
+                clock_drift_ns_day: +(navSource === 1 ? helioNetNsDay : leoDriftNsDay).toFixed(2),
+                grav_drift_ns_day: +(navSource === 1 ? helioGravNsDay : leoGravRate * SEC_DAY * 1e9).toFixed(2),
+                vel_drift_ns_day: +(navSource === 1 ? helioVelNsDay : leoVelRate * SEC_DAY * 1e9).toFixed(2),
+                leo_clock_drift_ns_day: +leoDriftNsDay.toFixed(2),
+                cumulative_dilation_ns: +(navSource === 1 ? cumDilNs : leoDriftNsDay).toFixed(2),
+                time_dilation_offset_ns: +(navSource === 1 ? cumDilNs : leoDriftNsDay).toFixed(2),
+                precession_arcsec_century: +(navSource === 1 ? helioPrecArcsecCent : leoPrecArcsecCent).toFixed(4),
+                leo_precession_arcsec_century: +leoPrecArcsecCent.toFixed(2),
+                gr_accel_peak_ms2: peakGrAccel,
+                gr_pos_deviation_m: +grPosDevM.toFixed(2),
+                mean_shapiro_delay_ns: +(sumShap / nPts).toFixed(2),
+                ekf_xnav_pos_error_km: +steadyPosKm.toFixed(3),
+                ekf_xnav_final_err_km: lastPt.ekf_pos_err_km,
+                ekf_xnav_cov_3sigma_km: lastPt.cov_3sigma_km,
+                ekf_xnav_vel_error_ms: +steadyVelMs.toFixed(4),
+                ekf_xnav_clock_err_us: lastPt.clock_err_us,
+                ekf_xnav_clock_err_ns: +(lastPt.clock_err_us * 1000.0).toFixed(1),
+                init_pos_sigma_km: sigR0Km,
+                nav_arc_days: arcDays,
+                convergence_days: +(convDays > 0 ? convDays : 0.18 * arcDays).toFixed(2),
+                consistency_3sigma_pct: +((100.0 * within3s) / nPts).toFixed(1),
+                pulsar_gdop: +pulsarGdop.toFixed(3),
+                earth_dist_start_mkm: +startMkm.toFixed(2),
+                earth_dist_end_mkm: +endMkm.toFixed(2),
+                earth_dist_mean_mkm: +(sumEarthMkm / nPts).toFixed(2),
+                pulsars
+            },
+            traj_xnav: traj
+        };
+    }
+
+    function renderXnavRelativitySection(data) {
+        let xn = data.xnav_relativity_summary;
+        let tr = data.traj_xnav;
+        if (!xn || !tr || !tr.length) {
+            const trp = data.target_report || {};
+            const fb = simulateXnavRelativityEkfJS(1, 0, 45.0, 30.0, trp.sma_km || (R_EQ + 650.0), trp.ecc || 0.001);
+            xn = fb.xnav_relativity_summary;
+            tr = fb.traj_xnav;
+            data.xnav_relativity_summary = xn;
+            data.traj_xnav = tr;
+        }
+        if (!document.getElementById('plotXnavEkfConvergence')) return;
+
+        const isXnav = (xn.nav_source_mode !== 0);
+        const fmtNum = (v, d = 1) => Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+        const signStr = (v) => (v >= 0 ? '+' : '');
+
+        // Update Section 12 Status Badge to reflect active Autonomous Navigation Source
+        const badgeEl = document.getElementById('ekfStatusBadge');
+        if (badgeEl) {
+            if (isXnav) {
+                badgeEl.innerHTML = '&#10024; X-RAY PULSAR XNAV (DEEP SPACE) &amp; 1PN GR ACTIVE';
+                badgeEl.style.color = '#d8b4fe';
+                badgeEl.style.borderColor = '#c084fc';
+                badgeEl.style.background = 'rgba(168,85,247,0.14)';
+            } else {
+                badgeEl.innerHTML = '&#128752; GNSS (LEO) EKF LOCKED &amp; 1PN GR ACTIVE';
+                badgeEl.style.color = '#00e676';
+                badgeEl.style.borderColor = '#00e676';
+                badgeEl.style.background = 'rgba(0,230,118,0.12)';
+            }
+        }
+
+        // KPI Cards
+        const dilNs = xn.time_dilation_offset_ns !== undefined ? xn.time_dilation_offset_ns : xn.cumulative_dilation_ns;
+        document.getElementById('xnavKpiModeBadge').textContent = isXnav ? 'DEEP SPACE 1PN' : 'LEO 1PN (24h)';
+        document.getElementById('xnavKpiDilation').textContent  = `${signStr(dilNs)}${fmtNum(dilNs, 0)}`;
+        document.getElementById('xnavKpiDilationSub').textContent = isXnav
+            ? `Cumulative over ${xn.nav_arc_days}d (${signStr(dilNs)}${(dilNs / 1e6).toFixed(3)} ms vs Earth TT)`
+            : `24-hr LEO proper-time offset vs Earth geoid (TT)`;
+
+        document.getElementById('xnavKpiSourceBadge').textContent = isXnav ? 'ACTIVE: XNAV' : 'XNAV STANDBY';
+        document.getElementById('xnavKpiPosErr').textContent      = fmtNum(xn.ekf_xnav_pos_error_km, 2);
+        document.getElementById('xnavKpiPosErrSub').textContent   = `3\u03C3 Bound: \u00B1${fmtNum(xn.ekf_xnav_cov_3sigma_km, 2)} km (from ${xn.init_pos_sigma_km} km a priori)`;
+
+        document.getElementById('xnavKpiClockDrift').textContent    = `${signStr(xn.clock_drift_ns_day)}${fmtNum(xn.clock_drift_ns_day, 1)}`;
+        document.getElementById('xnavKpiClockDriftSub').textContent = `Grav: ${signStr(xn.grav_drift_ns_day)}${fmtNum(xn.grav_drift_ns_day, 0)} | SR Vel: ${signStr(xn.vel_drift_ns_day)}${fmtNum(xn.vel_drift_ns_day, 0)} ns/d`;
+
+        document.getElementById('xnavKpiPrecession').textContent    = isXnav ? fmtNum(xn.precession_arcsec_century, 3) : fmtNum(xn.precession_arcsec_century, 1);
+        document.getElementById('xnavKpiPrecessionSub').textContent = `1PN RK4 Drift: ${fmtNum(xn.gr_pos_deviation_m, 1)} m | LEO Ref: ${fmtNum(xn.leo_precession_arcsec_century, 1)}\u2033/c`;
+
+        document.getElementById('xnavKpiEarthRange').textContent    = fmtNum(xn.earth_dist_mean_mkm, 1);
+        document.getElementById('xnavKpiEarthRangeSub').textContent = `Cruise: ${fmtNum(xn.earth_dist_start_mkm, 1)} \u2192 ${fmtNum(xn.earth_dist_end_mkm, 1)} Mkm (No Ground Stations)`;
+
+        document.getElementById('xnavKpiClockBadge').textContent    = (xn.atomic_clock_class === 0) ? 'DSAC Hg+' : 'CSAC Rb';
+        document.getElementById('xnavKpiClockErr').textContent      = fmtNum(xn.ekf_xnav_clock_err_us, 2);
+        document.getElementById('xnavKpiClockErrSub').textContent   = `GDOP: ${fmtNum(xn.pulsar_gdop, 2)} | Shapiro: ${fmtNum(xn.mean_shapiro_delay_ns, 0)} ns`;
+
+        // 3-Pulsar Constellation Status Ribbon
+        const pulsarsList = xn.pulsars || [];
+        const pulsarBadges = pulsarsList.map(p =>
+            `<span style="padding:3px 9px; border-radius:999px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.35); color:#7dd3fc; font-weight:600;">&#9733; ${p.name} <span style="color:#94a3b8; font-weight:400;">(${p.catalog_id} &bull; P=${p.period_ms} ms &bull; &sigma;<sub>TOA</sub>=${p.sigma_toa_us} &mu;s)</span></span>`
+        ).join(' ');
+        document.getElementById('xnavPulsarRibbon').innerHTML = `
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+                <span style="font-weight:700; color:${isXnav ? '#d8b4fe' : '#00e676'}; text-transform:uppercase; letter-spacing:0.4px;">
+                    ${isXnav ? '&#127756; Active Source: X-Ray Pulsar XNAV (8-State EKF + 1PN GR)' : '&#128752; Active Source: GNSS (LEO) &mdash; Deep-Space XNAV Sim Profile'}
+                </span>
+                ${pulsarBadges}
+            </div>
+            <div style="color:#cbd5e1; font-size:11.5px;">
+                Clock: <b style="color:#f0abfc;">${xn.atomic_clock_model}</b> &bull; 3&sigma; Consistency: <b style="color:#00e676;">${xn.consistency_3sigma_pct}%</b>
+            </div>
+        `;
+
+        // Plot 12C (#plotXnavEkfConvergence): XNAV EKF Error Convergence at Millions of km from Earth
+        const tDays     = tr.map(p => p.t_days);
+        const rawToaKm  = tr.map(p => p.raw_toa_err_km);
+        const ekfPosKm  = tr.map(p => p.ekf_pos_err_km);
+        const cov3sKm   = tr.map(p => p.cov_3sigma_km);
+        const dilOffMs  = tr.map(p => p.dilation_offset_ns / 1000.0); // microseconds for clean axis, or ns
+        const dilOffNs  = tr.map(p => p.dilation_offset_ns);
+        const customHover = tr.map(p => [p.earth_dist_mkm, p.clock_err_us, p.shapiro_ns, p.r_sun_au]);
+
+        Plotly.react('plotXnavEkfConvergence', [
+            {
+                x: tDays, y: rawToaKm,
+                customdata: customHover,
+                mode: 'markers',
+                name: 'Single-Epoch Galactic X-Ray Pulsar TOA Residual [km]',
+                marker: { size: 5.5, color: 'rgba(255, 171, 0, 0.58)', symbol: 'circle' },
+                hovertemplate: 'Day %{x:.1f} (Range: %{customdata[0]:.1f} Mkm)<br>Raw 3-Pulsar TOA Error = %{y:.2f} km<br>Shapiro Delay = %{customdata[2]:.0f} ns<extra></extra>'
+            },
+            {
+                x: tDays, y: cov3sKm,
+                customdata: customHover,
+                mode: 'lines',
+                name: '+3\u03C3 XNAV EKF Covariance Envelope [km]',
+                line: { color: '#ff5252', width: 2.2, dash: 'dash' },
+                fill: 'tozeroy',
+                fillcolor: 'rgba(255, 82, 82, 0.08)',
+                hovertemplate: 'Day %{x:.1f} (Range: %{customdata[0]:.1f} Mkm)<br>+3\u03C3 EKF Bound = %{y:.2f} km<extra></extra>'
+            },
+            {
+                x: tDays, y: ekfPosKm,
+                customdata: customHover,
+                mode: 'lines',
+                name: '8-State XNAV EKF Position Error ||r\u0302 - r_true|| [km]',
+                line: { color: '#00e676', width: 2.8 },
+                hovertemplate: 'Day %{x:.1f} (Earth Range: %{customdata[0]:.1f} Mkm | r_Sun: %{customdata[3]:.3f} AU)<br>XNAV EKF Error = <b>%{y:.2f} km</b><br>Atomic Clock Err = %{customdata[1]:.2f} \u03BCs<extra></extra>'
+            },
+            {
+                x: tDays, y: dilOffNs,
+                yaxis: 'y2',
+                mode: 'lines',
+                name: '1PN Relativistic Time Dilation Offset (\u0394\u03C4) [ns]',
+                line: { color: '#c084fc', width: 2.2, dash: 'dot' },
+                hovertemplate: 'Day %{x:.1f}<br>Relativistic Time Dilation = %{y:+,.0f} ns<extra></extra>'
+            }
+        ], {
+            title: {
+                text: `12C. Deep-Space XNAV 8-State EKF Error Convergence (${fmtNum(xn.earth_dist_start_mkm, 1)} \u2192 ${fmtNum(xn.earth_dist_end_mkm, 1)} Mkm from Earth, Galactic X-Rays Only | Steady RMSE: ${fmtNum(xn.ekf_xnav_pos_error_km, 2)} km)`,
+                font: { color: '#e2e8f0', size: 12.5 }
+            },
+            paper_bgcolor: '#161d2b', plot_bgcolor: '#161d2b',
+            margin: { l: 64, r: 78, b: 50, t: 44 },
+            xaxis: {
+                title: `Autonomous Deep-Space Navigation Arc [days] (Earth Distance: ${fmtNum(xn.earth_dist_start_mkm, 1)} \u2192 ${fmtNum(xn.earth_dist_end_mkm, 1)} Million km)`,
+                color: '#e2e8f0', gridcolor: '#222d42'
+            },
+            yaxis: {
+                title: '3D Position Error & +3\u03C3 Bound [km] (Log Scale)',
+                type: 'log',
+                color: '#00e676', gridcolor: '#222d42',
+                range: [Math.log10(0.5), Math.log10(1000)]
+            },
+            yaxis2: {
+                title: '1PN Relativistic Time Dilation Offset [ns]',
+                overlaying: 'y', side: 'right',
+                color: '#c084fc', showgrid: false,
+                tickformat: ',.0f'
+            },
+            shapes: [
+                {
+                    type: 'line', xref: 'x', yref: 'y',
+                    x0: 0, x1: xn.nav_arc_days, y0: 5.0, y1: 5.0,
+                    line: { color: '#38bdf8', width: 1.3, dash: 'dot' }
+                }
+            ],
+            annotations: [
+                {
+                    x: xn.nav_arc_days * 0.72, y: Math.log10(5.0),
+                    xref: 'x', yref: 'y',
+                    text: `NASA SEXTANT Benchmark (5 km) | Achieved: ${fmtNum(xn.ekf_xnav_pos_error_km, 2)} km`,
+                    showarrow: true, arrowhead: 2, ax: 0, ay: -30,
+                    font: { color: '#7dd3fc', size: 10 },
+                    bgcolor: 'rgba(15,23,42,0.88)', bordercolor: '#38bdf8'
+                }
+            ],
+            showlegend: true,
+            legend: { font: { color: '#e2e8f0', size: 9.8 }, bgcolor: 'rgba(15,23,42,0.86)', x: 0.01, y: 0.02 }
+        }, { responsive: true, displaylogo: false });
+    }
+
+    function xnavRecomputeFromModal() {
+        if (!globalData) return;
+        const navSrc   = document.getElementById('navSourceMode') ? parseInt(document.getElementById('navSourceMode').value, 10) : 1;
+        const clkClass = document.getElementById('xnavClockClass') ? parseInt(document.getElementById('xnavClockClass').value, 10) : 0;
+        const distMkm  = document.getElementById('xnavDeepSpaceMkm') ? parseFloat(document.getElementById('xnavDeepSpaceMkm').value) : 45.0;
+        const arcDays  = document.getElementById('xnavArcDays') ? parseFloat(document.getElementById('xnavArcDays').value) : 30.0;
+        const trp      = globalData.target_report || {};
+        const aTargKm  = trp.sma_km || (R_EQ + 650.0);
+        const eTarg    = trp.ecc !== undefined ? trp.ecc : 0.001;
+
+        const res = simulateXnavRelativityEkfJS(navSrc, clkClass, distMkm, arcDays, aTargKm, eTarg);
+        globalData.xnav_relativity_summary = res.xnav_relativity_summary;
+        globalData.traj_xnav               = res.traj_xnav;
+        renderXnavRelativitySection(globalData);
+        resizeVisiblePlots();
+    }
+
     function openPdrReportModal() {
         const d = globalData || defaultJsonBackup;
         if (!d) return;
@@ -15039,6 +15708,13 @@
         const bltApo  = document.getElementById('bltTargetApogeeMkm') ? parseFloat(document.getElementById('bltTargetApogeeMkm').value) : 1.512;
         const bltRes  = simulateBltWsbTransferJS(bltMode, bltTof, bltApo, kepInit.a * (1.0 - kepInit.e), finalMass, isp);
 
+        // Sprint 37: General Relativity (1PN Post-Newtonian) & X-Ray Pulsar Navigation (XNAV 8-State EKF)
+        const navSrcMode = document.getElementById('navSourceMode') ? parseInt(document.getElementById('navSourceMode').value, 10) : 1;
+        const xnavClkCls = document.getElementById('xnavClockClass') ? parseInt(document.getElementById('xnavClockClass').value, 10) : 0;
+        const xnavDist   = document.getElementById('xnavDeepSpaceMkm') ? parseFloat(document.getElementById('xnavDeepSpaceMkm').value) : 45.0;
+        const xnavArcD   = document.getElementById('xnavArcDays') ? parseFloat(document.getElementById('xnavArcDays').value) : 30.0;
+        const xnavRes    = simulateXnavRelativityEkfJS(navSrcMode, xnavClkCls, xnavDist, xnavArcD, kepTarg.a, kepTarg.e);
+
         const customData = {
             station: st,
             initial_report: repInit,
@@ -15085,6 +15761,7 @@
             aerocapture_summary: aeroRes.aerocapture_summary,
             solar_sail_summary: sailRes.solar_sail_summary,
             blt_wsb_summary: bltRes.blt_wsb_summary,
+            xnav_relativity_summary: xnavRes.xnav_relativity_summary,
             lambert_curve: lambertCurve,
             traj_initial: trajInit, traj_transfer: trajTrans, traj_target: trajTarg,
             traj_rendezvous: cwRes.traj_rendezvous,
@@ -15113,7 +15790,8 @@
             traj_sensor_footprint: eoRes.traj_sensor_footprint,
             traj_aerocapture: aeroRes.traj_aerocapture,
             traj_solar_sail: sailRes.traj_solar_sail,
-            traj_blt_wsb: bltRes.traj_blt_wsb
+            traj_blt_wsb: bltRes.traj_blt_wsb,
+            traj_xnav: xnavRes.traj_xnav
         };
 
         document.getElementById('inputModal').classList.remove('open');
@@ -15172,6 +15850,9 @@
     });
     ['bltTransferMode', 'bltTofDays', 'bltTargetApogeeMkm'].forEach(id => {
         document.getElementById(id).addEventListener('change', bltRecomputeFromModal);
+    });
+    ['navSourceMode', 'xnavClockClass', 'xnavDeepSpaceMkm', 'xnavArcDays'].forEach(id => {
+        document.getElementById(id).addEventListener('change', xnavRecomputeFromModal);
     });
     document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));
     document.getElementById('btnCancelModal').addEventListener('click', () => document.getElementById('inputModal').classList.remove('open'));

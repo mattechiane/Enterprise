@@ -266,4 +266,13 @@ BLTWSBReport simulate_blt_wsb_transfer(KeplerianElements orb_init,
                                        CislunarReport cislunar,
                                        BLTWSBSpec spec);
 
+// Sprint 37: General Relativity (Post-Newtonian 1PN Dynamics, Proper Time Dilation & Periapsis Precession)
+// & Autonomous Deep-Space X-Ray Pulsar Navigation (XNAV) 8-State EKF with Onboard Atomic Clock
+Vector3D compute_1pn_gr_accel(Vector3D r_km, Vector3D v_kms, double mu_km3_s2);
+double   compute_gr_time_dilation_rate(double r_km, double v_kms, double mu_km3_s2);
+XNAVRelativityReport simulate_xnav_relativity_ekf(KeplerianElements orb_target,
+                                                  NavigationReport gnss_nav,
+                                                  XNAVRelativitySpec spec,
+                                                  double mu_earth);
+
 #endif // MISSION_ANALYSIS_H

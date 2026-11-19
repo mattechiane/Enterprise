@@ -643,6 +643,20 @@ static void write_blt_wsb_trajectory_json_array(FILE *fp, BLTWSBReport blt) {
     fprintf(fp, "  ]");
 }
 
+static void write_xnav_trajectory_json_array(FILE *fp, XNAVRelativityReport xnav) {
+    fprintf(fp, "[\n");
+    for (int i = 0; i < xnav.num_samples; i++) {
+        XNAVSample s = xnav.samples[i];
+        fprintf(fp, "    {\"t_days\":%.2f,\"earth_dist_mkm\":%.3f,\"r_sun_au\":%.5f,\"raw_toa_err_km\":%.3f,\"ekf_pos_err_km\":%.3f,\"cov_3sigma_km\":%.3f,\"vel_err_ms\":%.4f,\"clock_err_us\":%.3f,\"dilation_offset_ns\":%.2f,\"gr_accel_nms2\":%.4f,\"shapiro_ns\":%.2f}%s\n",
+                s.t_days, s.earth_dist_mkm, s.r_sun_au,
+                s.raw_toa_err_km, s.ekf_pos_err_km, s.cov_3sigma_km,
+                s.vel_err_ms, s.clock_err_us, s.dilation_offset_ns,
+                s.gr_accel_nms2, s.shapiro_ns,
+                (i < xnav.num_samples - 1) ? "," : "");
+    }
+    fprintf(fp, "  ]");
+}
+
 static void format_oem_utc_timestamp(double elapsed_sec, char *buf, size_t buf_size) {
     // Base Epoch: 2026-11-12T00:00:00.000 UTC
     int total_ms = (int)llround(fmax(0.0, elapsed_sec) * 1000.0);
@@ -816,6 +830,7 @@ bool export_web_mission_json(const char *filename,
                              AerocaptureReport aero,
                              SolarSailReport sail,
                              BLTWSBReport blt,
+                             XNAVRelativityReport xnav,
                              const GroundStation *station,
                              const SpacecraftConfig *sc) {
     FILE *fp = fopen(filename, "w");
@@ -1368,6 +1383,38 @@ bool export_web_mission_json(const char *filename,
     fprintf(fp, "    \"fuel_saved_kg\": %.2f, \"perigee_init_km\": %.1f, \"perigee_final_km\": %.1f, \"peak_solar_tidal_mms2\": %.5f\n  },\n",
             blt.fuel_saved_kg, blt.perigee_init_km, blt.perigee_final_km, blt.peak_solar_tidal_mms2);
 
+    fprintf(fp, "  \"xnav_relativity_summary\": {\n");
+    fprintf(fp, "    \"nav_source_mode\": %d, \"nav_source_name\": \"%s\",\n",
+            (int)xnav.spec.nav_source, xnav.nav_source_name);
+    fprintf(fp, "    \"atomic_clock_class\": %d, \"atomic_clock_model\": \"%s\",\n",
+            (int)xnav.spec.clock_class, xnav.atomic_clock_model);
+    fprintf(fp, "    \"clock_drift_ns_day\": %.2f, \"grav_drift_ns_day\": %.2f, \"vel_drift_ns_day\": %.2f, \"leo_clock_drift_ns_day\": %.2f,\n",
+            xnav.clock_drift_ns_day, xnav.grav_drift_ns_day, xnav.vel_drift_ns_day, xnav.leo_clock_drift_ns_day);
+    fprintf(fp, "    \"cumulative_dilation_ns\": %.2f, \"time_dilation_offset_ns\": %.2f,\n",
+            xnav.cumulative_dilation_ns, xnav.cumulative_dilation_ns);
+    fprintf(fp, "    \"precession_arcsec_century\": %.4f, \"leo_precession_arcsec_century\": %.2f,\n",
+            xnav.precession_arcsec_century, xnav.leo_precession_arcsec_century);
+    fprintf(fp, "    \"gr_accel_peak_ms2\": %.4e, \"gr_pos_deviation_m\": %.2f, \"mean_shapiro_delay_ns\": %.2f,\n",
+            xnav.gr_accel_peak_ms2, xnav.gr_pos_deviation_m, xnav.mean_shapiro_delay_ns);
+    fprintf(fp, "    \"ekf_xnav_pos_error_km\": %.3f, \"ekf_xnav_final_err_km\": %.3f, \"ekf_xnav_cov_3sigma_km\": %.3f,\n",
+            xnav.ekf_xnav_pos_error_km, xnav.ekf_xnav_final_err_km, xnav.ekf_xnav_cov_3sigma_km);
+    fprintf(fp, "    \"ekf_xnav_vel_error_ms\": %.4f, \"ekf_xnav_clock_err_us\": %.3f, \"ekf_xnav_clock_err_ns\": %.1f,\n",
+            xnav.ekf_xnav_vel_error_ms, xnav.ekf_xnav_clock_err_us, xnav.ekf_xnav_clock_err_ns);
+    fprintf(fp, "    \"init_pos_sigma_km\": %.1f, \"nav_arc_days\": %.1f, \"convergence_days\": %.2f, \"consistency_3sigma_pct\": %.1f, \"pulsar_gdop\": %.3f,\n",
+            xnav.spec.init_pos_sigma_km, xnav.spec.nav_arc_days, xnav.convergence_days, xnav.consistency_3sigma_pct, xnav.pulsar_gdop);
+    fprintf(fp, "    \"earth_dist_start_mkm\": %.2f, \"earth_dist_end_mkm\": %.2f, \"earth_dist_mean_mkm\": %.2f,\n",
+            xnav.earth_dist_start_mkm, xnav.earth_dist_end_mkm, xnav.earth_dist_mean_mkm);
+    fprintf(fp, "    \"pulsars\": [\n");
+    for (int j = 0; j < NUM_XNAV_PULSARS; j++) {
+        fprintf(fp, "      {\"name\":\"%s\",\"catalog_id\":\"%s\",\"ra_deg\":%.4f,\"dec_deg\":%.4f,\"period_ms\":%.2f,\"sigma_toa_us\":%.1f,\"dist_kpc\":%.2f,\"unit_vec\":[%.5f,%.5f,%.5f]}%s\n",
+                xnav.pulsars[j].name, xnav.pulsars[j].catalog_id,
+                xnav.pulsars[j].ra_deg, xnav.pulsars[j].dec_deg,
+                xnav.pulsars[j].period_ms, xnav.pulsars[j].sigma_toa_us, xnav.pulsars[j].dist_kpc,
+                xnav.pulsars[j].unit_vec.x, xnav.pulsars[j].unit_vec.y, xnav.pulsars[j].unit_vec.z,
+                (j < NUM_XNAV_PULSARS - 1) ? "," : "");
+    }
+    fprintf(fp, "    ]\n  },\n");
+
     double init_mass = plan.final_mass + plan.propellant_used;
     double a_hoh = 0.5 * (rep_init.initial_kep.a + rep_target.initial_kep.a);
     double tof_opt = PI * sqrt((a_hoh * a_hoh * a_hoh) / EARTH_MU);
@@ -1528,6 +1575,10 @@ bool export_web_mission_json(const char *filename,
 
     fprintf(fp, "  \"traj_blt_wsb\": ");
     write_blt_wsb_trajectory_json_array(fp, blt);
+    fprintf(fp, ",\n");
+
+    fprintf(fp, "  \"traj_xnav\": ");
+    write_xnav_trajectory_json_array(fp, xnav);
     fprintf(fp, "\n}\n");
 
     fclose(fp);
