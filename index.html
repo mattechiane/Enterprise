@@ -391,9 +391,11 @@
             margin: 14px 24px 0; font-size: 12px; color: var(--text-secondary); display: flex; justify-content: space-between; align-items: center; gap: 12px;
         }
         .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
-        .form-section { background: rgba(15,23,42,0.72); border: 1px solid var(--border-col); border-radius: 9px; padding: 15px 16px; }
-        .form-section-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-        .form-section-header h3 { font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--cyan-bright); }
+        .form-group-block { display: block; width: 100%; margin-bottom: 1.25rem; }
+        .form-section { display: block; background: rgba(15,23,42,0.72); border: 1px solid var(--border-col); border-radius: 9px; padding: 15px 16px; }
+        .form-section-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(148,163,184,0.12); }
+        .form-section-header h3, .form-section-header h4 { display: block; margin: 0; font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--cyan-bright); line-height: 1.35; }
+        .form-section-subtitle { display: block; width: 100%; font-size: 11.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.35; }
         .mode-toggle { background: #060911; color: var(--text-main); border: 1px solid var(--border-strong); padding: 5px 9px; border-radius: 6px; font-size: 11.5px; cursor: pointer; }
         .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
@@ -1800,701 +1802,777 @@
             <button type="button" class="modal-subtab-btn" data-cat="safety" onclick="switchModalCategory('safety')">&#128737; Safety, EoL &amp; FDIR</button>
         </div>
         <div class="modal-body-scroll">
-        <div class="form-section modal-cat-item" data-cat="orbit" style="margin-bottom: 16px;">
-            <div class="form-section-header">
-                <h3>1. Spacecraft Mass, Propulsion System &amp; Transfer Constraints</h3>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
-                <div class="field">
-                    <label>Initial Mass (kg)</label>
-                    <input type="number" id="inMass" value="500" min="10" max="500000" step="10">
-                </div>
-                <div class="field" style="grid-column: span 2;">
-                    <label>Propellant / Propulsion Type (Chemical Impulsive vs. Electric Spiral)</label>
-                    <select id="inPropellant" onchange="onPropellantChange()">
-                        <option value="292|Solid|HTPB/AP Composite (Star-48B)|15000">[SOLID] HTPB/AP Composite (Isp: 292 s)</option>
-                        <option value="235|Liquid|Hydrazine Monoprop (N2H4)|400">[LIQUID] Hydrazine Monopropellant (Isp: 235 s)</option>
-                        <option value="316|Liquid|MMH / NTO Bipropellant|490" selected>[LIQUID] MMH / NTO Bipropellant (Isp: 316 s)</option>
-                        <option value="365|Liquid|LOX / Liquid Methane (Methalox)|2000">[LIQUID] LOX / Methane Methalox (Isp: 365 s)</option>
-                        <option value="450|Liquid|LOX / Liquid Hydrogen (Hydrolox)|5000">[LIQUID] LOX / Hydrogen Cryogenic (Isp: 450 s)</option>
-                        <option value="1650|Electric|Xenon Hall-Effect Thruster (HET)|0.50">[ELECTRIC SPIRAL] Xenon Hall-Effect HET (Isp: 1650 s)</option>
-                        <option value="3200|Electric|Xenon Gridded Ion Engine (NEXT-C)|0.25">[ELECTRIC SPIRAL] Xenon Gridded Ion Engine (Isp: 3200 s)</option>
-                    </select>
-                </div>
-                <div class="field" id="fieldMaxTimeBox">
-                    <label>Max Time Limit (min, 0=Auto)</label>
-                    <input type="number" id="inMaxTime" value="0" min="0" step="2">
-                </div>
-                <div class="field" id="fieldContinuousThrustBox" style="display:none;">
-                    <label>Continuous Thrust (N)</label>
-                    <input type="number" id="inThrustN" value="0.50" min="0.02" max="50" step="0.05">
-                </div>
-            </div>
-        </div>
 
-        <div class="form-section modal-cat-item" data-cat="orbit" style="margin-bottom: 14px; border-color: rgba(0,229,255,0.4);">
-            <div class="form-section-header">
-                <h3 style="color:var(--cyan)">&#128752; Import Real Satellite from NORAD Two-Line Elements (TLE Parser)</h3>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <select class="mode-toggle" id="tlePresetSelect" onchange="onTlePresetChange()">
-                        <option value="iss" selected>Preset: ISS (ZARYA) [NORAD #25544 &bull; LEO 418 km, 51.6&deg;]</option>
-                        <option value="sentinel2a">Preset: SENTINEL-2A [NORAD #40697 &bull; SSO 786 km, 98.5&deg;]</option>
-                        <option value="hubble">Preset: HUBBLE (HST) [NORAD #20580 &bull; LEO 535 km, 28.5&deg;]</option>
-                        <option value="gps">Preset: GPS BIIR-2 (PRN 13) [NORAD #24876 &bull; MEO 20,180 km, 55.4&deg;]</option>
-                        <option value="custom">Custom 2-Line NORAD / CelesTrak TLE</option>
-                    </select>
-                    <button type="button" class="btn-autofix" id="btnApplyTle" style="background:var(--cyan); color:#000; padding:5px 12px;" onclick="applyNoradTleToInitialOrbit()">&#128229; Decode &amp; Load into Initial Orbit</button>
-                </div>
-            </div>
-            <div class="input-group" style="grid-template-columns: 1fr 1fr;">
-                <div class="field">
-                    <label>NORAD TLE Line 1 <span>[69-char CelesTrak Format]</span></label>
-                    <input type="text" id="tleLine1" style="font-family:monospace; font-size:11.8px;" value="1 25544U 98067A   26316.50000000  .00016717  00000-0  10270-3 0  9993">
-                </div>
-                <div class="field">
-                    <label>NORAD TLE Line 2 <span>[Inclination, RAAN, Ecc, ArgP, M, Mean Motion n]</span></label>
-                    <input type="text" id="tleLine2" style="font-family:monospace; font-size:11.8px;" value="2 25544  51.6416  24.8512 0006703 130.5360 229.6085 15.49560532421537">
-                </div>
-            </div>
-            <div id="tleDecodeStatus" class="orbit-status-bar valid" style="margin-top:4px;">NORAD #25544 Ready: Click "Decode &amp; Load into Initial Orbit" to populate Initial Orbit from TLE.</div>
-        </div>
-
-        <div class="form-grid-2 modal-cat-item" data-cat="orbit">
+        <div class="form-group-block modal-cat-item" data-cat="orbit">
             <div class="form-section">
                 <div class="form-section-header">
-                    <h3 style="color:var(--cyan)">2. Initial Orbit Data</h3>
-                    <select class="mode-toggle" id="modeInit" onchange="toggleOrbitInput('Init')">
-                        <option value="kep" selected>Parametric (Keplerian)</option>
-                        <option value="cart">Cartesian (Position &amp; Velocity)</option>
-                    </select>
+                    <h4>1. Spacecraft Mass, Propulsion System &amp; Transfer Constraints</h4>
+                    <span class="form-section-subtitle">Initial Wet Mass, Chemical vs. Electric Low-Thrust Propulsion &amp; Transfer Time Limit</span>
                 </div>
-                <div id="fieldsInitKep" class="input-group">
+                <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
                     <div class="field">
-                        <label>Mean Altitude a - R_eq (km) <span>[Min: 150]</span></label>
-                        <input type="number" id="initAlt" value="400" min="150" max="400000" step="10" oninput="validateModalOrbits()">
+                        <label>Initial Mass (kg)</label>
+                        <input type="number" id="inMass" value="500" min="10" max="500000" step="10">
                     </div>
-                    <div class="field">
-                        <label>Eccentricity (e) <span id="maxEccLabelInit">[Max: 0.036]</span></label>
-                        <input type="number" id="initEcc" value="0.001" step="0.005" min="0" max="0.95" oninput="validateModalOrbits()">
+                    <div class="field" style="grid-column: span 2;">
+                        <label>Propellant / Propulsion Type (Chemical Impulsive vs. Electric Spiral)</label>
+                        <select id="inPropellant" onchange="onPropellantChange()">
+                            <option value="292|Solid|HTPB/AP Composite (Star-48B)|15000">[SOLID] HTPB/AP Composite (Isp: 292 s)</option>
+                            <option value="235|Liquid|Hydrazine Monoprop (N2H4)|400">[LIQUID] Hydrazine Monopropellant (Isp: 235 s)</option>
+                            <option value="316|Liquid|MMH / NTO Bipropellant|490" selected>[LIQUID] MMH / NTO Bipropellant (Isp: 316 s)</option>
+                            <option value="365|Liquid|LOX / Liquid Methane (Methalox)|2000">[LIQUID] LOX / Methane Methalox (Isp: 365 s)</option>
+                            <option value="450|Liquid|LOX / Liquid Hydrogen (Hydrolox)|5000">[LIQUID] LOX / Hydrogen Cryogenic (Isp: 450 s)</option>
+                            <option value="1650|Electric|Xenon Hall-Effect Thruster (HET)|0.50">[ELECTRIC SPIRAL] Xenon Hall-Effect HET (Isp: 1650 s)</option>
+                            <option value="3200|Electric|Xenon Gridded Ion Engine (NEXT-C)|0.25">[ELECTRIC SPIRAL] Xenon Gridded Ion Engine (NEXT-C) (Isp: 3200 s)</option>
+                        </select>
                     </div>
-                    <div class="field">
-                        <label>Inclination (deg) <span>[0 - 180&deg;]</span></label>
-                        <input type="number" id="initInc" value="51.6" min="0" max="180" step="0.5" oninput="validateModalOrbits()">
+                    <div class="field" id="fieldMaxTimeBox">
+                        <label>Max Time Limit (min, 0=Auto)</label>
+                        <input type="number" id="inMaxTime" value="0" min="0" step="2">
                     </div>
-                    <div class="field">
-                        <label>RAAN &Omega; (deg) <span>[0 - 360&deg;]</span></label>
-                        <input type="number" id="initRaan" value="30.0" min="0" max="360" step="1" oninput="validateModalOrbits()">
+                    <div class="field" id="fieldContinuousThrustBox" style="display:none;">
+                        <label>Continuous Thrust (N)</label>
+                        <input type="number" id="inThrustN" value="0.50" min="0.02" max="50" step="0.05">
                     </div>
                 </div>
-                <div id="fieldsInitCart" class="input-group" style="display:none;">
-                    <div class="field"><label>Rx (km)</label><input type="number" id="initRx" value="5864.17" step="10" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Ry (km)</label><input type="number" id="initRy" value="3385.68" step="10" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Rz (km)</label><input type="number" id="initRz" value="0.0" step="10" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vx (km/s)</label><input type="number" id="initVx" value="-2.384" step="0.1" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vy (km/s)</label><input type="number" id="initVy" value="4.129" step="0.1" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vz (km/s)</label><input type="number" id="initVz" value="6.015" step="0.1" oninput="validateModalOrbits()"></div>
-                </div>
-                <div id="statusInit" class="orbit-status-bar valid">Perigee: 393.2 km | Apogee: 406.8 km (Valid Closed Orbit)</div>
             </div>
+        </div>
 
+        <div class="form-group-block modal-cat-item" data-cat="orbit">
+            <div class="form-section" style="border-color: rgba(0,229,255,0.4);">
+                <div class="form-section-header">
+                    <h4 style="color:var(--cyan)">&#128752; Import Real Satellite from NORAD Two-Line Elements (TLE Parser)</h4>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <select class="mode-toggle" id="tlePresetSelect" onchange="onTlePresetChange()">
+                            <option value="iss" selected>Preset: ISS (ZARYA) [NORAD #25544 &bull; LEO 418 km, 51.6&deg;]</option>
+                            <option value="sentinel2a">Preset: SENTINEL-2A [NORAD #40697 &bull; SSO 786 km, 98.5&deg;]</option>
+                            <option value="hubble">Preset: HUBBLE (HST) [NORAD #20580 &bull; LEO 535 km, 28.5&deg;]</option>
+                            <option value="gps">Preset: GPS BIIR-2 (PRN 13) [NORAD #24876 &bull; MEO 20,180 km, 55.4&deg;]</option>
+                            <option value="custom">Custom 2-Line NORAD / CelesTrak TLE</option>
+                        </select>
+                        <button type="button" class="btn-autofix" id="btnApplyTle" style="background:var(--cyan); color:#000; padding:5px 12px;" onclick="applyNoradTleToInitialOrbit()">&#128229; Decode &amp; Load into Initial Orbit</button>
+                    </div>
+                </div>
+                <div class="input-group" style="grid-template-columns: 1fr 1fr;">
+                    <div class="field">
+                        <label>NORAD TLE Line 1 <span>[69-char CelesTrak Format]</span></label>
+                        <input type="text" id="tleLine1" style="font-family:monospace; font-size:11.8px;" value="1 25544U 98067A   26316.50000000  .00016717  00000-0  10270-3 0  9993">
+                    </div>
+                    <div class="field">
+                        <label>NORAD TLE Line 2 <span>[Inclination, RAAN, Ecc, ArgP, M, Mean Motion n]</span></label>
+                        <input type="text" id="tleLine2" style="font-family:monospace; font-size:11.8px;" value="2 25544  51.6416  24.8512 0006703 130.5360 229.6085 15.49560532421537">
+                    </div>
+                </div>
+                <div id="tleDecodeStatus" class="orbit-status-bar valid" style="margin-top:4px;">NORAD #25544 Ready: Click "Decode &amp; Load into Initial Orbit" to populate Initial Orbit from TLE.</div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="orbit">
+            <div class="form-grid-2">
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <h4 style="color:var(--cyan)">2. Initial Orbit Data</h4>
+                        <select class="mode-toggle" id="modeInit" onchange="toggleOrbitInput('Init')">
+                            <option value="kep" selected>Parametric (Keplerian)</option>
+                            <option value="cart">Cartesian (Position &amp; Velocity)</option>
+                        </select>
+                    </div>
+                    <div id="fieldsInitKep" class="input-group">
+                        <div class="field">
+                            <label>Mean Altitude a - R_eq (km) <span>[Min: 150]</span></label>
+                            <input type="number" id="initAlt" value="400" min="150" max="400000" step="10" oninput="validateModalOrbits()">
+                        </div>
+                        <div class="field">
+                            <label>Eccentricity (e) <span id="maxEccLabelInit">[Max: 0.036]</span></label>
+                            <input type="number" id="initEcc" value="0.001" step="0.005" min="0" max="0.95" oninput="validateModalOrbits()">
+                        </div>
+                        <div class="field">
+                            <label>Inclination (deg) <span>[0 - 180&deg;]</span></label>
+                            <input type="number" id="initInc" value="51.6" min="0" max="180" step="0.5" oninput="validateModalOrbits()">
+                        </div>
+                        <div class="field">
+                            <label>RAAN &Omega; (deg) <span>[0 - 360&deg;]</span></label>
+                            <input type="number" id="initRaan" value="30.0" min="0" max="360" step="1" oninput="validateModalOrbits()">
+                        </div>
+                    </div>
+                    <div id="fieldsInitCart" class="input-group" style="display:none;">
+                        <div class="field"><label>Rx (km)</label><input type="number" id="initRx" value="5864.17" step="10" oninput="validateModalOrbits()"></div>
+                        <div class="field"><label>Ry (km)</label><input type="number" id="initRy" value="3385.68" step="10" oninput="validateModalOrbits()"></div>
+                        <div class="field"><label>Rz (km)</label><input type="number" id="initRz" value="0.0" step="10" oninput="validateModalOrbits()"></div>
+                        <div class="field"><label>Vx (km/s)</label><input type="number" id="initVx" value="-2.384" step="0.1" oninput="validateModalOrbits()"></div>
+                        <div class="field"><label>Vy (km/s)</label><input type="number" id="initVy" value="4.129" step="0.1" oninput="validateModalOrbits()"></div>
+                        <div class="field"><label>Vz (km/s)</label><input type="number" id="initVz" value="6.015" step="0.1" oninput="validateModalOrbits()"></div>
+                    </div>
+                    <div id="statusInit" class="orbit-status-bar valid">Perigee: 393.2 km | Apogee: 406.8 km (Valid Closed Orbit)</div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <h4 style="color:var(--green)">3. Target Final Orbit Data</h4>
+                        <select class="mode-toggle" id="modeTarg" onchange="toggleOrbitInput('Targ')">
+                            <option value="kep" selected>Parametric (Keplerian)</option>
+                            <option value="cart">Cartesian (Position &amp; Velocity)</option>
+                        </select>
+                    </div>
+                    <div id="fieldsTargKep" class="input-group">
+                        <div class="field">
+                            <label>Mean Altitude a - R_eq (km) <span>[Min: 150]</span></label>
+                            <input type="number" id="targAlt" value="10000" min="150" max="400000" step="10" oninput="validateModalOrbits()">
+                        </div>
+                        <div class="field">
+                            <label>Eccentricity (e) <span id="maxEccLabelTarg">[Max: 0.601]</span></label>
+                            <input type="number" id="targEcc" value="0.02" step="0.005" min="0" max="0.95" oninput="validateModalOrbits()">
+                        </div>
+                        <div class="field">
+                            <label>Inclination (deg) <span>[0 - 180&deg;]</span></label>
+                            <input type="number" id="targInc" value="55.0" min="0" max="180" step="0.5" oninput="validateModalOrbits()">
+                        </div>
+                        <div class="field">
+                            <label>RAAN &Omega; (deg) <span>[0 - 360&deg;]</span></label>
+                            <input type="number" id="targRaan" value="50.0" min="0" max="360" step="1" oninput="validateModalOrbits()">
+                        </div>
+                    </div>
+                    <div id="fieldsTargCart" class="input-group" style="display:none;">
+                        <div class="field"><label>Rx (km)</label><input type="number" id="targRx" value="6080.47" step="10" oninput="validateModalOrbits()"></div>
+                        <div class="field"><label>Ry (km)</label><input type="number" id="targRy" value="3510.56" step="10" oninput="validateModalOrbits()"></div>
+                        <div class="field"><label>Rz (km)</label><input type="number" id="targRz" value="0.0" step="10" oninput="validateModalOrbits()"></div>
+                        <div class="field"><label>Vx (km/s)</label><input type="number" id="targVx" value="-2.268" step="0.1" oninput="validateModalOrbits()"></div>
+                        <div class="field"><label>Vy (km/s)</label><input type="number" id="targVy" value="3.928" step="0.1" oninput="validateModalOrbits()"></div>
+                        <div class="field"><label>Vz (km/s)</label><input type="number" id="targVz" value="6.019" step="0.1" oninput="validateModalOrbits()"></div>
+                    </div>
+                    <div id="statusTarg" class="orbit-status-bar valid">Perigee: 643.0 km | Apogee: 657.0 km (Valid Closed Orbit)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="gnc">
             <div class="form-section">
                 <div class="form-section-header">
-                    <h3 style="color:var(--green)">3. Target Final Orbit Data</h3>
-                    <select class="mode-toggle" id="modeTarg" onchange="toggleOrbitInput('Targ')">
-                        <option value="kep" selected>Parametric (Keplerian)</option>
-                        <option value="cart">Cartesian (Position &amp; Velocity)</option>
-                    </select>
+                    <h4 style="color:var(--amber)">4. Terminal Rendezvous &amp; Proximity Operations (LVLH / Hill Frame)</h4>
+                    <span class="form-section-subtitle">Two-Impulse Clohessy-Wiltshire Targeting to Target Origin [0, 0, 0]</span>
                 </div>
-                <div id="fieldsTargKep" class="input-group">
+                <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
                     <div class="field">
-                        <label>Mean Altitude a - R_eq (km) <span>[Min: 150]</span></label>
-                        <input type="number" id="targAlt" value="10000" min="150" max="400000" step="10" oninput="validateModalOrbits()">
+                        <label>Initial In-Track Offset &delta;y&#8320; [m] <span>[V-bar]</span></label>
+                        <input type="number" id="rdvDy0" value="-2000" min="-50000" max="50000" step="50">
                     </div>
                     <div class="field">
-                        <label>Eccentricity (e) <span id="maxEccLabelTarg">[Max: 0.601]</span></label>
-                        <input type="number" id="targEcc" value="0.02" step="0.005" min="0" max="0.95" oninput="validateModalOrbits()">
+                        <label>Initial Radial Offset &delta;x&#8320; [m] <span>[R-bar]</span></label>
+                        <input type="number" id="rdvDx0" value="-250" min="-20000" max="20000" step="25">
                     </div>
                     <div class="field">
-                        <label>Inclination (deg) <span>[0 - 180&deg;]</span></label>
-                        <input type="number" id="targInc" value="55.0" min="0" max="180" step="0.5" oninput="validateModalOrbits()">
+                        <label>Cross-Track Offset &delta;z&#8320; [m] <span>[H-bar]</span></label>
+                        <input type="number" id="rdvDz0" value="100" min="-10000" max="10000" step="10">
                     </div>
                     <div class="field">
-                        <label>RAAN &Omega; (deg) <span>[0 - 360&deg;]</span></label>
-                        <input type="number" id="targRaan" value="50.0" min="0" max="360" step="1" oninput="validateModalOrbits()">
+                        <label>Rendezvous Approach Duration [min]</label>
+                        <input type="number" id="rdvTofMin" value="45" min="2" max="300" step="1">
                     </div>
                 </div>
-                <div id="fieldsTargCart" class="input-group" style="display:none;">
-                    <div class="field"><label>Rx (km)</label><input type="number" id="targRx" value="6080.47" step="10" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Ry (km)</label><input type="number" id="targRy" value="3510.56" step="10" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Rz (km)</label><input type="number" id="targRz" value="0.0" step="10" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vx (km/s)</label><input type="number" id="targVx" value="-2.268" step="0.1" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vy (km/s)</label><input type="number" id="targVy" value="3.928" step="0.1" oninput="validateModalOrbits()"></div>
-                    <div class="field"><label>Vz (km/s)</label><input type="number" id="targVz" value="6.019" step="0.1" oninput="validateModalOrbits()"></div>
-                </div>
-                <div id="statusTarg" class="orbit-status-bar valid">Perigee: 643.0 km | Apogee: 657.0 km (Valid Closed Orbit)</div>
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--amber)">4. Terminal Rendezvous &amp; Proximity Operations (LVLH / Hill Frame)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Two-Impulse Clohessy-Wiltshire Targeting to Target Origin [0, 0, 0]</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
-                <div class="field">
-                    <label>Initial In-Track Offset &delta;y&#8320; [m] <span>[V-bar]</span></label>
-                    <input type="number" id="rdvDy0" value="-2000" min="-50000" max="50000" step="50">
+        <div class="form-group-block modal-cat-item" data-cat="gnc">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--purple)">5. Monte Carlo GNC Uncertainty &amp; Mid-Course TCM Parameters (100 Runs)</h4>
+                    <span class="form-section-subtitle">Box-Muller Stochastic Dispersion on Burn 1 Execution &amp; Navigation State</span>
                 </div>
-                <div class="field">
-                    <label>Initial Radial Offset &delta;x&#8320; [m] <span>[R-bar]</span></label>
-                    <input type="number" id="rdvDx0" value="-250" min="-20000" max="20000" step="25">
-                </div>
-                <div class="field">
-                    <label>Cross-Track Offset &delta;z&#8320; [m] <span>[H-bar]</span></label>
-                    <input type="number" id="rdvDz0" value="100" min="-10000" max="10000" step="10">
-                </div>
-                <div class="field">
-                    <label>Rendezvous Approach Duration [min]</label>
-                    <input type="number" id="rdvTofMin" value="45" min="2" max="300" step="1">
+                <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="field">
+                        <label>Thrust Magnitude Error 1&sigma; [%] <span>[ Propulsive Impulse Uncertainty ]</span></label>
+                        <input type="number" id="mcSigmaDv" value="1.0" min="0.05" max="15.0" step="0.1">
+                    </div>
+                    <div class="field">
+                        <label>Attitude Pointing Error 1&sigma; [deg] <span>[ Gimbal / ADCS Pointing Jitter ]</span></label>
+                        <input type="number" id="mcSigmaPoint" value="0.5" min="0.02" max="10.0" step="0.05">
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--purple)">5. Monte Carlo GNC Uncertainty &amp; Mid-Course TCM Parameters (100 Runs)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Box-Muller Stochastic Dispersion on Burn 1 Execution &amp; Navigation State</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="field">
-                    <label>Thrust Magnitude Error 1&sigma; [%] <span>[ Propulsive Impulse Uncertainty ]</span></label>
-                    <input type="number" id="mcSigmaDv" value="1.0" min="0.05" max="15.0" step="0.1">
-                </div>
-                <div class="field">
-                    <label>Attitude Pointing Error 1&sigma; [deg] <span>[ Gimbal / ADCS Pointing Jitter ]</span></label>
-                    <input type="number" id="mcSigmaPoint" value="0.5" min="0.02" max="10.0" step="0.05">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--cyan)">6. ADCS &amp; Spacecraft Inertia (6-DOF Attitude Control &amp; Reaction Wheels)</h3>
-                <select class="mode-toggle" id="adcsPresetSelect" onchange="onAdcsPresetChange()">
-                    <option value="120|110|85|10" selected>Bus Preset: SmallSat (120 / 110 / 85 kg&middot;m&sup2;)</option>
-                    <option value="450|410|320|15">Bus Preset: MediumSat (450 / 410 / 320 kg&middot;m&sup2;)</option>
-                    <option value="1200|1100|850|25">Bus Preset: Heavy Bus (1200 / 1100 / 850 kg&middot;m&sup2;)</option>
-                    <option value="custom">Custom Principal Inertia Tensor</option>
-                </select>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
-                <div class="field">
-                    <label>Roll Inertia J<sub>xx</sub> [kg&middot;m&sup2;]</label>
-                    <input type="number" id="adcsJxx" value="120.0" min="10" max="10000" step="10">
-                </div>
-                <div class="field">
-                    <label>Pitch Inertia J<sub>yy</sub> [kg&middot;m&sup2;]</label>
-                    <input type="number" id="adcsJyy" value="110.0" min="10" max="10000" step="10">
-                </div>
-                <div class="field">
-                    <label>Yaw Inertia J<sub>zz</sub> [kg&middot;m&sup2;]</label>
-                    <input type="number" id="adcsJzz" value="85.0" min="10" max="10000" step="10">
-                </div>
-                <div class="field">
-                    <label>Max RW Capacity h<sub>max</sub> [N&middot;m&middot;s]</label>
-                    <input type="number" id="adcsHmax" value="10.0" min="1.0" max="200.0" step="1.0">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--amber)">7. Thermal Control System (TCS), Surface Coating &amp; Radiation Shielding</h3>
-                <select class="mode-toggle" id="tcsPresetSelect" onchange="onTcsPresetChange()">
-                    <option value="0.22|0.86|-10|45|White Paint SG121" selected>Surface Coating: White Paint SG121 (&alpha;<sub>s</sub>=0.22, &epsilon;<sub>IR</sub>=0.86)</option>
-                    <option value="0.10|0.82|-10|45|Optical Solar Reflector (OSR)">Surface Coating: Optical Solar Reflector OSR (&alpha;<sub>s</sub>=0.10, &epsilon;<sub>IR</sub>=0.82)</option>
-                    <option value="0.35|0.55|-10|45|MLI Gold Kapton">Surface Coating: MLI Gold Kapton (&alpha;<sub>s</sub>=0.35, &epsilon;<sub>IR</sub>=0.55)</option>
-                    <option value="0.88|0.86|-10|45|Black Anodized Al">Surface Coating: Black Anodized Al (&alpha;<sub>s</sub>=0.88, &epsilon;<sub>IR</sub>=0.86)</option>
-                    <option value="custom">Custom Thermo-Optical Coating</option>
-                </select>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(5, 1fr);">
-                <div class="field">
-                    <label>Solar Absorptivity &alpha;<sub>s</sub> <span>[0.05-0.98]</span></label>
-                    <input type="number" id="tcsAlpha" value="0.22" min="0.05" max="0.98" step="0.02">
-                </div>
-                <div class="field">
-                    <label>IR Emissivity &epsilon;<sub>IR</sub> <span>[0.05-0.98]</span></label>
-                    <input type="number" id="tcsEps" value="0.86" min="0.05" max="0.98" step="0.02">
-                </div>
-                <div class="field">
-                    <label>Al Shielding Thickness [mm]</label>
-                    <input type="number" id="tcsShieldMm" value="4.0" min="0.5" max="30.0" step="0.5">
-                </div>
-                <div class="field">
-                    <label>Min Op Temp T<sub>min</sub> [&deg;C]</label>
-                    <input type="number" id="tcsTmin" value="-10" min="-80" max="30" step="2">
-                </div>
-                <div class="field">
-                    <label>Max Op Temp T<sub>max</sub> [&deg;C]</label>
-                    <input type="number" id="tcsTmax" value="45" min="10" max="120" step="2">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--green)">8. RF Telecommunication Link Budget &amp; Ground Station Downlink</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Milano-Bovisa 3.5m Ground Station &bull; Adaptive Coding &amp; Modulation (LDPC ACM)</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
-                <div class="field">
-                    <label>Downlink Frequency Band (S / X / Ka)</label>
-                    <select id="rfBandSelect" onchange="onRfBandChange()">
-                        <option value="0|2.2|2.0|6.5|36.2|S-Band (2.2 GHz TT&C)">S-Band (2.2 GHz TT&amp;C &bull; 2 Mbps Nom &bull; All-Weather)</option>
-                        <option value="1|8.4|50.0|15.5|47.8|X-Band (8.4 GHz Science)" selected>X-Band (8.4 GHz Science Downlink &bull; 50 Mbps Nom)</option>
-                        <option value="2|26.5|250.0|25.0|57.6|Ka-Band (26.5 GHz High-Rate)">Ka-Band (26.5 GHz High-Throughput &bull; 250 Mbps Nom)</option>
+        <div class="form-group-block modal-cat-item" data-cat="gnc">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--cyan)">6. ADCS &amp; Spacecraft Inertia (6-DOF Attitude Control &amp; Reaction Wheels)</h4>
+                    <select class="mode-toggle" id="adcsPresetSelect" onchange="onAdcsPresetChange()">
+                        <option value="120|110|85|10" selected>Bus Preset: SmallSat (120 / 110 / 85 kg&middot;m&sup2;)</option>
+                        <option value="450|410|320|15">Bus Preset: MediumSat (450 / 410 / 320 kg&middot;m&sup2;)</option>
+                        <option value="1200|1100|850|25">Bus Preset: Heavy Bus (1200 / 1100 / 850 kg&middot;m&sup2;)</option>
+                        <option value="custom">Custom Principal Inertia Tensor</option>
                     </select>
                 </div>
-                <div class="field">
-                    <label>Onboard Tx Power P<sub>tx</sub> [W]</label>
-                    <input type="number" id="rfTxPowerW" value="15.0" min="0.5" max="250.0" step="1.0">
-                </div>
-                <div class="field">
-                    <label>S/C Antenna Gain G<sub>tx</sub> [dBi]</label>
-                    <input type="number" id="rfTxGainDbi" value="15.5" min="0.0" max="45.0" step="0.5">
-                </div>
-                <div class="field">
-                    <label>G/S Dish Diameter [m]</label>
-                    <input type="number" id="rfDishM" value="3.5" min="1.0" max="15.0" step="0.5">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--purple)">9. Payload Sensor Optics &amp; Symmetrical Walker Delta Constellation (i : T / P / F)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Ground Swath Width, Rayleigh GSD Resolution, Global Revisit &amp; Parametric Cost</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(5, 1fr);">
-                <div class="field">
-                    <label>Sensor Half-FOV &theta;<sub>FOV/2</sub> [deg]</label>
-                    <input type="number" id="sysHalfFovDeg" value="25.0" min="1.0" max="65.0" step="1.0">
-                </div>
-                <div class="field">
-                    <label>Optical Aperture D<sub>opt</sub> [m]</label>
-                    <input type="number" id="sysApertureM" value="0.35" min="0.05" max="4.0" step="0.05">
-                </div>
-                <div class="field">
-                    <label>Walker Total Satellites T</label>
-                    <input type="number" id="sysWalkerT" value="24" min="1" max="120" step="1">
-                </div>
-                <div class="field">
-                    <label>Orbital Planes P</label>
-                    <input type="number" id="sysWalkerP" value="3" min="1" max="24" step="1">
-                </div>
-                <div class="field">
-                    <label>Inter-Plane Phasing F</label>
-                    <input type="number" id="sysWalkerF" value="1" min="0" max="23" step="1">
+                <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="field">
+                        <label>Roll Inertia J<sub>xx</sub> [kg&middot;m&sup2;]</label>
+                        <input type="number" id="adcsJxx" value="120.0" min="10" max="10000" step="10">
+                    </div>
+                    <div class="field">
+                        <label>Pitch Inertia J<sub>yy</sub> [kg&middot;m&sup2;]</label>
+                        <input type="number" id="adcsJyy" value="110.0" min="10" max="10000" step="10">
+                    </div>
+                    <div class="field">
+                        <label>Yaw Inertia J<sub>zz</sub> [kg&middot;m&sup2;]</label>
+                        <input type="number" id="adcsJzz" value="85.0" min="10" max="10000" step="10">
+                    </div>
+                    <div class="field">
+                        <label>Max RW Capacity h<sub>max</sub> [N&middot;m&middot;s]</label>
+                        <input type="number" id="adcsHmax" value="10.0" min="1.0" max="200.0" step="1.0">
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--cyan)">10. Autonomous Onboard Navigation: GNSS (LEO) vs. X-Ray Pulsar Timing (XNAV + 1PN GR)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">6-State GNSS EKF &bull; 8-State Deep-Space XNAV EKF (Crab, Vela, J0030+0451 + Atomic Clock) &bull; 1PN Post-Newtonian Relativity</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: 1.7fr 1.1fr 0.9fr 0.9fr; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed rgba(192,132,252,0.28);">
-                <div class="field">
-                    <label>Autonomous Navigation Source</label>
-                    <select id="navSourceMode">
-                        <option value="0">GNSS (LEO) &mdash; Multi-Constellation GPS/Galileo Receiver</option>
-                        <option value="1" selected>X-Ray Pulsar Timing (Deep Space) &mdash; 3-Pulsar XNAV + 1PN Relativity</option>
+        <div class="form-group-block modal-cat-item" data-cat="subsystems">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--amber)">7. Thermal Control System (TCS), Surface Coating &amp; Radiation Shielding</h4>
+                    <select class="mode-toggle" id="tcsPresetSelect" onchange="onTcsPresetChange()">
+                        <option value="0.22|0.86|-10|45|White Paint SG121" selected>Surface Coating: White Paint SG121 (&alpha;<sub>s</sub>=0.22, &epsilon;<sub>IR</sub>=0.86)</option>
+                        <option value="0.10|0.82|-10|45|Optical Solar Reflector (OSR)">Surface Coating: Optical Solar Reflector OSR (&alpha;<sub>s</sub>=0.10, &epsilon;<sub>IR</sub>=0.82)</option>
+                        <option value="0.35|0.55|-10|45|MLI Gold Kapton">Surface Coating: MLI Gold Kapton (&alpha;<sub>s</sub>=0.35, &epsilon;<sub>IR</sub>=0.55)</option>
+                        <option value="0.88|0.86|-10|45|Black Anodized Al">Surface Coating: Black Anodized Al (&alpha;<sub>s</sub>=0.88, &epsilon;<sub>IR</sub>=0.86)</option>
+                        <option value="custom">Custom Thermo-Optical Coating</option>
                     </select>
                 </div>
-                <div class="field">
-                    <label>Onboard Atomic Clock (EKF State)</label>
-                    <select id="xnavClockClass">
-                        <option value="0" selected>NASA DSAC (Hg+ Ion, 10&#8315;&#185;&#8308;)</option>
-                        <option value="1">CSAC Chip-Scale Rb (10&#8315;&#185;&#185;)</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>Deep Space Range [Mkm]</label>
-                    <input type="number" id="xnavDeepSpaceMkm" value="45.0" min="5.0" max="350.0" step="5.0">
-                </div>
-                <div class="field">
-                    <label>XNAV Arc [days]</label>
-                    <input type="number" id="xnavArcDays" value="30" min="10" max="90" step="5">
-                </div>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
-                <div class="field">
-                    <label>GNSS Position Noise 1&sigma; [m]</label>
-                    <input type="number" id="ekfGpsSigmaPosM" value="15.0" min="0.5" max="200.0" step="1.0">
-                </div>
-                <div class="field">
-                    <label>GNSS Velocity Noise 1&sigma; [m/s]</label>
-                    <input type="number" id="ekfGpsSigmaVelMs" value="0.15" min="0.01" max="5.0" step="0.02">
-                </div>
-                <div class="field">
-                    <label>Initial State Uncertainty &sigma;<sub>r,0</sub> [m]</label>
-                    <input type="number" id="ekfInitSigmaPosM" value="500.0" min="10.0" max="5000.0" step="25.0">
-                </div>
-                <div class="field">
-                    <label>Process Noise q<sub>a</sub> [m/s&sup2;]</label>
-                    <input type="number" id="ekfProcNoiseMs2" value="0.0038" min="0.0001" max="0.10" step="0.0005">
+                <div class="input-group" style="grid-template-columns: repeat(5, 1fr);">
+                    <div class="field">
+                        <label>Solar Absorptivity &alpha;<sub>s</sub> <span>[0.05-0.98]</span></label>
+                        <input type="number" id="tcsAlpha" value="0.22" min="0.05" max="0.98" step="0.02">
+                    </div>
+                    <div class="field">
+                        <label>IR Emissivity &epsilon;<sub>IR</sub> <span>[0.05-0.98]</span></label>
+                        <input type="number" id="tcsEps" value="0.86" min="0.05" max="0.98" step="0.02">
+                    </div>
+                    <div class="field">
+                        <label>Al Shielding Thickness [mm]</label>
+                        <input type="number" id="tcsShieldMm" value="4.0" min="0.5" max="30.0" step="0.5">
+                    </div>
+                    <div class="field">
+                        <label>Min Op Temp T<sub>min</sub> [&deg;C]</label>
+                        <input type="number" id="tcsTmin" value="-10" min="-80" max="30" step="2">
+                    </div>
+                    <div class="field">
+                        <label>Max Op Temp T<sub>max</sub> [&deg;C]</label>
+                        <input type="number" id="tcsTmax" value="45" min="10" max="120" step="2">
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="safety" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--red)">11. Space Situational Awareness (SSA), Space Debris &amp; CAM Planning</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">B-Plane (&xi;, &zeta;) Foster 2D P<sub>c</sub> &amp; Tangential In-Track Phasing Collision Avoidance Maneuver</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
-                <div class="field">
-                    <label>Predicted Debris Miss Distance at TCA [m]</label>
-                    <input type="number" id="camMissDistM" value="180.0" min="5.0" max="5000.0" step="10.0">
+        <div class="form-group-block modal-cat-item" data-cat="subsystems">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--green)">8. RF Telecommunication Link Budget &amp; Ground Station Downlink</h4>
+                    <span class="form-section-subtitle">Milano-Bovisa 3.5m Ground Station &bull; Adaptive Coding &amp; Modulation (LDPC ACM)</span>
                 </div>
-                <div class="field">
-                    <label>CAM Lead Time before TCA [Orbits]</label>
-                    <input type="number" id="camLeadOrbits" value="1.5" min="0.5" max="10.0" step="0.5">
-                </div>
-                <div class="field">
-                    <label>Combined Hard-Body Radius R<sub>HBR</sub> [m]</label>
-                    <input type="number" id="camHbrM" value="5.0" min="0.5" max="50.0" step="0.5">
-                </div>
-                <div class="field">
-                    <label>B-Plane 1&sigma; Uncertainty &sigma;<sub>&zeta;</sub> [m]</label>
-                    <input type="number" id="camSigmaZetaM" value="175.0" min="20.0" max="1000.0" step="10.0">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="safety" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--amber)">12. End-of-Life (EoL) Deorbit &amp; 3-Phase EDL Sequence (Hypersonic, Parachute &amp; Powered Descent)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">3-DOF Entry from h<sub>EI</sub> = 120 km &bull; Supersonic Disk-Gap-Band Chute Deploy &bull; Skycrane Powered Descent to V<sub>td</sub> &lt; 2.5 m/s</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
-                <div class="field">
-                    <label>Entry Flight-Path Angle &gamma;<sub>EI</sub> [deg]</label>
-                    <input type="number" id="eolFpaDeg" value="-1.5" min="-10.0" max="-0.4" step="0.1">
-                </div>
-                <div class="field">
-                    <label>Effective Nose Radius R<sub>n</sub> [m]</label>
-                    <input type="number" id="eolNoseRadiusM" value="0.50" min="0.10" max="3.00" step="0.05">
-                </div>
-                <div class="field">
-                    <label>Parachute Deploy Mach Number [-]</label>
-                    <input type="number" id="edlChuteMach" value="2.1" min="1.1" max="3.2" step="0.1">
-                </div>
-                <div class="field">
-                    <label>Powered Descent Start Altitude [m]</label>
-                    <input type="number" id="edlPdAltM" value="2000" min="300" max="6000" step="100">
+                <div class="input-group" style="grid-template-columns: 2fr 1fr 1fr 1fr;">
+                    <div class="field">
+                        <label>Downlink Frequency Band (S / X / Ka)</label>
+                        <select id="rfBandSelect" onchange="onRfBandChange()">
+                            <option value="0|2.2|2.0|6.5|36.2|S-Band (2.2 GHz TT&C)">S-Band (2.2 GHz TT&amp;C &bull; 2 Mbps Nom &bull; All-Weather)</option>
+                            <option value="1|8.4|50.0|15.5|47.8|X-Band (8.4 GHz Science)" selected>X-Band (8.4 GHz Science Downlink &bull; 50 Mbps Nom)</option>
+                            <option value="2|26.5|250.0|25.0|57.6|Ka-Band (26.5 GHz High-Rate)">Ka-Band (26.5 GHz High-Throughput &bull; 250 Mbps Nom)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Onboard Tx Power P<sub>tx</sub> [W]</label>
+                        <input type="number" id="rfTxPowerW" value="15.0" min="0.5" max="250.0" step="1.0">
+                    </div>
+                    <div class="field">
+                        <label>S/C Antenna Gain G<sub>tx</sub> [dBi]</label>
+                        <input type="number" id="rfTxGainDbi" value="15.5" min="0.0" max="45.0" step="0.5">
+                    </div>
+                    <div class="field">
+                        <label>G/S Dish Diameter [m]</label>
+                        <input type="number" id="rfDishM" value="3.5" min="1.0" max="15.0" step="0.5">
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="orbit" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--cyan)">13. Cislunar CR3BP, Weak Stability Boundary (WSB) &amp; 4-Body Ballistic Lunar Transfer</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">CR3BP (&mu;<sub>EM</sub> = 0.01215059) &bull; Bicircular 4-Body Sun-Earth-Moon (BCR4BP) &bull; 1.5M km Sun-Earth L<sub>1</sub> WSB Capture</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 8px;">
-                <div class="field">
-                    <label>Target Lagrange Point Regime</label>
-                    <select id="cislunarRegime">
-                        <option value="0" selected>L2 Far-Side Southern Halo (Lunar Gateway)</option>
-                        <option value="1">L1 Cislunar Neck Gateway / Halo Orbit</option>
-                        <option value="2">Lunar Free-Return Circum-Lunar Flyby</option>
-                    </select>
+        <div class="form-group-block modal-cat-item" data-cat="subsystems">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--purple)">9. Payload Sensor Optics &amp; Symmetrical Walker Delta Constellation (i : T / P / F)</h4>
+                    <span class="form-section-subtitle">Ground Swath Width, Rayleigh GSD Resolution, Global Revisit &amp; Parametric Cost</span>
                 </div>
-                <div class="field">
-                    <label>Halo Z-Amplitude A<sub>z</sub> [km]</label>
-                    <input type="number" id="cislunarHaloAzKm" value="15000" min="1000" max="50000" step="1000">
-                </div>
-            </div>
-            <div class="input-group" style="grid-template-columns: 1.8fr 1.1fr 1.1fr; padding-top: 8px; border-top: 1px dashed rgba(148,163,184,0.2);">
-                <div class="field">
-                    <label>Lunar Transfer Type (Direct TLI vs. 4-Body Ballistic Lunar Transfer)</label>
-                    <select id="bltTransferMode">
-                        <option value="1" selected>Ballistic Lunar Transfer (BLT / WSB &mdash; 100 Days, 1.5M km Solar L1 Loop)</option>
-                        <option value="0">Direct TLI (3.8 Days &mdash; Fast Hohmann-like Cislunar Transfer)</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>BLT / WSB Time of Flight [days]</label>
-                    <input type="number" id="bltTofDays" value="102" min="75" max="140" step="2">
-                </div>
-                <div class="field">
-                    <label>WSB Apogee Distance [Million km]</label>
-                    <input type="number" id="bltTargetApogeeMkm" value="1.512" min="1.20" max="1.85" step="0.02">
+                <div class="input-group" style="grid-template-columns: repeat(5, 1fr);">
+                    <div class="field">
+                        <label>Sensor Half-FOV &theta;<sub>FOV/2</sub> [deg]</label>
+                        <input type="number" id="sysHalfFovDeg" value="25.0" min="1.0" max="65.0" step="1.0">
+                    </div>
+                    <div class="field">
+                        <label>Optical Aperture D<sub>opt</sub> [m]</label>
+                        <input type="number" id="sysApertureM" value="0.35" min="0.05" max="4.0" step="0.05">
+                    </div>
+                    <div class="field">
+                        <label>Walker Total Satellites T</label>
+                        <input type="number" id="sysWalkerT" value="24" min="1" max="120" step="1">
+                    </div>
+                    <div class="field">
+                        <label>Orbital Planes P</label>
+                        <input type="number" id="sysWalkerP" value="3" min="1" max="24" step="1">
+                    </div>
+                    <div class="field">
+                        <label>Inter-Plane Phasing F</label>
+                        <input type="number" id="sysWalkerF" value="1" min="0" max="23" step="1">
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--purple)">14. Structural &amp; Slosh Dynamics (Flexible Solar Array Modes, Tank Sloshing &amp; CSI)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Cantilever Solar Array Bending f<sub>flex</sub> &bull; Abramson Propellant Slosh Pendulum &zeta;<sub>slosh</sub> &bull; GNC Digital Notch Filter</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="field">
-                    <label>Solar Array 1st Bending Frequency f<sub>flex</sub> [Hz]</label>
-                    <input type="number" id="csiFlexFreqHz" value="0.85" min="0.20" max="3.00" step="0.05">
+        <div class="form-group-block modal-cat-item" data-cat="gnc">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--cyan)">10. Autonomous Onboard Navigation: GNSS (LEO) vs. X-Ray Pulsar Timing (XNAV + 1PN GR)</h4>
+                    <span class="form-section-subtitle">6-State GNSS EKF &bull; 8-State Deep-Space XNAV EKF (Crab, Vela, J0030+0451 + Atomic Clock) &bull; 1PN Post-Newtonian Relativity</span>
                 </div>
-                <div class="field">
-                    <label>Tank Slosh Baffle Damping Ratio &zeta;<sub>slosh</sub> [-]</label>
-                    <input type="number" id="csiSloshZeta" value="0.03" min="0.005" max="0.20" step="0.005">
+                <div class="input-group" style="grid-template-columns: 1.7fr 1.1fr 0.9fr 0.9fr; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed rgba(192,132,252,0.28);">
+                    <div class="field">
+                        <label>Autonomous Navigation Source</label>
+                        <select id="navSourceMode">
+                            <option value="0">GNSS (LEO) &mdash; Multi-Constellation GPS/Galileo Receiver</option>
+                            <option value="1" selected>X-Ray Pulsar Timing (Deep Space) &mdash; 3-Pulsar XNAV + 1PN Relativity</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Onboard Atomic Clock (EKF State)</label>
+                        <select id="xnavClockClass">
+                            <option value="0" selected>NASA DSAC (Hg+ Ion, 10&#8315;&#185;&#8308;)</option>
+                            <option value="1">CSAC Chip-Scale Rb (10&#8315;&#185;&#185;)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Deep Space Range [Mkm]</label>
+                        <input type="number" id="xnavDeepSpaceMkm" value="45.0" min="5.0" max="350.0" step="5.0">
+                    </div>
+                    <div class="field">
+                        <label>XNAV Arc [days]</label>
+                        <input type="number" id="xnavArcDays" value="30" min="10" max="90" step="5">
+                    </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="safety" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--red)">15. Autonomous FDIR Fault Injection, B-Side Redundancy &amp; Safe-Mode Recovery</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">OBDH FDIR State Machine &bull; LCL Isolation &amp; B-Side Redundancy Switchover &bull; Sun-Pointing Safe Mode</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: 2fr 1fr;">
-                <div class="field">
-                    <label>FDIR Fault Injection Scenario</label>
-                    <select id="fdirFaultScenario">
-                        <option value="0" selected>RW-2 Actuator Failure (Tachometer/Driver Loss &rarr; Skewed RW-4 B-Side Takeover)</option>
-                        <option value="1">Solar Array Shunt Short (28V Bus Undervoltage &rarr; B-Side S3R-B Array Regulator)</option>
-                        <option value="2">Star Tracker Blinded (STR-A Optical Head SEU &rarr; Hot-Standby STR-B + FOG IMU)</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>Fault Injection Epoch t<sub>fault</sub> [s]</label>
-                    <input type="number" id="fdirInjectTimeS" value="12.0" min="3.0" max="55.0" step="1.0">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="orbit" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--amber)">16. Interplanetary Patched-Conics &amp; Planetary Gravity Assist (Flyby)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Heliocentric Lambert &bull; Porkchop C<sub>3</sub> / V<sub>&infin;</sub> Grid &bull; Planetary Slingshot V<sub>&infin;</sub> Rotation &amp; B-Plane Targeting</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 10px;">
-                <div class="field">
-                    <label>Target Planet (Direct Lambert)</label>
-                    <select id="iplTarget">
-                        <option value="0" selected>Mars</option>
-                        <option value="1">Venus</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>Target Capture Periapsis Altitude [km]</label>
-                    <input type="number" id="iplCaptureAltKm" value="400" min="100" max="100000" step="50">
-                </div>
-                <div class="field">
-                    <label>Interplanetary Transfer TOF [days]</label>
-                    <input type="number" id="iplTofDays" value="210" min="150" max="320" step="5">
-                </div>
-            </div>
-            <div class="input-group" style="grid-template-columns: 1.2fr 1.5fr 1.3fr; padding-top: 8px; border-top: 1px dashed rgba(148,163,184,0.2);">
-                <div class="field" style="justify-content: center;">
-                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#00e676; font-weight:700; font-size:12px; margin-top:14px;">
-                        <input type="checkbox" id="iplEnableFlyby" checked style="width:16px; height:16px; accent-color:#00e676; cursor:pointer;">
-                        Enable Gravity Assist (Flyby)
-                    </label>
-                </div>
-                <div class="field">
-                    <label>Intermediate Flyby Planet (Slingshot Body)</label>
-                    <select id="iplFlybyPlanet">
-                        <option value="0" selected>Jupiter (5.20 AU &mdash; Giant Deep-Space Slingshot)</option>
-                        <option value="1">Venus (0.72 AU &mdash; Inner Solar System Assist)</option>
-                        <option value="2">Mars (1.52 AU &mdash; Terrestrial Gravity Assist)</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>Flyby Periapsis Altitude h<sub>p</sub> [km]</label>
-                    <input type="number" id="iplFlybyAltKm" value="140000" min="200" max="1500000" step="1000">
-                </div>
-            </div>
-            <div class="input-group" style="grid-template-columns: 1.6fr 1.2fr 1.2fr; padding-top: 8px; margin-top: 6px; border-top: 1px dashed rgba(148,163,184,0.2);">
-                <div class="field">
-                    <label>Target Orbit Insertion Method (Propulsive Burn vs. Aerocapture)</label>
-                    <select id="aeroInsertionMethod">
-                        <option value="1" selected>Aerocapture &amp; Aerobraking Pass (Martian Atmospheric Drag Capture)</option>
-                        <option value="0">Propulsive Retro-Burn (&Delta;V_MOI Engine Ignition)</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>Hypersonic Lift-to-Drag Ratio (L/D) [-]</label>
-                    <input type="number" id="aeroLiftToDrag" value="0.25" min="0.05" max="0.60" step="0.05">
-                </div>
-                <div class="field">
-                    <label>Atmospheric Entry FPA &gamma;<sub>EI</sub> [deg]</label>
-                    <input type="number" id="aeroEntryFpaDeg" value="-11.35" min="-14.50" max="-8.50" step="0.10">
-                </div>
-            </div>
-            <div class="input-group" style="grid-template-columns: 1.2fr 1.3fr 1.5fr; padding-top: 8px; margin-top: 6px; border-top: 1px dashed rgba(148,163,184,0.2);">
-                <div class="field" style="justify-content: center;">
-                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#fbbf24; font-weight:700; font-size:12px; margin-top:14px;">
-                        <input type="checkbox" id="sailEnablePropulsion" checked style="width:16px; height:16px; accent-color:#fbbf24; cursor:pointer;">
-                        Enable Solar Sail Propulsion
-                    </label>
-                </div>
-                <div class="field">
-                    <label>Solar Sail Reflective Area A<sub>sail</sub> [m&sup2;]</label>
-                    <input type="number" id="sailAreaM2" value="1200" min="100" max="50000" step="100">
-                </div>
-                <div class="field">
-                    <label>Solar Sail Spiral Target &amp; Steering Law</label>
-                    <select id="sailTargetPlanet">
-                        <option value="0" selected>Mars Outward Spiral (1.0 &rarr; 1.524 AU, Optimal Pitch &alpha;* = +35.26&deg;)</option>
-                        <option value="1">Venus Inward Spiral (1.0 &rarr; 0.723 AU, Optimal Pitch &alpha;* = -35.26&deg;)</option>
-                    </select>
+                <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="field">
+                        <label>GNSS Position Noise 1&sigma; [m]</label>
+                        <input type="number" id="ekfGpsSigmaPosM" value="15.0" min="0.5" max="200.0" step="1.0">
+                    </div>
+                    <div class="field">
+                        <label>GNSS Velocity Noise 1&sigma; [m/s]</label>
+                        <input type="number" id="ekfGpsSigmaVelMs" value="0.15" min="0.01" max="5.0" step="0.02">
+                    </div>
+                    <div class="field">
+                        <label>Initial State Uncertainty &sigma;<sub>r,0</sub> [m]</label>
+                        <input type="number" id="ekfInitSigmaPosM" value="500.0" min="10.0" max="5000.0" step="25.0">
+                    </div>
+                    <div class="field">
+                        <label>Process Noise q<sub>a</sub> [m/s&sup2;]</label>
+                        <input type="number" id="ekfProcNoiseMs2" value="0.0038" min="0.0001" max="0.10" step="0.0005">
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="gnc" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--green)">17. Multi-Satellite Formation Flying (Chief + 3 Deputies, D'Amico ROEs &amp; J<sub>2</sub>-Invariance)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Quasi-Nonsingular Relative Orbital Elements (&delta;<b>&alpha;</b>) &bull; E/I-Vector Passive Anti-Collision Safety &bull; LVLH [R, T, N]</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: 2fr 1fr;">
-                <div class="field">
-                    <label>Formation Topology (LVLH Relative Geometry)</label>
-                    <select id="formTopology">
-                        <option value="0" selected>Projected Circular Orbit (PCO &mdash; 3D Circular T-N Interferometric Aperture)</option>
-                        <option value="3">Cartwheel 2:1 Ellipse (In-Plane Elliptical Aperture + Cross-Track E/I Safety)</option>
-                        <option value="2">Cross-Track Pendulum (Bistatic SAR Cross-Track Oscillation)</option>
-                        <option value="1">Along-Track String of Pearls (Leader-Follower + Passive E/I Helix)</option>
-                    </select>
+        <div class="form-group-block modal-cat-item" data-cat="safety">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--red)">11. Space Situational Awareness (SSA), Space Debris &amp; CAM Planning</h4>
+                    <span class="form-section-subtitle">B-Plane (&xi;, &zeta;) Foster 2D P<sub>c</sub> &amp; Tangential In-Track Phasing Collision Avoidance Maneuver</span>
                 </div>
-                <div class="field">
-                    <label>Formation Baseline Radius &rho;<sub>form</sub> [m]</label>
-                    <input type="number" id="formRadiusM" value="500" min="50" max="25000" step="50">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--cyan)">18. Onboard SSR Memory Buffer &amp; Autonomous Operations Scheduler</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">NAND Flash Solid-State Recorder (SSR) with EDAC &bull; 95% Overflow Protection &bull; Payload Acquisition vs. RF Downlink</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="field">
-                    <label>Solid-State Recorder (SSR) Capacity M<sub>SSR,max</sub> [GB]</label>
-                    <input type="number" id="ssrCapacityGb" value="128" min="8" max="8192" step="16">
-                </div>
-                <div class="field">
-                    <label>Payload Science Data Generation Rate R<sub>gen</sub> [Mbps]</label>
-                    <input type="number" id="ssrScienceRateMbps" value="120" min="5" max="2000" step="10">
+                <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="field">
+                        <label>Predicted Debris Miss Distance at TCA [m]</label>
+                        <input type="number" id="camMissDistM" value="180.0" min="5.0" max="5000.0" step="10.0">
+                    </div>
+                    <div class="field">
+                        <label>CAM Lead Time before TCA [Orbits]</label>
+                        <input type="number" id="camLeadOrbits" value="1.5" min="0.5" max="10.0" step="0.5">
+                    </div>
+                    <div class="field">
+                        <label>Combined Hard-Body Radius R<sub>HBR</sub> [m]</label>
+                        <input type="number" id="camHbrM" value="5.0" min="0.5" max="50.0" step="0.5">
+                    </div>
+                    <div class="field">
+                        <label>B-Plane 1&sigma; Uncertainty &sigma;<sub>&zeta;</sub> [m]</label>
+                        <input type="number" id="camSigmaZetaM" value="175.0" min="20.0" max="1000.0" step="10.0">
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--green)">19. Optical Inter-Satellite Links (ISL) &amp; Constellation Laser Mesh Network</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">1550 nm Laser Communication Terminals (LCT) &bull; 3D Line-of-Sight Limb Occultation (R<sub>E</sub> + 80 km) &bull; 10 Gbps/Link</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="field">
-                    <label>Optical Link Range Limit d<sub>ISL,max</sub> [km] <span>[500 - 25,000 km]</span></label>
-                    <input type="number" id="islMaxRangeKm" value="5000" min="500" max="25000" step="250">
+        <div class="form-group-block modal-cat-item" data-cat="safety">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--amber)">12. End-of-Life (EoL) Deorbit &amp; 3-Phase EDL Sequence (Hypersonic, Parachute &amp; Powered Descent)</h4>
+                    <span class="form-section-subtitle">3-DOF Entry from h<sub>EI</sub> = 120 km &bull; Supersonic Disk-Gap-Band Chute Deploy &bull; Skycrane Powered Descent to V<sub>td</sub> &lt; 2.5 m/s</span>
                 </div>
-                <div class="field">
-                    <label>Per-Link Laser Data Rate [Gbps] <span>[Coherent BPSK LCT]</span></label>
-                    <input type="number" id="islLinkRateGbps" value="10.0" min="1.0" max="100.0" step="1.0">
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--amber)">20. Multi-Station Ground Network (NASA DSN / ESA ESTRACK / Polar LEO) &amp; Tracking</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Topocentric SEZ Azimuth-Elevation-Range (AER) &bull; AOS/LOS Visibility Cones &bull; Antenna Pedestal Slew Rate</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: 2fr 1fr;">
-                <div class="field">
-                    <label>Active Global Ground Station Network</label>
-                    <select id="gndNetworkType">
-                        <option value="0" selected>NASA Deep Space Network (DSN: Goldstone, Madrid, Canberra + Milano-Bovisa)</option>
-                        <option value="1">ESA ESTRACK Global Network (Cebreros, Malarg&uuml;e, New Norcia, Kourou)</option>
-                        <option value="2">High-Latitude Polar LEO Network (Svalbard SvalSat, TrollSat, Fairbanks, Punta Arenas)</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>Antenna Elevation Mask El<sub>min</sub> [deg] <span>[0 - 45&deg;]</span></label>
-                    <input type="number" id="gndElMaskDeg" value="5.0" min="0.0" max="45.0" step="1.0">
+                <div class="input-group" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="field">
+                        <label>Entry Flight-Path Angle &gamma;<sub>EI</sub> [deg]</label>
+                        <input type="number" id="eolFpaDeg" value="-1.5" min="-10.0" max="-0.4" step="0.1">
+                    </div>
+                    <div class="field">
+                        <label>Effective Nose Radius R<sub>n</sub> [m]</label>
+                        <input type="number" id="eolNoseRadiusM" value="0.50" min="0.10" max="3.00" step="0.05">
+                    </div>
+                    <div class="field">
+                        <label>Parachute Deploy Mach Number [-]</label>
+                        <input type="number" id="edlChuteMach" value="2.1" min="1.1" max="3.2" step="0.1">
+                    </div>
+                    <div class="field">
+                        <label>Powered Descent Start Altitude [m]</label>
+                        <input type="number" id="edlPdAltM" value="2000" min="300" max="6000" step="100">
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--cyan)">21. High-Fidelity Electrical Power System (EPS Hi-Fi), Penumbra &amp; Li-Ion Chemistry</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Conical Umbra/Penumbra Transit &bull; Thermal/TID MPPT Solar Array &bull; Nonlinear Li-Ion V<sub>batt</sub>(SoC) &amp; Cyclic DoD SoH Fade</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: 1fr 1fr;">
-                <div class="field">
-                    <label>Battery Cell Configuration <span>[Series &times; Parallel Pack]</span></label>
-                    <select id="epsBattConfig">
-                        <option value="0" selected>8S4P Li-Ion Standard (28V Unregulated Bus &bull; 33.6V Max / 24.0V Cut &bull; 48 Ah / 1382 Wh)</option>
-                        <option value="1">8S6P Li-Ion High-Capacity (28V Unregulated Bus &bull; 33.6V Max / 24.0V Cut &bull; 72 Ah / 2074 Wh)</option>
-                        <option value="2">7S4P Li-Ion Compact LEO (25.2V Bus &bull; 29.4V Max / 21.0V Cut &bull; 48 Ah / 1210 Wh)</option>
-                        <option value="3">14S4P Li-Ion High-Power (50V Bus &bull; 58.8V Max / 42.0V Cut &bull; 48 Ah / 2419 Wh)</option>
-                    </select>
+        <div class="form-group-block modal-cat-item" data-cat="orbit">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--cyan)">13. Cislunar CR3BP, Weak Stability Boundary (WSB) &amp; 4-Body Ballistic Lunar Transfer</h4>
+                    <span class="form-section-subtitle">CR3BP (&mu;<sub>EM</sub> = 0.01215059) &bull; Bicircular 4-Body Sun-Earth-Moon (BCR4BP) &bull; 1.5M km Sun-Earth L<sub>1</sub> WSB Capture</span>
                 </div>
-                <div class="field">
-                    <label>Solar Array Cell Type <span>[Photovoltaic Technology &amp; &beta;<sub>T</sub>]</span></label>
-                    <select id="epsSolarCellType">
-                        <option value="0" selected>GaAs Triple-Junction InGaP/GaAs/Ge (&eta;&#8320; = 30.2%, &beta; = -0.20%/K, Radiation-Hard)</option>
-                        <option value="1">Silicon High-Efficiency Space BSFR (&eta;&#8320; = 19.8%, &beta; = -0.45%/K)</option>
-                    </select>
+                <div class="input-group" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 8px;">
+                    <div class="field">
+                        <label>Target Lagrange Point Regime</label>
+                        <select id="cislunarRegime">
+                            <option value="0" selected>L2 Far-Side Southern Halo (Lunar Gateway)</option>
+                            <option value="1">L1 Cislunar Neck Gateway / Halo Orbit</option>
+                            <option value="2">Lunar Free-Return Circum-Lunar Flyby</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Halo Z-Amplitude A<sub>z</sub> [km]</label>
+                        <input type="number" id="cislunarHaloAzKm" value="15000" min="1000" max="50000" step="1000">
+                    </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="form-section modal-cat-item" data-cat="subsystems" style="margin-bottom: 10px; border-color: rgba(56,189,248,0.38);">
-            <div class="form-section-header">
-                <h3 style="color:var(--cyan-bright)">22. Earth Observation (EO) Sensor Raycasting, Rectangular FOV &amp; Off-Nadir Tilt</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">6-DOF Quaternion Boresight (+Z<sub>body</sub>) WGS84 Ellipsoid Intersection &bull; Trapezoidal Swath Polygon &amp; Global Heatmap</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: repeat(3, 1fr);">
-                <div class="field">
-                    <label>Sensor Along-Track FOV X [deg] <span>[1 - 55&deg;]</span></label>
-                    <input type="number" id="eoFovXDeg" value="10.0" min="1.0" max="55.0" step="1.0">
-                </div>
-                <div class="field">
-                    <label>Sensor Cross-Track FOV Y [deg] <span>[1 - 60&deg;]</span></label>
-                    <input type="number" id="eoFovYDeg" value="15.0" min="1.0" max="60.0" step="1.0">
-                </div>
-                <div class="field">
-                    <label>Sensor Boresight Off-Nadir Angle [deg] <span>[-40&deg; .. +40&deg; SAR/EO]</span></label>
-                    <input type="number" id="eoOffNadirDeg" value="0.0" min="-40.0" max="40.0" step="2.5">
+                <div class="input-group" style="grid-template-columns: 1.8fr 1.1fr 1.1fr; padding-top: 8px; border-top: 1px dashed rgba(148,163,184,0.2);">
+                    <div class="field">
+                        <label>Lunar Transfer Type (Direct TLI vs. 4-Body Ballistic Lunar Transfer)</label>
+                        <select id="bltTransferMode">
+                            <option value="1" selected>Ballistic Lunar Transfer (BLT / WSB &mdash; 100 Days, 1.5M km Solar L1 Loop)</option>
+                            <option value="0">Direct TLI (3.8 Days &mdash; Fast Hohmann-like Cislunar Transfer)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>BLT / WSB Time of Flight [days]</label>
+                        <input type="number" id="bltTofDays" value="102" min="75" max="140" step="2">
+                    </div>
+                    <div class="field">
+                        <label>WSB Apogee Distance [Million km]</label>
+                        <input type="number" id="bltTargetApogeeMkm" value="1.512" min="1.20" max="1.85" step="0.02">
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="form-section modal-cat-item" data-cat="safety" style="margin-bottom: 10px;">
-            <div class="form-section-header">
-                <h3 style="color:var(--amber)">23. Space Weather (Solar Activity F<sub>10.7</sub>, Diurnal Bulge &amp; Geomagnetic Storm K<sub>p</sub>)</h3>
-                <span style="font-size:11.5px; color:var(--text-muted);">Jacchia-Bowman / NRLMSISE-00 Thermospheric Breathing &bull; Secular King-Hele Orbit Decay &bull; IADC 25-Year Rule</span>
-            </div>
-            <div class="input-group" style="grid-template-columns: 2fr 1fr;">
-                <div class="field">
-                    <label>Solar Cycle Phase (10.7 cm Solar Radio Flux F<sub>10.7</sub> [SFU])</label>
-                    <select id="swxCyclePhase">
-                        <option value="0|70">Solar Minimum (F10.7 = 70 SFU &bull; Quiet Thermosphere / Slow Decay)</option>
-                        <option value="1|140" selected>Average Solar Activity (F10.7 = 140 SFU &bull; Nominal 11-Yr Mean)</option>
-                        <option value="2|220">Solar Maximum (F10.7 = 220 SFU &bull; Expanded Thermosphere / Rapid Decay)</option>
-                    </select>
+        <div class="form-group-block modal-cat-item" data-cat="gnc">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--purple)">14. Structural &amp; Slosh Dynamics (Flexible Solar Array Modes, Tank Sloshing &amp; CSI)</h4>
+                    <span class="form-section-subtitle">Cantilever Solar Array Bending f<sub>flex</sub> &bull; Abramson Propellant Slosh Pendulum &zeta;<sub>slosh</sub> &bull; GNC Digital Notch Filter</span>
                 </div>
-                <div class="field">
-                    <label>Geomagnetic Storm Index K<sub>p</sub> <span>[0 = Quiet .. 9 = Extreme Storm]</span></label>
-                    <input type="number" id="swxKpIndex" value="3.0" min="0.0" max="9.0" step="0.5">
+                <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="field">
+                        <label>Solar Array 1st Bending Frequency f<sub>flex</sub> [Hz]</label>
+                        <input type="number" id="csiFlexFreqHz" value="0.85" min="0.20" max="3.00" step="0.05">
+                    </div>
+                    <div class="field">
+                        <label>Tank Slosh Baffle Damping Ratio &zeta;<sub>slosh</sub> [-]</label>
+                        <input type="number" id="csiSloshZeta" value="0.03" min="0.005" max="0.20" step="0.005">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="safety">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--red)">15. Autonomous FDIR Fault Injection, B-Side Redundancy &amp; Safe-Mode Recovery</h4>
+                    <span class="form-section-subtitle">OBDH FDIR State Machine &bull; LCL Isolation &amp; B-Side Redundancy Switchover &bull; Sun-Pointing Safe Mode</span>
+                </div>
+                <div class="input-group" style="grid-template-columns: 2fr 1fr;">
+                    <div class="field">
+                        <label>FDIR Fault Injection Scenario</label>
+                        <select id="fdirFaultScenario">
+                            <option value="0" selected>RW-2 Actuator Failure (Tachometer/Driver Loss &rarr; Skewed RW-4 B-Side Takeover)</option>
+                            <option value="1">Solar Array Shunt Short (28V Bus Undervoltage &rarr; B-Side S3R-B Array Regulator)</option>
+                            <option value="2">Star Tracker Blinded (STR-A Optical Head SEU &rarr; Hot-Standby STR-B + FOG IMU)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Fault Injection Epoch t<sub>fault</sub> [s]</label>
+                        <input type="number" id="fdirInjectTimeS" value="12.0" min="3.0" max="55.0" step="1.0">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="orbit">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--amber)">16. Interplanetary Patched-Conics &amp; Planetary Gravity Assist (Flyby)</h4>
+                    <span class="form-section-subtitle">Heliocentric Lambert &bull; Porkchop C<sub>3</sub> / V<sub>&infin;</sub> Grid &bull; Planetary Slingshot V<sub>&infin;</sub> Rotation &amp; B-Plane Targeting</span>
+                </div>
+                <div class="input-group" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 10px;">
+                    <div class="field">
+                        <label>Target Planet (Direct Lambert)</label>
+                        <select id="iplTarget">
+                            <option value="0" selected>Mars</option>
+                            <option value="1">Venus</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Target Capture Periapsis Altitude [km]</label>
+                        <input type="number" id="iplCaptureAltKm" value="400" min="100" max="100000" step="50">
+                    </div>
+                    <div class="field">
+                        <label>Interplanetary Transfer TOF [days]</label>
+                        <input type="number" id="iplTofDays" value="210" min="150" max="320" step="5">
+                    </div>
+                </div>
+                <div class="input-group" style="grid-template-columns: 1.2fr 1.5fr 1.3fr; padding-top: 8px; border-top: 1px dashed rgba(148,163,184,0.2);">
+                    <div class="field" style="justify-content: center;">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#00e676; font-weight:700; font-size:12px; margin-top:14px;">
+                            <input type="checkbox" id="iplEnableFlyby" checked style="width:16px; height:16px; accent-color:#00e676; cursor:pointer;">
+                            Enable Gravity Assist (Flyby)
+                        </label>
+                    </div>
+                    <div class="field">
+                        <label>Intermediate Flyby Planet (Slingshot Body)</label>
+                        <select id="iplFlybyPlanet">
+                            <option value="0" selected>Jupiter (5.20 AU &mdash; Giant Deep-Space Slingshot)</option>
+                            <option value="1">Venus (0.72 AU &mdash; Inner Solar System Assist)</option>
+                            <option value="2">Mars (1.52 AU &mdash; Terrestrial Gravity Assist)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Flyby Periapsis Altitude h<sub>p</sub> [km]</label>
+                        <input type="number" id="iplFlybyAltKm" value="140000" min="200" max="1500000" step="1000">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="gnc">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--green)">17. Multi-Satellite Formation Flying (Chief + 3 Deputies, D'Amico ROEs &amp; J<sub>2</sub>-Invariance)</h4>
+                    <span class="form-section-subtitle">Quasi-Nonsingular Relative Orbital Elements (&delta;<b>&alpha;</b>) &bull; E/I-Vector Passive Anti-Collision Safety &bull; LVLH [R, T, N]</span>
+                </div>
+                <div class="input-group" style="grid-template-columns: 2fr 1fr;">
+                    <div class="field">
+                        <label>Formation Topology (LVLH Relative Geometry)</label>
+                        <select id="formTopology">
+                            <option value="0" selected>Projected Circular Orbit (PCO &mdash; 3D Circular T-N Interferometric Aperture)</option>
+                            <option value="3">Cartwheel 2:1 Ellipse (In-Plane Elliptical Aperture + Cross-Track E/I Safety)</option>
+                            <option value="2">Cross-Track Pendulum (Bistatic SAR Cross-Track Oscillation)</option>
+                            <option value="1">Along-Track String of Pearls (Leader-Follower + Passive E/I Helix)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Formation Baseline Radius &rho;<sub>form</sub> [m]</label>
+                        <input type="number" id="formRadiusM" value="500" min="50" max="25000" step="50">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="subsystems">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--cyan)">18. Onboard SSR Memory Buffer &amp; Autonomous Operations Scheduler</h4>
+                    <span class="form-section-subtitle">NAND Flash Solid-State Recorder (SSR) with EDAC &bull; 95% Overflow Protection &bull; Payload Acquisition vs. RF Downlink</span>
+                </div>
+                <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="field">
+                        <label>Solid-State Recorder (SSR) Capacity M<sub>SSR,max</sub> [GB]</label>
+                        <input type="number" id="ssrCapacityGb" value="128" min="8" max="8192" step="16">
+                    </div>
+                    <div class="field">
+                        <label>Payload Science Data Generation Rate R<sub>gen</sub> [Mbps]</label>
+                        <input type="number" id="ssrScienceRateMbps" value="120" min="5" max="2000" step="10">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="safety">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--amber)">19. Space Weather (Solar Activity F<sub>10.7</sub>, Diurnal Bulge &amp; Geomagnetic Storm K<sub>p</sub>)</h4>
+                    <span class="form-section-subtitle">Jacchia-Bowman / NRLMSISE-00 Thermospheric Breathing &bull; Secular King-Hele Orbit Decay &bull; IADC 25-Year Rule</span>
+                </div>
+                <div class="input-group" style="grid-template-columns: 2fr 1fr;">
+                    <div class="field">
+                        <label>Solar Cycle Phase (10.7 cm Solar Radio Flux F<sub>10.7</sub> [SFU])</label>
+                        <select id="swxCyclePhase">
+                            <option value="0|70">Solar Minimum (F10.7 = 70 SFU &bull; Quiet Thermosphere / Slow Decay)</option>
+                            <option value="1|140" selected>Average Solar Activity (F10.7 = 140 SFU &bull; Nominal 11-Yr Mean)</option>
+                            <option value="2|220">Solar Maximum (F10.7 = 220 SFU &bull; Expanded Thermosphere / Rapid Decay)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Geomagnetic Storm Index K<sub>p</sub> <span>[0 = Quiet .. 9 = Extreme Storm]</span></label>
+                        <input type="number" id="swxKpIndex" value="3.0" min="0.0" max="9.0" step="0.5">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="subsystems">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--green)">20. Optical Inter-Satellite Links (ISL) &amp; Constellation Laser Mesh Network</h4>
+                    <span class="form-section-subtitle">1550 nm Laser Communication Terminals (LCT) &bull; 3D Line-of-Sight Limb Occultation (R<sub>E</sub> + 80 km) &bull; 10 Gbps/Link</span>
+                </div>
+                <div class="input-group" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="field">
+                        <label>Optical Link Range Limit d<sub>ISL,max</sub> [km] <span>[500 - 25,000 km]</span></label>
+                        <input type="number" id="islMaxRangeKm" value="5000" min="500" max="25000" step="250">
+                    </div>
+                    <div class="field">
+                        <label>Per-Link Laser Data Rate [Gbps] <span>[Coherent BPSK LCT]</span></label>
+                        <input type="number" id="islLinkRateGbps" value="10.0" min="1.0" max="100.0" step="1.0">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="subsystems">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--amber)">21. Multi-Station Ground Network (NASA DSN / ESA ESTRACK / Polar LEO) &amp; Tracking</h4>
+                    <span class="form-section-subtitle">Topocentric SEZ Azimuth-Elevation-Range (AER) &bull; AOS/LOS Visibility Cones &bull; Antenna Pedestal Slew Rate</span>
+                </div>
+                <div class="input-group" style="grid-template-columns: 2fr 1fr;">
+                    <div class="field">
+                        <label>Active Global Ground Station Network</label>
+                        <select id="gndNetworkType">
+                            <option value="0" selected>NASA Deep Space Network (DSN: Goldstone, Madrid, Canberra + Milano-Bovisa)</option>
+                            <option value="1">ESA ESTRACK Global Network (Cebreros, Malarg&uuml;e, New Norcia, Kourou)</option>
+                            <option value="2">High-Latitude Polar LEO Network (Svalbard SvalSat, TrollSat, Fairbanks, Punta Arenas)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Antenna Elevation Mask El<sub>min</sub> [deg] <span>[0 - 45&deg;]</span></label>
+                        <input type="number" id="gndElMaskDeg" value="5.0" min="0.0" max="45.0" step="1.0">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="subsystems">
+            <div class="form-section" style="border-color: rgba(56,189,248,0.38);">
+                <div class="form-section-header">
+                    <h4 style="color:var(--cyan-bright)">22. Earth Observation (EO) Sensor Raycasting, Rectangular FOV &amp; Off-Nadir Tilt</h4>
+                    <span class="form-section-subtitle">6-DOF Quaternion Boresight (+Z<sub>body</sub>) WGS84 Ellipsoid Intersection &bull; Trapezoidal Swath Polygon &amp; Global Heatmap</span>
+                </div>
+                <div class="input-group" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="field">
+                        <label>Sensor Along-Track FOV X [deg] <span>[1 - 55&deg;]</span></label>
+                        <input type="number" id="eoFovXDeg" value="10.0" min="1.0" max="55.0" step="1.0">
+                    </div>
+                    <div class="field">
+                        <label>Sensor Cross-Track FOV Y [deg] <span>[1 - 60&deg;]</span></label>
+                        <input type="number" id="eoFovYDeg" value="15.0" min="1.0" max="60.0" step="1.0">
+                    </div>
+                    <div class="field">
+                        <label>Sensor Boresight Off-Nadir Angle [deg] <span>[-40&deg; .. +40&deg; SAR/EO]</span></label>
+                        <input type="number" id="eoOffNadirDeg" value="0.0" min="-40.0" max="40.0" step="2.5">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="subsystems">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <h4 style="color:var(--cyan)">23. High-Fidelity Electrical Power System (EPS Hi-Fi), Penumbra &amp; Li-Ion Chemistry</h4>
+                    <span class="form-section-subtitle">Conical Umbra/Penumbra Transit &bull; Thermal/TID MPPT Solar Array &bull; Nonlinear Li-Ion V<sub>batt</sub>(SoC) &amp; Cyclic DoD SoH Fade</span>
+                </div>
+                <div class="input-group" style="grid-template-columns: 1fr 1fr;">
+                    <div class="field">
+                        <label>Battery Cell Configuration <span>[Series &times; Parallel Pack]</span></label>
+                        <select id="epsBattConfig">
+                            <option value="0" selected>8S4P Li-Ion Standard (28V Unregulated Bus &bull; 33.6V Max / 24.0V Cut &bull; 48 Ah / 1382 Wh)</option>
+                            <option value="1">8S6P Li-Ion High-Capacity (28V Unregulated Bus &bull; 33.6V Max / 24.0V Cut &bull; 72 Ah / 2074 Wh)</option>
+                            <option value="2">7S4P Li-Ion Compact LEO (25.2V Bus &bull; 29.4V Max / 21.0V Cut &bull; 48 Ah / 1210 Wh)</option>
+                            <option value="3">14S4P Li-Ion High-Power (50V Bus &bull; 58.8V Max / 42.0V Cut &bull; 48 Ah / 2419 Wh)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Solar Array Cell Type <span>[Photovoltaic Technology &amp; &beta;<sub>T</sub>]</span></label>
+                        <select id="epsSolarCellType">
+                            <option value="0" selected>GaAs Triple-Junction InGaP/GaAs/Ge (&eta;&#8320; = 30.2%, &beta; = -0.20%/K, Radiation-Hard)</option>
+                            <option value="1">Silicon High-Efficiency Space BSFR (&eta;&#8320; = 19.8%, &beta; = -0.45%/K)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="orbit">
+            <div class="form-section" style="border-color: rgba(251,146,60,0.38);">
+                <div class="form-section-header">
+                    <h4 style="color:var(--amber)">24. Planetary Aerocapture, Aerobraking &amp; Martian Atmospheric Pass</h4>
+                    <span class="form-section-subtitle">3-DOF Atmospheric Capture Pass &bull; Propulsive MOI vs. Aerocapture &bull; Hypersonic Lift-to-Drag (L/D) &amp; Entry Corridor &gamma;<sub>EI</sub></span>
+                </div>
+                <div class="input-group" style="grid-template-columns: 1.6fr 1.2fr 1.2fr;">
+                    <div class="field">
+                        <label>Target Orbit Insertion Method (Propulsive Burn vs. Aerocapture)</label>
+                        <select id="aeroInsertionMethod">
+                            <option value="1" selected>Aerocapture &amp; Aerobraking Pass (Martian Atmospheric Drag Capture)</option>
+                            <option value="0">Propulsive Retro-Burn (&Delta;V_MOI Engine Ignition)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Hypersonic Lift-to-Drag Ratio (L/D) [-]</label>
+                        <input type="number" id="aeroLiftToDrag" value="0.25" min="0.05" max="0.60" step="0.05">
+                    </div>
+                    <div class="field">
+                        <label>Atmospheric Entry FPA &gamma;<sub>EI</sub> [deg]</label>
+                        <input type="number" id="aeroEntryFpaDeg" value="-11.35" min="-14.50" max="-8.50" step="0.10">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group-block modal-cat-item" data-cat="orbit">
+            <div class="form-section" style="border-color: rgba(251,191,36,0.42);">
+                <div class="form-section-header">
+                    <h4 style="color:#fbbf24">25. Solar Sail Continuous Propulsion &amp; SRP Heliocentric Steering</h4>
+                    <span class="form-section-subtitle">Propellantless Solar Radiation Pressure (SRP) &bull; Reflective Area A<sub>sail</sub>, Pitch Angle &alpha; &amp; Specular Reflectivity &eta; [0&ndash;1]</span>
+                </div>
+                <div class="input-group" style="grid-template-columns: 1.1fr 1.9fr; margin-bottom: 10px;">
+                    <div class="field" style="justify-content: center;">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#fbbf24; font-weight:700; font-size:12px; margin-top:14px;">
+                            <input type="checkbox" id="sailEnablePropulsion" checked style="width:16px; height:16px; accent-color:#fbbf24; cursor:pointer;">
+                            Enable Solar Sail Propulsion
+                        </label>
+                    </div>
+                    <div class="field">
+                        <label>Solar Sail Spiral Target &amp; Steering Law</label>
+                        <select id="sailTargetPlanet">
+                            <option value="0" selected>Mars Outward Spiral (1.0 &rarr; 1.524 AU, Optimal Pitch &alpha;* = +35.26&deg;)</option>
+                            <option value="1">Venus Inward Spiral (1.0 &rarr; 0.723 AU, Optimal Pitch &alpha;* = -35.26&deg;)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="field">
+                        <label>Sail Area A<sub>sail</sub> [m&sup2;] <span>[100 - 50,000]</span></label>
+                        <input type="number" id="sailAreaM2" value="1200" min="100" max="50000" step="100">
+                    </div>
+                    <div class="field">
+                        <label>Pitch Angle &alpha; [deg] <span>[-60&deg; .. +60&deg;]</span></label>
+                        <input type="number" id="sailPitchDeg" value="35.26" min="-60.0" max="60.0" step="0.5">
+                    </div>
+                    <div class="field">
+                        <label>Reflectivity &eta; [0&ndash;1] <span>[CP1 Aluminized: 0.91]</span></label>
+                        <input type="number" id="sailReflectivity" value="0.91" min="0.10" max="1.00" step="0.01">
+                    </div>
                 </div>
             </div>
         </div>
@@ -3202,6 +3280,12 @@
             }
             if (ss.target_planet_id !== undefined && document.getElementById('sailTargetPlanet')) {
                 document.getElementById('sailTargetPlanet').value = String(ss.target_planet_id);
+            }
+            if (ss.opt_pitch_angle_deg !== undefined && document.getElementById('sailPitchDeg')) {
+                document.getElementById('sailPitchDeg').value = Number(ss.opt_pitch_angle_deg).toFixed(2);
+            }
+            if (ss.reflectivity !== undefined && document.getElementById('sailReflectivity')) {
+                document.getElementById('sailReflectivity').value = Number(ss.reflectivity).toFixed(2);
             }
         }
         if (data.blt_wsb_summary) {
@@ -14071,24 +14155,30 @@
     // SPRINT 35: SOLAR SAIL CONTINUOUS THRUST & SOLAR RADIATION PRESSURE (SRP)
     // DYNAMICS (JS mirror of simulate_solar_sail_spiral in mission_analysis.c)
     // =========================================================================
-    function simulateSolarSailSpiralJS(enableSail, targetPlanetId, sailAreaM2, ispS) {
+    function simulateSolarSailSpiralJS(enableSail, targetPlanetId, sailAreaM2, ispS, pitchDegOverride, reflectivityOverride) {
         const isVenus = (parseInt(targetPlanetId, 10) === 1);
         const areaM2  = Math.max(100.0, Math.min(50000.0, parseFloat(sailAreaM2) || 1200.0));
-        const refl    = 0.91;
+        const refl    = (reflectivityOverride !== undefined && Number.isFinite(+reflectivityOverride))
+            ? Math.max(0.10, Math.min(1.00, +reflectivityOverride))
+            : 0.91;
         const massKg  = 85.0 + 0.012 * areaM2;
 
         const alphaOptRad = Math.atan(1.0 / Math.sqrt(2.0));
         const signDir     = isVenus ? -1.0 : 1.0;
-        const optPitchDeg = signDir * alphaOptRad * RAD2DEG;
+        const defaultPitchDeg = signDir * alphaOptRad * RAD2DEG;
+        const optPitchDeg = (pitchDegOverride !== undefined && Number.isFinite(+pitchDegOverride))
+            ? Math.max(-60.0, Math.min(60.0, +pitchDegOverride))
+            : defaultPitchDeg;
+        const effPitchRad = optPitchDeg * DEG2RAD;
         const steerName   = isVenus
-            ? 'McInnes Inward Spiral Steering (\u03b1* = -35.26 deg + ADCS Trim)'
-            : 'McInnes Outward Spiral Steering (\u03b1* = +35.26 deg + ADCS Trim)';
+            ? `McInnes Inward Spiral Steering (\u03b1 = ${optPitchDeg.toFixed(2)} deg + ADCS Trim)`
+            : `McInnes Outward Spiral Steering (\u03b1 = ${optPitchDeg >= 0 ? '+' : ''}${optPitchDeg.toFixed(2)} deg + ADCS Trim)`;
 
         const srp1Au      = 4.5398e-6;
         const loadingGm2  = (massKg * 1000.0) / areaM2;
         const acMs2       = 2.0 * srp1Au * refl * (areaM2 / massKg);
         const charAccMms2 = acMs2 * 1000.0;
-        const effAccMms2  = charAccMms2 * Math.pow(Math.cos(alphaOptRad), 2.0);
+        const effAccMms2  = charAccMms2 * Math.pow(Math.cos(effPitchRad), 2.0);
         const peakThrMn   = (massKg * acMs2) * 1000.0;
         const gSun1AuMs2  = (IPL.SUN_MU / (IPL.AU * IPL.AU)) * 1000.0;
         const betaLight   = acMs2 / gSun1AuMs2;
@@ -14420,9 +14510,11 @@
         const enableSail = document.getElementById('sailEnablePropulsion') ? document.getElementById('sailEnablePropulsion').checked : true;
         const targPl     = document.getElementById('sailTargetPlanet') ? parseInt(document.getElementById('sailTargetPlanet').value, 10) : 0;
         const areaM2     = document.getElementById('sailAreaM2') ? parseFloat(document.getElementById('sailAreaM2').value) : 1200.0;
+        const pitchDeg   = document.getElementById('sailPitchDeg') ? parseFloat(document.getElementById('sailPitchDeg').value) : (targPl === 1 ? -35.26 : 35.26);
+        const reflVal    = document.getElementById('sailReflectivity') ? parseFloat(document.getElementById('sailReflectivity').value) : 0.91;
         const ispVal     = (globalData.maneuver && globalData.maneuver.isp_s) ? globalData.maneuver.isp_s : 316.0;
 
-        const res = simulateSolarSailSpiralJS(enableSail, targPl, areaM2, ispVal);
+        const res = simulateSolarSailSpiralJS(enableSail, targPl, areaM2, ispVal, pitchDeg, reflVal);
         globalData.solar_sail_summary = res.solar_sail_summary;
         globalData.traj_solar_sail    = res.traj_solar_sail;
         renderSolarSailSection(globalData);
@@ -16124,10 +16216,12 @@
         );
 
         // Sprint 35: Solar Sail Continuous Thrust & Solar Radiation Pressure (SRP) Dynamics
-        const sailEn   = document.getElementById('sailEnablePropulsion') ? document.getElementById('sailEnablePropulsion').checked : true;
-        const sailPlId = document.getElementById('sailTargetPlanet') ? parseInt(document.getElementById('sailTargetPlanet').value, 10) : 0;
-        const sailArea = document.getElementById('sailAreaM2') ? parseFloat(document.getElementById('sailAreaM2').value) : 1200.0;
-        const sailRes  = simulateSolarSailSpiralJS(sailEn, sailPlId, sailArea, isp);
+        const sailEn    = document.getElementById('sailEnablePropulsion') ? document.getElementById('sailEnablePropulsion').checked : true;
+        const sailPlId  = document.getElementById('sailTargetPlanet') ? parseInt(document.getElementById('sailTargetPlanet').value, 10) : 0;
+        const sailArea  = document.getElementById('sailAreaM2') ? parseFloat(document.getElementById('sailAreaM2').value) : 1200.0;
+        const sailPitch = document.getElementById('sailPitchDeg') ? parseFloat(document.getElementById('sailPitchDeg').value) : (sailPlId === 1 ? -35.26 : 35.26);
+        const sailRefl  = document.getElementById('sailReflectivity') ? parseFloat(document.getElementById('sailReflectivity').value) : 0.91;
+        const sailRes   = simulateSolarSailSpiralJS(sailEn, sailPlId, sailArea, isp, sailPitch, sailRefl);
 
         // Sprint 36: Ballistic Lunar Transfer (BLT), Weak Stability Boundary (WSB) & 4-Body Dynamics
         const bltMode = document.getElementById('bltTransferMode') ? parseInt(document.getElementById('bltTransferMode').value, 10) : 1;
@@ -16272,7 +16366,12 @@
     ['aeroInsertionMethod', 'aeroLiftToDrag', 'aeroEntryFpaDeg'].forEach(id => {
         document.getElementById(id).addEventListener('change', aeroRecomputeFromModal);
     });
-    ['sailEnablePropulsion', 'sailAreaM2', 'sailTargetPlanet'].forEach(id => {
+    document.getElementById('sailTargetPlanet').addEventListener('change', function() {
+        const pitchEl = document.getElementById('sailPitchDeg');
+        if (pitchEl) pitchEl.value = (parseInt(this.value, 10) === 1) ? '-35.26' : '35.26';
+        sailRecomputeFromModal();
+    });
+    ['sailEnablePropulsion', 'sailAreaM2', 'sailPitchDeg', 'sailReflectivity'].forEach(id => {
         document.getElementById(id).addEventListener('change', sailRecomputeFromModal);
     });
     ['bltTransferMode', 'bltTofDays', 'bltTargetApogeeMkm'].forEach(id => {
